@@ -1,0 +1,17 @@
+{
+  "name": "clarity-data-dispatcher",
+  "version": "0.0.1",
+  "description": "Integrate your data.",
+  "main": "./dist/main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "IoT",
+    "Data Integration"
+  ],
+  "author": "Jared J Barnes",
+  "devDependencies": {
+    "tsc": "^1.20150623.0"
+  }
+}
