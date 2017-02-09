@@ -35,3 +35,11 @@ export interface ISystem {
     initializeAsync?(clarityTransactionDispatcher: ClarityTransactionDispatcher);
 
 }
+
+export interface ILogger {
+    warn(message: string, ...data: any[]): void;
+    error(message: string, ...data: any[]): void;
+    message(message: string, ...data: any[]): void;
+    info(message: string, ...data: any[]): void;
+    debug(message: string, ...data: any[]): void;
+}
