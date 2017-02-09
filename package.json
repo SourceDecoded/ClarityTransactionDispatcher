@@ -12,6 +12,9 @@
   ],
   "author": "Jared J Barnes",
   "devDependencies": {
-    "tsc": "^1.20150623.0"
+    "gulp": "^3.9.1",
+    "gulp-jsdoc3": "^1.0.1",
+    "tsc": "^1.20150623.0",
+    "webpack": "^2.2.1"
   }
 }

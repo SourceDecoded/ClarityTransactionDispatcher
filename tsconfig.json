@@ -1,8 +1,9 @@
 {
     "compilerOptions": {
-        "target": "es6",
+        "target": "es2015",
         "module":"commonjs",
         "sourceMap": true,
-        "typeRoots" : ["./typings/globals"]
+        "typeRoots" : ["./typings/globals"],
+        "removeComments": false
     }
 }
