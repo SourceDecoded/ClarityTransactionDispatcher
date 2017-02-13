@@ -118,13 +118,13 @@ export default class ClarityTransactionDispatcher {
      */
     getService(name: string) {
 
-
     }
 
     /**
      * Pauses the dispatcher.
+     * @returns {Promise<undefined>}
      */
-    pause() { }
+    pauseAsync() { }
 
     /**
      * Removes an entity.
@@ -148,9 +148,12 @@ export default class ClarityTransactionDispatcher {
     removeSystemAsync(system: ISystem) { }
 
     /**
-     * Starts the dispatcher.
+     * Starts the dispatcher. When the dispatcher is started it will look for a ctd_config.json
+     * in the process directory. From the config file it will install all the dependencies with
+     * npm. 
+     * @returns {Promise<undefined>}
      */
-    start() { }
+    startAsync() { }
 
     /**
      * Updated an entity.

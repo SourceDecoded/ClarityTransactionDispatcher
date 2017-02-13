@@ -199,8 +199,9 @@ class ClarityTransactionDispatcher {
     }
     /**
      * Pauses the dispatcher.
+     * @returns {Promise<undefined>}
      */
-    pause() { }
+    pauseAsync() { }
     /**
      * Removes an entity.
      * @param {object} entity - The entity to be removed.
@@ -221,8 +222,9 @@ class ClarityTransactionDispatcher {
     removeSystemAsync(system) { }
     /**
      * Starts the dispatcher.
+     * @returns {Promise<undefined>}
      */
-    start() { }
+    startAsync() { }
     /**
      * Updated an entity.
      * @param {object} entity - The updated entity.
