@@ -15,8 +15,24 @@ Here is an example of "dispatcher.js".
 var ClarityTransactionDispatcher = require("clarity-transaction-dispatcher").ClarityTransactionDispatcher;
 
 var LoggerSystem = function(){
-    
+    this.name = "Logger";
+    this.guid = "eaef6f3b-f9eb-4aac-b5ba-314e53da87d2";
 };
+
+LoggerSystem.prototype.getName = function(){
+    return this.name;
+};
+
+LoggerSystem.prototype.getGuid = function(){
+    return this.guid;
+};
+
+LoggerSystem.prototype.entityAddedAsync = function(entity){};
+
+LoggerSystem.prototype.entityUpdatedAsync = function(entity){};
+
+LoggerSystem.prototype.entityRemovedAsync = function(entity){};
+
 
 var logger = new LoggerSystem();
 var dispatcher = new ClarityTransactionDispatcher();

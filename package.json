@@ -16,5 +16,9 @@
     "gulp-jsdoc3": "^1.0.1",
     "tsc": "^1.20150623.0",
     "webpack": "^2.2.1"
+  },
+  "dependencies": {
+    "gridfs-stream": "^1.1.1",
+    "mongodb": "^2.2.24"
   }
 }

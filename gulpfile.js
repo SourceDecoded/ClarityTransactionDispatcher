@@ -12,18 +12,8 @@ gulp.task("typescript", function (callback) {
     });
 });
 
-gulp.task("webpack", ["typescript"], function (callback) {
-    exec("webpack", function (err) {
-        if (err != null) {
-            callback(err);
-            return;
-        }
-        callback();
-    });
-});
-
-gulp.task("jsdoc", ["typescript", "webpack"], function (callback) {
+gulp.task("jsdoc", ["typescript"], function (callback) {
     gulp.src(["./README.md", "./library/**/*.js"], { read: false }).pipe(jsdoc(callback));
 });
 
-gulp.task("default", ["webpack", "typescript", "jsdoc"]);
+gulp.task("default", ["typescript", "jsdoc"]);

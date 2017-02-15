@@ -9,7 +9,8 @@ var distribution = {
         library: "clarityDispatcher",
         libraryTarget: "umd",
         path: './dist'
-    }
+    },
+    target: "node"
 };
 
 module.exports = [
