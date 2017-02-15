@@ -5,14 +5,14 @@ import ClarityTransactionDispatcher from "./ClarityTransactionDispatcher";
  * to systems registering with ClarityTransactionDispatcher.
  */
 export interface ISystem {
-     /** 
-     * Returns a guid that is unique to this system. This is used to
-     * serialize the systems into a state.json file. The file will be 
-     * used on booting up the dispatcher. The state.json file will know
-     * whether or not the system has been initialized. This is just one 
-     * possibility of many.
-     * @return {string} The GUID of the system.
-     */
+    /** 
+    * Returns a guid that is unique to this system. This is used to
+    * serialize the systems into a state.json file. The file will be 
+    * used on booting up the dispatcher. The state.json file will know
+    * whether or not the system has been initialized. This is just one 
+    * possibility of many.
+    * @return {string} The GUID of the system.
+    */
     getGuid();
     /** 
      * This will be the name of the system displayed on any interface
@@ -22,17 +22,20 @@ export interface ISystem {
     getName();
 
     // Optional interfaces.
-    activatedAsync?(clarityTransactionDispatcher: ClarityTransactionDispatcher);
-    disposeAsync?(clarityTransactionDispatcher: ClarityTransactionDispatcher);
-    deactivatedAsync?(clarityTransactionDispatcher: ClarityTransactionDispatcher);
-    entityAddedAsync?(entity: any);
-    entityUpdatedAsync?(entity: any);
-    entityRemovedAsync?(entity: any);
-    entityContentUpdatedAsync?(entity: any);
-    entityComponentAddedAsync?(entity: any, component: any);
-    entityComponentUpdatedAsync?(entity: any, component: any);
-    entityComponentRemovedAsync?(entity: any, component: any);
-    initializeAsync?(clarityTransactionDispatcher: ClarityTransactionDispatcher);
+    activatedAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher);
+    disposeAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher);
+    deactivatedAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher);
+    entityAddedAsync(entity: { _id: string });
+    entityUpdatedAsync(oldEntity: any, newEntity: any);
+    entityRemovedAsync(entity: { _id: string });
+    entityContentUpdatedAsync(oldContentId: string, newContentId: string);
+    entityComponentAddedAsync(entity: { _id: string }, component: any);
+    entityComponentUpdatedAsync(entity: { _id: string }, oldComponent: any, newComponent: any);
+    entityComponentRemovedAsync(entity: { _id: string }, component: any);
+    initializeAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher);
+    validateEntityAsync(entity: { _id: string });
+    validateComponentAsync(component: { _id: string });
+    validateEntityContentAsync(entity: { _id: string });
 
 }
 

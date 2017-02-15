@@ -39,8 +39,8 @@ export default class ClarityTransactionDispatcher {
     }
 
     /**
-     * @private
      * Get a mongodb.
+     * @private
      * @returns {Promise<mongodb>}
      */
     _getDatabaseAsync() {
@@ -57,6 +57,7 @@ export default class ClarityTransactionDispatcher {
 
     /**
      * Get a gridFs.
+     * @private
      * @returns {Promise<gridfs>}
      */
     _getGridFsAsync() {
@@ -66,9 +67,57 @@ export default class ClarityTransactionDispatcher {
     }
 
     /**
-     * Add an Entity to the datastore. This will record
-     * a transaction as well as maintain the current 
-     * state of the entity.
+     * Notify the systems of a life cycle.
+     * @private
+     */
+    _notifySystems(methodName: string, args: Array<any>) {
+        return this.systems.reduce((promise, system) => {
+
+            return promise.then(() => {
+                if (typeof system[methodName] === "function") {
+                    return system[methodName].apply(system, args);
+                } else {
+                    return Promise.resolve();
+                }
+            });
+
+        }, Promise.resolve());
+    }
+
+    /**
+     * This allows systems to validate the component being saved.
+     * @private
+     */
+    _validateComponent(entity: { _id: string }, component: { type: string, entity_id: string }) {
+
+    }
+
+    /**
+     * This allows systems to validate the entity being saved.
+     * @private
+     */
+    _validateEntity(entity: { _id: string }) {
+
+    }
+
+    /**
+     * This allows the systems to validate content before its accepted.
+     * The dispatcher saves it to a temporary location so systems can validate it
+     * independently. The content could be an extremely large file so we don't want 
+     * to hold it in memory.
+     * @private
+     */
+    _validateEntityContent(entity: { _id: string }, contentId: string) {
+
+    }
+
+    /**
+     * Add an Entity to the datastore. The steps the dispatcher takes when saving an
+     * entity are.
+     * 
+     * - Validate the entity with all systems. All systems have to validate to pass.
+     * - Save the entity to the datastore.
+     * - Notify the systems that an entity has been save to the datastore.
      * @param {object} entity - The entity you want add.
      * @return {Promise}
      */
@@ -94,6 +143,12 @@ export default class ClarityTransactionDispatcher {
 
     /**
      * Adds a component to an entity.
+     * 
+     * The dispatcher does the following when adding a component.
+     * 
+     * - Validate the component with all systems. Needs to be validated on all systems to pass.
+     * - Saves the component to the datastore.
+     * - Notifies the systems that a component has been added.
      * @param {object} entity - The entity of the component being added.
      * @param {object} component - The component being added.
      */
@@ -113,6 +168,10 @@ export default class ClarityTransactionDispatcher {
 
                 });
 
+            }).then((results) => {
+                return this._notifySystems("entityComponentAddedAsync", [entity, component]).then(() => {
+                    return results;
+                })
             });
 
         });
@@ -136,11 +195,11 @@ export default class ClarityTransactionDispatcher {
      * 
      * For example an Image Thumbnail System will look to see if the entity has the 
      * component of image
-     * #### Required
+     * #### Required System Methods
      * - getGuid()
      * - getName()
      * 
-     * #### Optional
+     * #### Optional System Methods
      *  - activatedAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher)
      *  - disposeAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher)
      *  - deactivatedAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher)
@@ -319,7 +378,7 @@ export default class ClarityTransactionDispatcher {
      * @returns {object} - Null or the desired service.
      */
     getService(name: string) {
-
+        return this.services[name] || null;
     }
 
     /**
@@ -327,8 +386,29 @@ export default class ClarityTransactionDispatcher {
      * @param {object} component - The component to be removed.
      * @returns {Promise<undefined>}
      */
-    removeComponentAsync(component: { _id: string, type: string }) {
+    removeComponentAsync(component: { _id: string, type: string, entity_id: string }) {
+        return this._getDatabaseAsync().then((db: any) => {
+            return new Promise((resolve, reject) => {
+                var id = mongo.ObjectID(component._id);
 
+                db.collection("components").deleteOne({
+                    _id: id
+                }, (error, results) => {
+                    if (error != null) {
+                        reject(error);
+                    } else {
+                        resolve(results);
+                    }
+                });
+            });
+
+        }).then((results) => {
+            return this.getEntityByIdAsync(component.entity_id).then((entity: any) => {
+                return this._notifySystems("entityComponentRemovedAsync", [entity, component])
+            }).then(() => {
+                return Promise.resolve(results);
+            });
+        });
     }
 
     /**

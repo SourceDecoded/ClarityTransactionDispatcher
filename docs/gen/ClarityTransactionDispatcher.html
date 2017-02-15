@@ -76,14 +76,14 @@
         
             <div class="class-description"><p>Class that organizes systems to respond to data transactions.
 The dispatcher manages the life-cycle of data entities. They can be
-added, updated, removed, and read. The dispatcher is not responsible
+added, updated, and removed. The dispatcher is not responsible
 for anything beyond this. It will notify the systems when any entity
-has been added, updated, removed, and read. This allows the dispatcher
+has been added, updated, and removed. This allows the dispatcher
 to remain unopinionated about tasks to run when a certain entity is
 added, updated, or removed.</p>
 <p>The idea behind the dispatcher is to handle the complexity of the IoT.
 There are many systems, devices, and other technologies that need to
-communicate for a company to run smoothly. We believe that answer to
+communicate for a company to run smoothly. We believe that the answer to
 these needs is a data dispatcher which lets all independent systems know
 about data changes.</p>
 <p>The dispatcher will also notify the system when components on the entity
@@ -205,6 +205,12 @@ fulfill their responsibilities efficiently.</p></div>
     
     <div class="description">
         <p>Adds a component to an entity.</p>
+<p>The dispatcher does the following when adding a component.</p>
+<ul>
+<li>Validate the component with all systems. Needs to be validated on all systems to pass.</li>
+<li>Saves the component to the datastore.</li>
+<li>Notifies the systems that a component has been added.</li>
+</ul>
     </div>
     
 
@@ -356,9 +362,13 @@ fulfill their responsibilities efficiently.</p></div>
 
     
     <div class="description">
-        <p>Add an Entity to the datastore. This will record
-a transaction as well as maintain the current
-state of the entity.</p>
+        <p>Add an Entity to the datastore. The steps the dispatcher takes when saving an
+entity are.</p>
+<ul>
+<li>Validate the entity with all systems. All systems have to validate to pass.</li>
+<li>Save the entity to the datastore.</li>
+<li>Notify the systems that an entity has been save to the datastore.</li>
+</ul>
     </div>
     
 
@@ -684,11 +694,11 @@ is done. They listen to the life-cycle of the entity and react based
 on the composition of components.</p>
 <p>For example an Image Thumbnail System will look to see if the entity has the
 component of image</p>
-<h4>Required</h4><ul>
+<h4>Required System Methods</h4><ul>
 <li>getGuid()</li>
 <li>getName()</li>
 </ul>
-<h4>Optional</h4><ul>
+<h4>Optional System Methods</h4><ul>
 <li>activatedAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher)</li>
 <li>disposeAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher)</li>
 <li>deactivatedAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher)</li>
@@ -700,6 +710,9 @@ component of image</p>
 <li>entityComponentUpdatedAsync(entity: {_id: string}, oldComponent: any, newComponent: any)</li>
 <li>entityComponentRemovedAsync(entity: {_id: string}, component: any)</li>
 <li>initializeAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher)</li>
+<li>validateEntityAsync(entity: {_id: string})</li>
+<li>validateComponentAsync(component: {_id: string})</li>
+<li>validateEntityContentAsync(entity: {_id: string})</li>
 </ul>
     </div>
     
@@ -846,7 +859,7 @@ component of image</p>
             
 <hr>
 <dt>
-    <h4 class="name" id="getComponent"><span class="type-signature"></span>getComponent(id)</h4>
+    <h4 class="name" id="getComponentAsync"><span class="type-signature"></span>getComponentAsync(componentId)</h4>
     
     
 </dt>
@@ -889,7 +902,7 @@ component of image</p>
 
         <tr>
             
-                <td class="name"><code>id</code></td>
+                <td class="name"><code>componentId</code></td>
             
 
             <td class="type">
@@ -1142,7 +1155,7 @@ component of image</p>
             
 <hr>
 <dt>
-    <h4 class="name" id="getComponentsByEntityIdAsync"><span class="type-signature"></span>getComponentsByEntityIdAsync(entity)</h4>
+    <h4 class="name" id="getComponentsByTypeAsync"><span class="type-signature"></span>getComponentsByTypeAsync(entity, type)</h4>
     
     
 </dt>
@@ -1150,7 +1163,7 @@ component of image</p>
 
     
     <div class="description">
-        <p>Get the components of an entity by the entity.</p>
+        <p>Get the Components on the entity provided matching the type provided.</p>
     </div>
     
 
@@ -1202,7 +1215,31 @@ component of image</p>
 
             
 
-            <td class="description last"><p>The entity's id of the components.</p></td>
+            <td class="description last"><p>The entity of the needed components.</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>type</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">string</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>The type of the component needed.</p></td>
         </tr>
 
     
@@ -1262,26 +1299,6 @@ component of image</p>
     
 
     
-    <h5>Returns:</h5>
-    
-            
-
-
-<dl>
-    <dt>
-        Type
-    </dt>
-    <dd>
-        
-<span class="param-type">Promise.&lt;Array></span>
-
-
-
-    </dd>
-</dl>
-
-
-        
 
     
 </dd>
@@ -1290,7 +1307,7 @@ component of image</p>
             
 <hr>
 <dt>
-    <h4 class="name" id="getEntitiesAsync"><span class="type-signature"></span>getEntitiesAsync(skip, take)</h4>
+    <h4 class="name" id="getEntitiesIterator"><span class="type-signature"></span>getEntitiesIterator()</h4>
     
     
 </dt>
@@ -1298,7 +1315,7 @@ component of image</p>
 
     
     <div class="description">
-        <p>Get a range of entities.</p>
+        <p>Get an Iterator of the all entities.</p>
     </div>
     
 
@@ -1308,80 +1325,6 @@ component of image</p>
 
     
     
-        <h5>Parameters:</h5>
-        
-
-<table class="params table table-striped">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>skip</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">number</span>
-
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>The amount of entities you want to skip.</p></td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>take</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">number</span>
-
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>The amount of entities you want to take.</p></td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-    
 
     
 <dl class="details">
@@ -1437,12 +1380,6 @@ component of image</p>
     <h5>Returns:</h5>
     
             
-<div class="param-desc">
-    <ul>
-<li>The range of entities.</li>
-</ul>
-</div>
-
 
 
 <dl>
@@ -1451,7 +1388,7 @@ component of image</p>
     </dt>
     <dd>
         
-<span class="param-type">Promise.&lt;Array.&lt;object>></span>
+<span class="param-type"><a href="MongoDbIterator.html">MongoDbIterator</a></span>
 
 
 
@@ -1468,7 +1405,7 @@ component of image</p>
             
 <hr>
 <dt>
-    <h4 class="name" id="getEntityByIdAsync"><span class="type-signature"></span>getEntityByIdAsync(id)</h4>
+    <h4 class="name" id="getEntityByIdAsync"><span class="type-signature"></span>getEntityByIdAsync(entityId)</h4>
     
     
 </dt>
@@ -1511,7 +1448,7 @@ component of image</p>
 
         <tr>
             
-                <td class="name"><code>id</code></td>
+                <td class="name"><code>entityId</code></td>
             
 
             <td class="type">
@@ -1622,7 +1559,7 @@ component of image</p>
             
 <hr>
 <dt>
-    <h4 class="name" id="getEntityContentStream"><span class="type-signature"></span>getEntityContentStream(entity)</h4>
+    <h4 class="name" id="getEntityContentStreamByContentIdAsync"><span class="type-signature"></span>getEntityContentStreamByContentIdAsync(contentId)</h4>
     
     
 </dt>
@@ -1630,7 +1567,7 @@ component of image</p>
 
     
     <div class="description">
-        <p>Get a stream of the content of the entity.</p>
+        <p>Get a stream of the content of the entity by its id.</p>
     </div>
     
 
@@ -1665,161 +1602,7 @@ component of image</p>
 
         <tr>
             
-                <td class="name"><code>entity</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">object</span>
-
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>The entity you want to get the content of.</p></td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-    
-
-    
-<dl class="details">
-    
-
-	
-
-	
-
-	
-
-    
-
-    
-
-    
-
-    
-
-	
-
-	
-
-	
-
-	
-
-	
-
-
-
-	
-
-	
-
-	
-
-	
-</dl>
-
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <h5>Returns:</h5>
-    
-            
-<div class="param-desc">
-    <ul>
-<li>Node read stream.</li>
-</ul>
-</div>
-
-
-
-<dl>
-    <dt>
-        Type
-    </dt>
-    <dd>
-        
-<span class="param-type">stream</span>
-
-
-
-    </dd>
-</dl>
-
-
-        
-
-    
-</dd>
-
-        
-            
-<hr>
-<dt>
-    <h4 class="name" id="getEntityContentStreamById"><span class="type-signature"></span>getEntityContentStreamById(id)</h4>
-    
-    
-</dt>
-<dd>
-
-    
-    <div class="description">
-        <p>Get a stream of the content of the entity.</p>
-    </div>
-    
-
-    
-
-    
-
-    
-    
-        <h5>Parameters:</h5>
-        
-
-<table class="params table table-striped">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>id</code></td>
+                <td class="name"><code>contentId</code></td>
             
 
             <td class="type">
@@ -1836,7 +1619,7 @@ component of image</p>
 
             
 
-            <td class="description last"><p>The id of the entity you want to get the content of.</p></td>
+            <td class="description last"><p>The id of the content needed..</p></td>
         </tr>
 
     
@@ -1914,6 +1697,160 @@ component of image</p>
     <dd>
         
 <span class="param-type">NodeJS.ReadableStream</span>
+
+
+
+    </dd>
+</dl>
+
+
+        
+
+    
+</dd>
+
+        
+            
+<hr>
+<dt>
+    <h4 class="name" id="getEntityContentStreamByEntityAsync"><span class="type-signature"></span>getEntityContentStreamByEntityAsync(entity)</h4>
+    
+    
+</dt>
+<dd>
+
+    
+    <div class="description">
+        <p>Get a stream of the content of the entity.</p>
+    </div>
+    
+
+    
+
+    
+
+    
+    
+        <h5>Parameters:</h5>
+        
+
+<table class="params table table-striped">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>entity</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">object</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>The entity of the content needed.</p></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+    
+
+    
+<dl class="details">
+    
+
+	
+
+	
+
+	
+
+    
+
+    
+
+    
+
+    
+
+	
+
+	
+
+	
+
+	
+
+	
+
+
+
+	
+
+	
+
+	
+
+	
+</dl>
+
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <h5>Returns:</h5>
+    
+            
+<div class="param-desc">
+    <ul>
+<li>Node read stream.</li>
+</ul>
+</div>
+
+
+
+<dl>
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">Promise.&lt;stream></span>
 
 
 
@@ -2084,104 +2021,6 @@ component of image</p>
             
 <hr>
 <dt>
-    <h4 class="name" id="pauseAsync"><span class="type-signature"></span>pauseAsync()</h4>
-    
-    
-</dt>
-<dd>
-
-    
-    <div class="description">
-        <p>Pauses the dispatcher.</p>
-    </div>
-    
-
-    
-
-    
-
-    
-    
-
-    
-<dl class="details">
-    
-
-	
-
-	
-
-	
-
-    
-
-    
-
-    
-
-    
-
-	
-
-	
-
-	
-
-	
-
-	
-
-
-
-	
-
-	
-
-	
-
-	
-</dl>
-
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <h5>Returns:</h5>
-    
-            
-
-
-<dl>
-    <dt>
-        Type
-    </dt>
-    <dd>
-        
-<span class="param-type">Promise.&lt;undefined></span>
-
-
-
-    </dd>
-</dl>
-
-
-        
-
-    
-</dd>
-
-        
-            
-<hr>
-<dt>
     <h4 class="name" id="removeComponentAsync"><span class="type-signature"></span>removeComponentAsync(component)</h4>
     
     
@@ -2302,6 +2141,26 @@ component of image</p>
     
 
     
+    <h5>Returns:</h5>
+    
+            
+
+
+<dl>
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">Promise.&lt;undefined></span>
+
+
+
+    </dd>
+</dl>
+
+
+        
 
     
 </dd>
@@ -2318,7 +2177,10 @@ component of image</p>
 
     
     <div class="description">
-        <p>Removes an entity.</p>
+        <p>Removes an entity, and its associated content. When the content is
+removed it runs it through all the life cycles of content being removed.
+It also removes all the components from the entity, this will also trigger
+life cycle calls to the systems.</p>
     </div>
     
 
@@ -2458,7 +2320,7 @@ component of image</p>
             
 <hr>
 <dt>
-    <h4 class="name" id="removeService"><span class="type-signature"></span>removeService(name)</h4>
+    <h4 class="name" id="removeServiceAsync"><span class="type-signature"></span>removeServiceAsync(name)</h4>
     
     
 </dt>
@@ -2589,7 +2451,7 @@ component of image</p>
     </dt>
     <dd>
         
-<span class="param-type">undefined</span>
+<span class="param-type">Promise.&lt;undefined></span>
 
 
 
@@ -2735,106 +2597,6 @@ component of image</p>
 </ul>
 </div>
 
-
-
-<dl>
-    <dt>
-        Type
-    </dt>
-    <dd>
-        
-<span class="param-type">Promise.&lt;undefined></span>
-
-
-
-    </dd>
-</dl>
-
-
-        
-
-    
-</dd>
-
-        
-            
-<hr>
-<dt>
-    <h4 class="name" id="startAsync"><span class="type-signature"></span>startAsync()</h4>
-    
-    
-</dt>
-<dd>
-
-    
-    <div class="description">
-        <p>Starts the dispatcher. When the dispatcher is started it will look for a ctd_config.json
-in the process directory. From the config file it will install all the dependencies with
-npm.</p>
-    </div>
-    
-
-    
-
-    
-
-    
-    
-
-    
-<dl class="details">
-    
-
-	
-
-	
-
-	
-
-    
-
-    
-
-    
-
-    
-
-	
-
-	
-
-	
-
-	
-
-	
-
-
-
-	
-
-	
-
-	
-
-	
-</dl>
-
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <h5>Returns:</h5>
-    
-            
 
 
 <dl>
@@ -3360,7 +3122,7 @@ npm.</p>
 <span class="jsdoc-message">
 	Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.3</a>
 	
-		on February 14th 2017, 9:46:34 am
+		on February 15th 2017, 3:47:37 pm
 	
 	using the <a href="https://github.com/docstrap/docstrap">DocStrap template</a>.
 </span>

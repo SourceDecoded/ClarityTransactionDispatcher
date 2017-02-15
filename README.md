@@ -5,39 +5,18 @@ Install Clarity Transaction Dispatcher with npm.
 ```bash
 npm install ...To be determined
 ```
+The purpose of the transaction dispatcher is to be the mechanism by which data can flow and notify systems of that data flow.
+Data can come from devices, database systems, apis, or user input. We will give concrete examples in business where the
+transaction dispatcher is needed, but first the principle behind the transaction dispatcher is crucial. 
 
-### Setting Up
-Now that the dispatcher is install create a file title "dispatcher.js". 
-Inside "dispatcher.js" set up the services and the systems you need. 
+Video games became more and more complex as the hardware became more advance. This advancement meant the game could do more things.
+With more things came more complexity. There was also a need to turn on and off different affects like shaders, reflections, etc. 
+Game engineers saught for a pattern that would allow them the flexibility they needed as well as the speed. They discovered the "Component, Entity, System" 
+pattern, which through the years has been refined. The most recent advances have the entities and the components just contain data, and all 
+logic runs on the systems. The systems do not and should not no about eachother. The systems rely on the composition of components to 
+know whether or not to act on the entity. This pattern truly changed the industry. It allowed complexity to be acheived through composition, 
+and simplicity because systems became specialist. They only worried about one thing and did that one thing really well. 
 
-Here is an example of "dispatcher.js".
-```js
-var ClarityTransactionDispatcher = require("clarity-transaction-dispatcher").ClarityTransactionDispatcher;
-
-var LoggerSystem = function(){
-    this.name = "Logger";
-    this.guid = "eaef6f3b-f9eb-4aac-b5ba-314e53da87d2";
-};
-
-LoggerSystem.prototype.getName = function(){
-    return this.name;
-};
-
-LoggerSystem.prototype.getGuid = function(){
-    return this.guid;
-};
-
-LoggerSystem.prototype.entityAddedAsync = function(entity){};
-
-LoggerSystem.prototype.entityUpdatedAsync = function(entity){};
-
-LoggerSystem.prototype.entityRemovedAsync = function(entity){};
-
-
-var logger = new LoggerSystem();
-var dispatcher = new ClarityTransactionDispatcher();
-
-dispatcher.addSystemAsync(logger);
-
-
-```
+The main difference between the transaction dispatcher and game engines is that games engines life-cycle revolved around a 16 milliseconde tick.
+The dispatcher however builds itself around the life-cycle of an entity, specifically, when an entity is added, updated, and removed. With these
+life-cycles the systems can react to changes only when they happen not on a tick like in video game.
