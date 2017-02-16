@@ -599,10 +599,11 @@ export default class ClarityTransactionDispatcher {
     }
 
     /**
-     * Removes an entity, and its associated content. When the content is
-     * removed it runs it through all the life cycles of content being removed.
-     * It also removes all the components from the entity, this will also trigger
-     * life cycle calls to the systems.
+     * Removes an entity, and its associated content. The dispatcher does the following to remove an entity.
+     * 
+     * - Removes all of the components on the entity notifying the systems that the components have been removed.
+     * - Removes the content and notifies the systems.
+     * - Removes the entity to be removed and notifies the systems the entity has been removed.
      * @param {object} entity - The entity to be removed.
      * @returns {Promise<undefined>} 
      */
