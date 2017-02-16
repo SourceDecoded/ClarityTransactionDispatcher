@@ -207,7 +207,7 @@ fulfill their responsibilities efficiently.</p></div>
         <p>Adds a component to an entity.</p>
 <p>The dispatcher does the following when adding a component.</p>
 <ul>
-<li>Validate the component with all systems. Needs to be validated on all systems to pass.</li>
+<li>Validate the component with all systems. All systems have to validate to pass.</li>
 <li>Saves the component to the datastore.</li>
 <li>Notifies the systems that a component has been added.</li>
 </ul>
@@ -367,7 +367,7 @@ entity are.</p>
 <ul>
 <li>Validate the entity with all systems. All systems have to validate to pass.</li>
 <li>Save the entity to the datastore.</li>
-<li>Notify the systems that an entity has been save to the datastore.</li>
+<li>Notify the systems that an entity has been saved to the datastore.</li>
 </ul>
     </div>
     
@@ -420,7 +420,7 @@ entity are.</p>
 
             
 
-            <td class="description last"><p>The entity you want add.</p></td>
+            <td class="description last"><p>The entity you want to add.</p></td>
         </tr>
 
     
@@ -664,7 +664,7 @@ or governance that needs to be shared acrossed systems.</p>
     </dt>
     <dd>
         
-<span class="param-type">Promise</span>
+<span class="param-type">Promise.&lt;undefined></span>
 
 
 
@@ -691,7 +691,13 @@ or governance that needs to be shared acrossed systems.</p>
     <div class="description">
         <p>Add a system to the dispatcher. The systems are really where the work
 is done. They listen to the life-cycle of the entity and react based
-on the composition of components.</p>
+on the composition of components.
+The dispatcher does the following when adding a system.</p>
+<ul>
+<li>Adds the system.</li>
+<li>Invokes initializeAsync if the systems hasn't been used before, and invokes
+activatedAsync after initializeAsync is finished.</li>
+</ul>
 <p>For example an Image Thumbnail System will look to see if the entity has the
 component of image</p>
 <h4>Required System Methods</h4><ul>
@@ -700,8 +706,8 @@ component of image</p>
 </ul>
 <h4>Optional System Methods</h4><ul>
 <li>activatedAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher)</li>
-<li>disposeAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher)</li>
 <li>deactivatedAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher)</li>
+<li>disposeAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher)</li>
 <li>entityAddedAsync(entity: {_id: string})</li>
 <li>entityUpdatedAsync(oldEntity: any, newEntity: any)</li>
 <li>entityRemovedAsync(entity: {_id: string})</li>
@@ -710,9 +716,10 @@ component of image</p>
 <li>entityComponentUpdatedAsync(entity: {_id: string}, oldComponent: any, newComponent: any)</li>
 <li>entityComponentRemovedAsync(entity: {_id: string}, component: any)</li>
 <li>initializeAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher)</li>
+<li>serviceRemovedAsync(name: string, service: any);</li>
 <li>validateEntityAsync(entity: {_id: string})</li>
 <li>validateComponentAsync(component: {_id: string})</li>
-<li>validateEntityContentAsync(entity: {_id: string})</li>
+<li>validateEntityContentAsync(entity: {_id: string}, newContentId: string)</li>
 </ul>
     </div>
     
@@ -843,6 +850,316 @@ component of image</p>
     <dd>
         
 <span class="param-type">Promise</span>
+
+
+
+    </dd>
+</dl>
+
+
+        
+
+    
+</dd>
+
+        
+            
+<hr>
+<dt>
+    <h4 class="name" id="deactivateSystemAsync"><span class="type-signature"></span>deactivateSystemAsync(system)</h4>
+    
+    
+</dt>
+<dd>
+
+    
+    <div class="description">
+        <p>Deactivates a system and removes it from the systems being notified. To activate again use addSystemAsync.
+Think of this like a pause. The dispatcher calls deactivatedAsync on the system being removed.</p>
+    </div>
+    
+
+    
+
+    
+
+    
+    
+        <h5>Parameters:</h5>
+        
+
+<table class="params table table-striped">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>system</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">ISystem</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>The system to be deactivate.</p></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+    
+
+    
+<dl class="details">
+    
+
+	
+
+	
+
+	
+
+    
+
+    
+
+    
+
+    
+
+	
+
+	
+
+	
+
+	
+
+	
+
+
+
+	
+
+	
+
+	
+
+	
+</dl>
+
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <h5>Returns:</h5>
+    
+            
+<div class="param-desc">
+    <ul>
+<li>Resolves when the system is deactivated.</li>
+</ul>
+</div>
+
+
+
+<dl>
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">Promise.&lt;undefined></span>
+
+
+
+    </dd>
+</dl>
+
+
+        
+
+    
+</dd>
+
+        
+            
+<hr>
+<dt>
+    <h4 class="name" id="disposeSystemAsync"><span class="type-signature"></span>disposeSystemAsync(system)</h4>
+    
+    
+</dt>
+<dd>
+
+    
+    <div class="description">
+        <p>Disposes a system and removes it from the systems being notified. Use then when removing systems for
+good. This allows the system to clean up after itself if needed. The dispatcher calls disposeAsync on the system being removed.</p>
+    </div>
+    
+
+    
+
+    
+
+    
+    
+        <h5>Parameters:</h5>
+        
+
+<table class="params table table-striped">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>system</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">ISystem</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>The system to be disposed.</p></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+    
+
+    
+<dl class="details">
+    
+
+	
+
+	
+
+	
+
+    
+
+    
+
+    
+
+    
+
+	
+
+	
+
+	
+
+	
+
+	
+
+
+
+	
+
+	
+
+	
+
+	
+</dl>
+
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <h5>Returns:</h5>
+    
+            
+<div class="param-desc">
+    <ul>
+<li>Resolves when the system is disposed.</li>
+</ul>
+</div>
+
+
+
+<dl>
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">Promise.&lt;undefined></span>
 
 
 
@@ -1007,155 +1324,7 @@ component of image</p>
             
 <hr>
 <dt>
-    <h4 class="name" id="getComponentsByEntityAsync"><span class="type-signature"></span>getComponentsByEntityAsync(entity)</h4>
-    
-    
-</dt>
-<dd>
-
-    
-    <div class="description">
-        <p>Get the components of an entity by the entity.</p>
-    </div>
-    
-
-    
-
-    
-
-    
-    
-        <h5>Parameters:</h5>
-        
-
-<table class="params table table-striped">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>entity</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">object</span>
-
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>The entity of the components.</p></td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-    
-
-    
-<dl class="details">
-    
-
-	
-
-	
-
-	
-
-    
-
-    
-
-    
-
-    
-
-	
-
-	
-
-	
-
-	
-
-	
-
-
-
-	
-
-	
-
-	
-
-	
-</dl>
-
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <h5>Returns:</h5>
-    
-            
-
-
-<dl>
-    <dt>
-        Type
-    </dt>
-    <dd>
-        
-<span class="param-type">Promise.&lt;Array></span>
-
-
-
-    </dd>
-</dl>
-
-
-        
-
-    
-</dd>
-
-        
-            
-<hr>
-<dt>
-    <h4 class="name" id="getComponentsByTypeAsync"><span class="type-signature"></span>getComponentsByTypeAsync(entity, type)</h4>
+    <h4 class="name" id="getComponentsByEntityAndTypeAsync"><span class="type-signature"></span>getComponentsByEntityAndTypeAsync(entity, type)</h4>
     
     
 </dt>
@@ -1299,6 +1468,154 @@ component of image</p>
     
 
     
+
+    
+</dd>
+
+        
+            
+<hr>
+<dt>
+    <h4 class="name" id="getComponentsByEntityAsync"><span class="type-signature"></span>getComponentsByEntityAsync(entity)</h4>
+    
+    
+</dt>
+<dd>
+
+    
+    <div class="description">
+        <p>Get the components of an entity by the entity.</p>
+    </div>
+    
+
+    
+
+    
+
+    
+    
+        <h5>Parameters:</h5>
+        
+
+<table class="params table table-striped">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>entity</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">object</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>The entity of the components.</p></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+    
+
+    
+<dl class="details">
+    
+
+	
+
+	
+
+	
+
+    
+
+    
+
+    
+
+    
+
+	
+
+	
+
+	
+
+	
+
+	
+
+
+
+	
+
+	
+
+	
+
+	
+</dl>
+
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <h5>Returns:</h5>
+    
+            
+
+
+<dl>
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">Promise.&lt;Array></span>
+
+
+
+    </dd>
+</dl>
+
+
+        
 
     
 </dd>
@@ -2320,6 +2637,84 @@ life cycle calls to the systems.</p>
             
 <hr>
 <dt>
+    <h4 class="name" id="removeEntityContentAsync"><span class="type-signature"></span>removeEntityContentAsync()</h4>
+    
+    
+</dt>
+<dd>
+
+    
+    <div class="description">
+        <p>Removes the content of an entity.</p>
+    </div>
+    
+
+    
+
+    
+
+    
+    
+
+    
+<dl class="details">
+    
+
+	
+
+	
+
+	
+
+    
+
+    
+
+    
+
+    
+
+	
+
+	
+
+	
+
+	
+
+	
+
+
+
+	
+
+	
+
+	
+
+	
+</dl>
+
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dd>
+
+        
+            
+<hr>
+<dt>
     <h4 class="name" id="removeServiceAsync"><span class="type-signature"></span>removeServiceAsync(name)</h4>
     
     
@@ -2328,7 +2723,8 @@ life cycle calls to the systems.</p>
 
     
     <div class="description">
-        <p>Removes a service by its name.</p>
+        <p>Removes a service by its name. The dispatcher will notify the systems that this service is being
+removed.</p>
     </div>
     
 
@@ -2451,161 +2847,7 @@ life cycle calls to the systems.</p>
     </dt>
     <dd>
         
-<span class="param-type">Promise.&lt;undefined></span>
-
-
-
-    </dd>
-</dl>
-
-
-        
-
-    
-</dd>
-
-        
-            
-<hr>
-<dt>
-    <h4 class="name" id="removeSystemAsync"><span class="type-signature"></span>removeSystemAsync(system)</h4>
-    
-    
-</dt>
-<dd>
-
-    
-    <div class="description">
-        <p>Removes a system.</p>
-    </div>
-    
-
-    
-
-    
-
-    
-    
-        <h5>Parameters:</h5>
-        
-
-<table class="params table table-striped">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>system</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">system</span>
-
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>The system to be removed.</p></td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-    
-
-    
-<dl class="details">
-    
-
-	
-
-	
-
-	
-
-    
-
-    
-
-    
-
-    
-
-	
-
-	
-
-	
-
-	
-
-	
-
-
-
-	
-
-	
-
-	
-
-	
-</dl>
-
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <h5>Returns:</h5>
-    
-            
-<div class="param-desc">
-    <ul>
-<li>Resolves when the system is disposed.</li>
-</ul>
-</div>
-
-
-
-<dl>
-    <dt>
-        Type
-    </dt>
-    <dd>
-        
-<span class="param-type">Promise.&lt;undefined></span>
+<span class="param-type">undefined</span>
 
 
 
@@ -3122,7 +3364,7 @@ life cycle calls to the systems.</p>
 <span class="jsdoc-message">
 	Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.3</a>
 	
-		on February 15th 2017, 4:37:47 pm
+		on February 16th 2017, 4:30:59 pm
 	
 	using the <a href="https://github.com/docstrap/docstrap">DocStrap template</a>.
 </span>

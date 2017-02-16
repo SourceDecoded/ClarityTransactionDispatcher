@@ -2,6 +2,11 @@
 const mongodb_1 = require("mongodb");
 const Grid = require("gridfs-stream");
 const MongoDbIterator_1 = require("./MongoDbIterator");
+const NullableLogger_1 = require("./NullableLogger");
+const nullableLogger = new NullableLogger_1.default();
+const resolvedPromise = Promise.resolve();
+const ENTITIES_COLLECTION = "entities";
+const COMPONENTS_COLLECTION = "components";
 /**
  * Class that organizes systems to respond to data transactions.
  * The dispatcher manages the life-cycle of data entities. They can be
@@ -31,6 +36,60 @@ class ClarityTransactionDispatcher {
         this.databaseUrl = config.databaseUrl;
     }
     /**
+     * Add an item to a collection.
+     * @private
+     */
+    _addItemToCollectionAsync(item, collectionName) {
+        return this._getDatabaseAsync().then((db) => {
+            return new Promise((resolve, reject) => {
+                db.collection(collectionName).insertOne(item, (error, result) => {
+                    if (error != null) {
+                        reject(error);
+                    }
+                    else {
+                        resolve(result);
+                    }
+                });
+            });
+        });
+    }
+    /**
+     * Find one in a collection.
+     * @private
+     */
+    _findOneAsync(collectionName, filter) {
+        return this._getDatabaseAsync().then((db) => {
+            return new Promise((resolve, reject) => {
+                db.collection(collectionName).findOne(filter, function (error, item) {
+                    if (error != null) {
+                        reject(error);
+                    }
+                    else {
+                        resolve(item);
+                    }
+                });
+            });
+        });
+    }
+    /**
+    * Find many in a collection.
+    * @private
+    */
+    _findAsync(collectionName, filter) {
+        return this._getDatabaseAsync().then((db) => {
+            return new Promise((resolve, reject) => {
+                db.collection(collectionName).find(filter).toArray((error, items) => {
+                    if (error != null) {
+                        reject(error);
+                    }
+                    else {
+                        resolve(items);
+                    }
+                });
+            });
+        });
+    }
+    /**
      * Get a mongodb.
      * @private
      * @returns {Promise<mongodb>}
@@ -58,32 +117,150 @@ class ClarityTransactionDispatcher {
         });
     }
     /**
-     * Notify the systems of a life cycle.
+     * Get the logger.
      * @private
      */
-    _notifySystems(methodName, args) {
+    _getLogger() {
+        return this.services["logger"] || nullableLogger;
+    }
+    /**
+     * Invoke a method on any object and make sure a promise is the returned value.
+     * @private
+     */
+    _invokeMethodAsync(obj, methodName, args) {
+        var returnValue;
+        if (typeof obj[methodName] === "function") {
+            returnValue = obj[methodName].apply(obj, args);
+            if (!(returnValue instanceof Promise)) {
+                returnValue = Promise.resolve(returnValue);
+            }
+        }
+        else {
+            returnValue = resolvedPromise;
+        }
+        return returnValue;
+    }
+    /**
+     * Notify the systems of a life cycle by its method name.
+     * @private
+     * @returns {Promise<undefined>}
+     */
+    _notifySystemsAsync(methodName, args) {
         return this.systems.reduce((promise, system) => {
             return promise.then(() => {
-                if (typeof system[methodName] === "function") {
-                    return system[methodName].apply(system, args);
+                try {
+                    return this._invokeMethodAsync(system, methodName, args);
                 }
-                else {
-                    return Promise.resolve();
+                catch (error) {
+                    this._getLogger().error(error.message, error);
+                    return resolvedPromise;
                 }
             });
-        }, Promise.resolve());
+        }, resolvedPromise);
+    }
+    /**
+       * Notify the systems of a life cycle by its method name and recover if
+       * any of the systems reject the promise.
+       *
+       * This will be used for most life-cycle calls. The other systems need to respond
+       * regardless of other systems failing.
+       * @private
+       * @returns {Promise<undefined>}
+       */
+    _notifySystemsWithRecoveryAsync(methodName, args) {
+        return this.systems.reduce((promise, system) => {
+            return promise.then(() => {
+                try {
+                    return this._invokeMethodAsync(system, methodName, args);
+                }
+                catch (error) {
+                    this._getLogger().error(error.message, error);
+                    return resolvedPromise;
+                }
+            }).catch(() => {
+                return resolvedPromise;
+            });
+        }, resolvedPromise);
+    }
+    /**
+     * Remove the content of an entity.
+     * @private
+     */
+    _removeEntityContentAsync(contentId) {
+        return this._getGridFsAsync().then((gfs) => {
+            return new Promise((resolve, reject) => {
+                gfs.remove({
+                    _id: contentId
+                }, function (error) {
+                    if (error != null) {
+                        reject(error);
+                    }
+                    else {
+                        resolve();
+                    }
+                });
+            });
+        }).catch((error) => {
+            this._getLogger().error(error.message, error);
+            // It may not have been able to find the file.
+            return resolvedPromise;
+        });
+    }
+    /**
+     * Remove and item from a collection
+     * @private
+     * @returns {Promise<undefined>}
+     */
+    _removeItemfromCollection(item, collectionName) {
+        return this._getDatabaseAsync().then((db) => {
+            return new Promise((resolve, reject) => {
+                db.collection(collectionName).deleteOne({
+                    _id: mongodb_1.default.ObjectID(item._id)
+                }, item, (error, result) => {
+                    if (error != null) {
+                        reject(error);
+                    }
+                    else {
+                        resolve(result);
+                    }
+                });
+            });
+        });
+    }
+    /**
+     * Update an item in a collection.
+     * @private
+     * @returns {Promise<undefined>}
+     */
+    _updateItemInCollection(item, collectionName) {
+        return this._getDatabaseAsync().then((db) => {
+            return new Promise((resolve, reject) => {
+                db.collection(collectionName).update({
+                    _id: mongodb_1.default.ObjectID(item._id)
+                }, item, (error, result) => {
+                    if (error != null) {
+                        reject(error);
+                    }
+                    else {
+                        resolve(result);
+                    }
+                });
+            });
+        });
     }
     /**
      * This allows systems to validate the component being saved.
      * @private
      */
-    _validateComponent(entity, component) {
+    _validateComponentAsync(entity, component) {
+        return this._notifySystemsAsync("validateComponentAsync", [entity, component]);
     }
     /**
      * This allows systems to validate the entity being saved.
      * @private
      */
-    _validateEntity(entity) {
+    _validateEntityAsync(entity) {
+        return this._notifySystemsAsync("validateEntityAsync", [entity]);
     }
     /**
      * This allows the systems to validate content before its accepted.
@@ -92,7 +269,8 @@ class ClarityTransactionDispatcher {
      * to hold it in memory.
      * @private
      */
-    _validateEntityContent(entity, contentId) {
+    _validateEntityContentAsync(entity, newContentId) {
+        return this._notifySystemsAsync("validateEntityContentAsync", [entity, newContentId]);
     }
     /**
      * Add an Entity to the datastore. The steps the dispatcher takes when saving an
@@ -100,22 +278,15 @@ class ClarityTransactionDispatcher {
      *
      * - Validate the entity with all systems. All systems have to validate to pass.
      * - Save the entity to the datastore.
-     * - Notify the systems that an entity has been save to the datastore.
-     * @param {object} entity - The entity you want add.
+     * - Notify the systems that an entity has been saved to the datastore.
+     * @param {object} entity - The entity you want to add.
      * @return {Promise}
      */
     addEntityAsync(entity) {
-        return this._getDatabaseAsync().then((db) => {
-            return new Promise((resolve, reject) => {
-                db.collection("entities").insertOne(entity, (error, result) => {
-                    if (error != null) {
-                        reject(error);
-                    }
-                    else {
-                        resolve(result);
-                    }
-                });
-            });
+        return this._validateEntityAsync(entity).then(() => {
+            return this._addItemToCollectionAsync(entity, ENTITIES_COLLECTION);
+        }).then(() => {
+            return this._notifySystemsWithRecoveryAsync("entityAddedAsync", [entity]);
         });
     }
     /**
@@ -123,29 +294,18 @@ class ClarityTransactionDispatcher {
      *
      * The dispatcher does the following when adding a component.
      *
-     * - Validate the component with all systems. Needs to be validated on all systems to pass.
+     * - Validate the component with all systems. All systems have to validate to pass.
      * - Saves the component to the datastore.
      * - Notifies the systems that a component has been added.
      * @param {object} entity - The entity of the component being added.
      * @param {object} component - The component being added.
      */
     addComponentAsync(entity, component) {
-        return this._getDatabaseAsync().then((db) => {
-            return new Promise((resolve, reject) => {
-                component.entity_id = mongodb_1.default.ObjectID(entity._id);
-                db.collection("components").insertOne(component, (error, result) => {
-                    if (error != null) {
-                        reject(error);
-                    }
-                    else {
-                        resolve(result);
-                    }
-                });
-            }).then((results) => {
-                return this._notifySystems("entityComponentAddedAsync", [entity, component]).then(() => {
-                    return results;
-                });
-            });
+        component.entity_id = entity._id;
+        return this._validateEntityAsync(entity).then(() => {
+            return this._addItemToCollectionAsync(entity, COMPONENTS_COLLECTION);
+        }).then(() => {
+            return this._notifySystemsWithRecoveryAsync("entityComponentAddedAsync", [entity, component]);
         });
     }
     /**
@@ -153,7 +313,7 @@ class ClarityTransactionDispatcher {
      * or governance that needs to be shared acrossed systems.
      * @param {string} name - The name by which the systems will request the service.
      * @param {object} service - The service.
-     * @return {Promise}
+     * @return {Promise<undefined>}
      */
     addServiceAsync(name, service) {
         this.services[name] = service;
@@ -162,6 +322,11 @@ class ClarityTransactionDispatcher {
      * Add a system to the dispatcher. The systems are really where the work
      * is done. They listen to the life-cycle of the entity and react based
      * on the composition of components.
+     * The dispatcher does the following when adding a system.
+     *
+     * - Adds the system.
+     * - Invokes initializeAsync if the systems hasn't been used before, and invokes
+     * activatedAsync after initializeAsync is finished.
      *
      * For example an Image Thumbnail System will look to see if the entity has the
      * component of image
@@ -171,8 +336,8 @@ class ClarityTransactionDispatcher {
      *
      * #### Optional System Methods
      *  - activatedAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher)
-     *  - disposeAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher)
      *  - deactivatedAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher)
+     *  - disposeAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher)
      *  - entityAddedAsync(entity: {_id: string})
      *  - entityUpdatedAsync(oldEntity: any, newEntity: any)
      *  - entityRemovedAsync(entity: {_id: string})
@@ -181,9 +346,10 @@ class ClarityTransactionDispatcher {
      *  - entityComponentUpdatedAsync(entity: {_id: string}, oldComponent: any, newComponent: any)
      *  - entityComponentRemovedAsync(entity: {_id: string}, component: any)
      *  - initializeAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher)
+     *  - serviceRemovedAsync(name: string, service: any);
      *  - validateEntityAsync(entity: {_id: string})
      *  - validateComponentAsync(component: {_id: string})
-     *  - validateEntityContentAsync(entity: {_id: string})
+     *  - validateEntityContentAsync(entity: {_id: string}, newContentId: string)
      * @param {ISystem} system - The system to add.
      * @return {Promise} - An undefined Promise.
      */
@@ -191,25 +357,62 @@ class ClarityTransactionDispatcher {
         this.systems.push(system);
     }
     /**
+     * Deactivates a system and removes it from the systems being notified. To activate again use addSystemAsync.
+     * Think of this like a pause. The dispatcher calls deactivatedAsync on the system being removed.
+     * @param {ISystem} system - The system to be deactivate.
+     * @returns {Promise<undefined>} - Resolves when the system is deactivated.
+     */
+    deactivateSystemAsync(system) {
+        var deactivatedPromise;
+        var index = this.systems.indexOf(system);
+        if (index === -1) {
+            return Promise.reject(new Error("Couldn't find system to be deactivated."));
+        }
+        else {
+            this.systems.splice(index, 1);
+            try {
+                return deactivatedPromise = this._invokeMethodAsync(system, "deactivatedAsync", []).catch(() => {
+                    return resolvedPromise;
+                });
+            }
+            catch (e) {
+                return resolvedPromise;
+            }
+        }
+    }
+    /**
+     * Disposes a system and removes it from the systems being notified. Use then when removing systems for
+     * good. This allows the system to clean up after itself if needed. The dispatcher calls disposeAsync on the system being removed.
+     * @param {ISystem} system - The system to be disposed.
+     * @returns {Promise<undefined>} - Resolves when the system is disposed.
+     */
+    disposeSystemAsync(system) {
+        var deactivatedPromise;
+        var index = this.systems.indexOf(system);
+        if (index === -1) {
+            return Promise.reject(new Error("Couldn't find system to be disposed."));
+        }
+        else {
+            this.systems.splice(index, 1);
+            try {
+                return deactivatedPromise = this._invokeMethodAsync(system, "disposeAsync", []).catch(() => {
+                    return resolvedPromise;
+                });
+            }
+            catch (e) {
+                return resolvedPromise;
+            }
+        }
+    }
+    /**
      * Gets the component by the id provided.
      * @param {string} componentId - The id of the component.
      * @return {Promise<Array>}
      */
     getComponentAsync(componentId) {
-        return this._getDatabaseAsync().then((db) => {
-            var id = mongodb_1.default.ObjectID(componentId);
-            return new Promise((resolve, reject) => {
-                db.collection("components").findOne({
-                    _id: id
-                }, function (error, component) {
-                    if (error != null) {
-                        reject(error);
-                    }
-                    else {
-                        resolve(component);
-                    }
-                });
-            });
+        var id = mongodb_1.default.ObjectID(componentId);
+        return this._findOneAsync(COMPONENTS_COLLECTION, {
+            _id: id
         });
     }
     /**
@@ -218,44 +421,24 @@ class ClarityTransactionDispatcher {
      * @return {Promise<Array>}
      */
     getComponentsByEntityAsync(entity) {
-        return this._getDatabaseAsync().then((db) => {
-            var entityId = mongodb_1.default.ObjectID(entity._id);
-            return new Promise((resolve, reject) => {
-                db.collection("components").find({
-                    entity_id: entityId
-                }, function (error, components) {
-                    if (error != null) {
-                        reject(error);
-                    }
-                    else {
-                        resolve(components);
-                    }
-                });
-            });
-        });
+        var entityId = mongodb_1.default.ObjectID(entity._id);
+        var filter = {
+            entity_id: entityId
+        };
+        return this._findAsync(COMPONENTS_COLLECTION, filter);
     }
     /**
      * Get the Components on the entity provided matching the type provided.
      * @param {object} entity - The entity of the needed components.
      * @param {string} type - The type of the component needed.
      */
-    getComponentsByTypeAsync(entity, type) {
-        return this._getDatabaseAsync().then((db) => {
-            var entityId = mongodb_1.default.ObjectID(entity._id);
-            return new Promise((resolve, reject) => {
-                db.collection("components").find({
-                    entity_id: entityId,
-                    type: type
-                }, function (error, components) {
-                    if (error != null) {
-                        reject(error);
-                    }
-                    else {
-                        resolve(components);
-                    }
-                });
-            });
-        });
+    getComponentsByEntityAndTypeAsync(entity, type) {
+        var entityId = mongodb_1.default.ObjectID(entity._id);
+        var filter = {
+            entity_id: entityId,
+            type: type
+        };
+        return this._findAsync(COMPONENTS_COLLECTION, filter);
     }
     /**
      * Get an entity by its id.
@@ -263,21 +446,10 @@ class ClarityTransactionDispatcher {
      * @return {Promise<Entity>} - A Promise resolved with the entity or null.
      */
     getEntityByIdAsync(entityId) {
-        return this._getDatabaseAsync().then((db) => {
-            var id = mongodb_1.default.ObjectID(entityId);
-            return new Promise((resolve, reject) => {
-                db.collection("entities").findOne({
-                    entity_id: id
-                }, function (error, entity) {
-                    if (error != null) {
-                        reject(error);
-                    }
-                    else {
-                        resolve(entity);
-                    }
-                });
-            });
-        });
+        var filter = {
+            _id: entityId
+        };
+        return this._findOneAsync(ENTITIES_COLLECTION, filter);
     }
     /**
      * Get a stream of the content of the entity.
@@ -330,26 +502,22 @@ class ClarityTransactionDispatcher {
      * @returns {Promise<undefined>}
      */
     removeComponentAsync(component) {
-        return this._getDatabaseAsync().then((db) => {
-            return new Promise((resolve, reject) => {
-                var id = mongodb_1.default.ObjectID(component._id);
-                db.collection("components").deleteOne({
-                    _id: id
-                }, (error, results) => {
-                    if (error != null) {
-                        reject(error);
-                    }
-                    else {
-                        resolve(results);
-                    }
-                });
-            });
-        }).then((results) => {
-            return this.getEntityByIdAsync(component.entity_id).then((entity) => {
-                return this._notifySystems("entityComponentRemovedAsync", [entity, component]);
-            }).then(() => {
-                return Promise.resolve(results);
-            });
+        return this._removeItemfromCollection(component, COMPONENTS_COLLECTION).then(() => {
+            return this.getEntityByIdAsync(component.entity_id);
+        }).then((entity) => {
+            return this._notifySystemsWithRecoveryAsync("entityComponentRemovedAsync", [entity, component]);
+        });
+    }
+    /**
+     * Removes the content of an entity.
+     */
+    removeEntityContentAsync(entity) {
+        var contentId = entity.content_id;
+        this._removeEntityContentAsync(contentId).then(() => {
+            entity.content_id = null;
+            return this.updateEntityAsync(entity);
+        }).then(() => {
+            return this._notifySystemsWithRecoveryAsync("entityContentUpdatedAsync", [null, contentId]);
         });
     }
     /**
@@ -361,20 +529,29 @@ class ClarityTransactionDispatcher {
      * @returns {Promise<undefined>}
      */
     removeEntityAsync(entity) {
+        return this.getComponentsByEntityAsync(entity).then((components) => {
+            return components.reduce((promise, component) => {
+                return promise.then(() => {
+                    return this.removeComponentAsync(component);
+                }).catch((error) => {
+                    return resolvedPromise;
+                });
+            }, resolvedPromise);
+        }).then(() => {
+            return this.removeEntityContentAsync(entity);
+        });
     }
     /**
-     * Removes a service by its name.
+     * Removes a service by its name. The dispatcher will notify the systems that this service is being
+     * removed.
      * @param {string} name - The name of the service to be removed.
-     * @returns {Promise<undefined>}
+     * @returns {undefined}
      */
     removeServiceAsync(name) {
-    }
-    /**
-     * Removes a system.
-     * @param {system} - The system to be removed.
-     * @returns {Promise<undefined>} - Resolves when the system is disposed.
-     */
-    removeSystemAsync(system) {
+        if (this.services[name]) {
+            delete this.services[name];
+            return this._notifySystemsWithRecoveryAsync("serviceRemovedAsync", [name, this.services[name]]);
+        }
     }
     /**
      * Updated an entity.
