@@ -1,8 +1,11 @@
-import { ISystem } from "./interfaces";
+import { ISystem, ILogger } from "./interfaces";
 import mongo, { MongoClient } from "mongodb";
 import * as Grid from "gridfs-stream";
 import * as fs from "fs";
 import MongoDbIterator from "./MongoDbIterator";
+import NullableLogger from "./NullableLogger";
+
+var nullableLogger = new NullableLogger();
 
 /**
  * Class that organizes systems to respond to data transactions.
@@ -89,6 +92,13 @@ export default class ClarityTransactionDispatcher {
     }
 
     /**
+     * Get the logger.
+     */
+    _getLogger() {
+        return <ILogger>this.services["logger"] || nullableLogger;
+    }
+
+    /**
      * Notify the systems of a life cycle by its method name.
      * @private
      * @returns {Promise<undefined>}
@@ -98,13 +108,46 @@ export default class ClarityTransactionDispatcher {
 
             return promise.then(() => {
                 if (typeof system[methodName] === "function") {
-                    return system[methodName].apply(system, args);
+                    try {
+                        return system[methodName].apply(system, args);
+                    } catch (error) {
+
+                        this._getLogger().error(error.message, error);
+
+                        return Promise.resolve();
+                    }
                 } else {
                     return Promise.resolve();
                 }
             });
 
         }, Promise.resolve());
+    }
+
+    /**
+     * Remove the content of an entity.
+     */
+    _removeEntityContentAsync(contentId: string) {
+        return this._getGridFsAsync().then((gfs) => {
+            return new Promise((resolve, reject) => {
+
+                gfs.remove({
+                    _id: contentId
+                }, function (error) {
+                    if (error != null) {
+                        reject(error);
+                    } else {
+                        resolve();
+                    }
+                });
+
+            });
+        }).catch((error) => {
+            this._getLogger().error(error.message, error);
+
+            // It may not have been able to find the file.
+            return Promise.resolve();
+        });
     }
 
     /**
@@ -159,8 +202,6 @@ export default class ClarityTransactionDispatcher {
         });
     }
 
-
-
     /**
      * This allows systems to validate the component being saved.
      * @private
@@ -200,7 +241,7 @@ export default class ClarityTransactionDispatcher {
      */
     addEntityAsync(entity: any) {
 
-        this._validateEntityAsync(entity).then(() => {
+        return this._validateEntityAsync(entity).then(() => {
             return this._addItemToCollectionAsync(entity, "entities");
         }).then(() => {
             return this._notifySystemsAsync("entityAddedAsync", [entity]);
@@ -222,7 +263,7 @@ export default class ClarityTransactionDispatcher {
     addComponentAsync(entity: { _id: string }, component: { type: string, entity_id: string }) {
         component.entity_id = entity._id;
 
-        this._validateEntityAsync(entity).then(() => {
+        return this._validateEntityAsync(entity).then(() => {
             return this._addItemToCollectionAsync(entity, "components");
         }).then(() => {
             return this._notifySystemsAsync("entityComponentAddedAsync", [entity, component]);
@@ -235,7 +276,7 @@ export default class ClarityTransactionDispatcher {
      * or governance that needs to be shared acrossed systems.
      * @param {string} name - The name by which the systems will request the service.
      * @param {object} service - The service.
-     * @return {Promise}
+     * @return {Promise<undefined>}
      */
     addServiceAsync(name: string, service: any) {
         this.services[name] = service;
@@ -254,8 +295,8 @@ export default class ClarityTransactionDispatcher {
      * 
      * #### Optional System Methods
      *  - activatedAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher)
-     *  - disposeAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher)
      *  - deactivatedAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher)
+     *  - disposeAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher)
      *  - entityAddedAsync(entity: {_id: string})
      *  - entityUpdatedAsync(oldEntity: any, newEntity: any)
      *  - entityRemovedAsync(entity: {_id: string})
@@ -264,6 +305,7 @@ export default class ClarityTransactionDispatcher {
      *  - entityComponentUpdatedAsync(entity: {_id: string}, oldComponent: any, newComponent: any)
      *  - entityComponentRemovedAsync(entity: {_id: string}, component: any)
      *  - initializeAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher)
+     *  - serviceRemovedAsync(name: string, service: any);
      *  - validateEntityAsync(entity: {_id: string})
      *  - validateComponentAsync(component: {_id: string})
      *  - validateEntityContentAsync(entity: {_id: string}, newContentId: string)
@@ -453,21 +495,7 @@ export default class ClarityTransactionDispatcher {
     removeEntityContentAsync(entity: { _id: string, content_id: string }) {
         var contentId = entity.content_id;
 
-        this._getGridFsAsync().then((gfs) => {
-            return new Promise((resolve, reject) => {
-
-                gfs.remove({
-                    _id: entity.content_id
-                }, function (error) {
-                    if (error != null) {
-                        reject(error);
-                    } else {
-                        resolve();
-                    }
-                });
-
-            });
-        }).then(() => {
+        this._removeEntityContentAsync(contentId).then(() => {
             entity.content_id = null;
             return this.updateEntityAsync(entity);
         }).then(() => {
@@ -490,6 +518,8 @@ export default class ClarityTransactionDispatcher {
 
                 return promise.then(() => {
                     return this.removeComponentAsync(component);
+                }).catch((error) => {
+                    return Promise.resolve();
                 });
 
             }, Promise.resolve());
@@ -500,11 +530,12 @@ export default class ClarityTransactionDispatcher {
     }
 
     /**
-     * Removes a service by its name.
+     * Removes a service by its name. The dispatcher will notify the systems that this service is being 
+     * removed.
      * @param {string} name - The name of the service to be removed.
      * @returns {undefined}
      */
-    removeService(name: string) {
+    removeServiceAsync(name: string) {
         delete this.services[name];
     }
 

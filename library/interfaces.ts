@@ -23,8 +23,8 @@ export interface ISystem {
 
     // Optional interfaces.
     activatedAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher);
-    disposeAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher);
     deactivatedAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher);
+    disposeAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher);
     entityAddedAsync(entity: { _id: string });
     entityUpdatedAsync(oldEntity: any, newEntity: any);
     entityRemovedAsync(entity: { _id: string });
@@ -33,10 +33,10 @@ export interface ISystem {
     entityComponentUpdatedAsync(entity: { _id: string }, oldComponent: any, newComponent: any);
     entityComponentRemovedAsync(entity: { _id: string }, component: any);
     initializeAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher);
+    serviceRemovedAsync(name: string, service: any);
     validateEntityAsync(entity: { _id: string });
     validateComponentAsync(component: { _id: string });
-    validateEntityContentAsync(entity: { _id: string });
-
+    validateEntityContentAsync(entity: { _id: string }, newContentId: string);
 }
 
 export interface ILogger {
