@@ -19,5 +19,17 @@ through composition, and simplicity because systems became specialist. They only
 
 The main difference between the transaction dispatcher and game engines is that games engine's life-cycle revolved around a 16 millisecond tick.
 The dispatcher however builds itself around the life-cycle of an entity, specifically, when an entity is added, updated, and removed. With these
-life-cycles the systems can react to changes. It is slightly more complicated than just three life-cycles, but that is the idea. For a full reference
+life-cycles the systems can react to changes in an efficient way. It is slightly more complicated than just three life-cycles, but that is the idea. For a full list
 of the life-cycles [click here](./ClarityTransactionDispatcher.html#addSystemAsync__anchor).
+
+The structure of an entity is as follows.
+* An entity has many components of any type.
+* An entity has content. 
+
+The entity's components are just objects of varying properties and the only requirement is that they have a "type" property. 
+The content of an entity could be nothing or image binary. It could also be a JSON object. The entity itself has no important data on it 
+other than its id. It is the container, and that is it.
+
+So an entity could have content of an image and have a component with the type "Image". The image component would have important information on it
+pertaining to the image like jpg, or png. Of course this component would be maintained by 1 or more systems based on the life-cycle of entity's content
+and other components.
