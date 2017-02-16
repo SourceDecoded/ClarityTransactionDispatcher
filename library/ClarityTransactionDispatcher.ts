@@ -5,7 +5,12 @@ import * as fs from "fs";
 import MongoDbIterator from "./MongoDbIterator";
 import NullableLogger from "./NullableLogger";
 
-var nullableLogger = new NullableLogger();
+const nullableLogger = new NullableLogger();
+const resolvedPromise = Promise.resolve();
+
+const ENTITIES_COLLECTION = "entities";
+const COMPONENTS_COLLECTION = "components";
+
 
 /**
  * Class that organizes systems to respond to data transactions.
@@ -49,7 +54,7 @@ export default class ClarityTransactionDispatcher {
 
             return new Promise((resolve, reject) => {
 
-                db.collection("components").insertOne(item, (error, result) => {
+                db.collection(collectionName).insertOne(item, (error, result) => {
 
                     if (error != null) {
                         reject(error);
@@ -60,6 +65,46 @@ export default class ClarityTransactionDispatcher {
                 });
 
             });
+        });
+    }
+
+    /** 
+     * Find one in a collection.
+     */
+    _findOneAsync(collectionName: string, filter: any) {
+        return this._getDatabaseAsync().then((db: any) => {
+            return new Promise((resolve, reject) => {
+
+                db.collection(collectionName).findOne(filter, function (error, item) {
+                    if (error != null) {
+                        reject(error);
+                    } else {
+                        resolve(item);
+                    }
+                });
+
+            });
+
+        });
+    }
+
+    /** 
+    * Find many in a collection.
+    */
+    _findAsync(collectionName: string, filter: any) {
+        return this._getDatabaseAsync().then((db: any) => {
+            return new Promise((resolve, reject) => {
+
+                db.collection(collectionName).find(filter).toArray((error, items) => {
+                    if (error != null) {
+                        reject(error);
+                    } else {
+                        resolve(items);
+                    }
+                });
+
+            });
+
         });
     }
 
@@ -114,14 +159,46 @@ export default class ClarityTransactionDispatcher {
 
                         this._getLogger().error(error.message, error);
 
-                        return Promise.resolve();
+                        return resolvedPromise;
                     }
                 } else {
-                    return Promise.resolve();
+                    return resolvedPromise;
                 }
             });
 
-        }, Promise.resolve());
+        }, resolvedPromise);
+    }
+
+    /**
+       * Notify the systems of a life cycle by its method name and recover if 
+       * any of the systems reject the promise.
+       * 
+       * This will be used for most life-cycle calls. The other systems need to respond 
+       * regardless of other systems failing.
+       * @private
+       * @returns {Promise<undefined>}
+       */
+    _notifySystemsWithRecoveryAsync(methodName: string, args: Array<any>) {
+        return this.systems.reduce((promise, system) => {
+
+            return promise.then(() => {
+                if (typeof system[methodName] === "function") {
+                    try {
+                        return system[methodName].apply(system, args);
+                    } catch (error) {
+                        // System has run time error.
+                        this._getLogger().error(error.message, error);
+
+                        return resolvedPromise;
+                    }
+                } else {
+                    return resolvedPromise;
+                }
+            }).catch(() => {
+                return resolvedPromise;
+            });
+
+        }, resolvedPromise);
     }
 
     /**
@@ -146,7 +223,7 @@ export default class ClarityTransactionDispatcher {
             this._getLogger().error(error.message, error);
 
             // It may not have been able to find the file.
-            return Promise.resolve();
+            return resolvedPromise;
         });
     }
 
@@ -160,7 +237,7 @@ export default class ClarityTransactionDispatcher {
 
             return new Promise((resolve, reject) => {
 
-                db.collection("components").deleteOne({
+                db.collection(collectionName).deleteOne({
                     _id: mongo.ObjectID(item._id)
                 }, item, (error, result) => {
 
@@ -186,7 +263,7 @@ export default class ClarityTransactionDispatcher {
 
             return new Promise((resolve, reject) => {
 
-                db.collection("components").update({
+                db.collection(collectionName).update({
                     _id: mongo.ObjectID(item._id)
                 }, item, (error, result) => {
 
@@ -242,7 +319,7 @@ export default class ClarityTransactionDispatcher {
     addEntityAsync(entity: any) {
 
         return this._validateEntityAsync(entity).then(() => {
-            return this._addItemToCollectionAsync(entity, "entities");
+            return this._addItemToCollectionAsync(entity, ENTITIES_COLLECTION);
         }).then(() => {
             return this._notifySystemsAsync("entityAddedAsync", [entity]);
         });
@@ -264,7 +341,7 @@ export default class ClarityTransactionDispatcher {
         component.entity_id = entity._id;
 
         return this._validateEntityAsync(entity).then(() => {
-            return this._addItemToCollectionAsync(entity, "components");
+            return this._addItemToCollectionAsync(entity, COMPONENTS_COLLECTION);
         }).then(() => {
             return this._notifySystemsAsync("entityComponentAddedAsync", [entity, component]);
         });
@@ -322,24 +399,9 @@ export default class ClarityTransactionDispatcher {
      * @return {Promise<Array>}
      */
     getComponentAsync(componentId: string) {
-        return this._getDatabaseAsync().then((db: any) => {
-
-            var id = mongo.ObjectID(componentId);
-
-            return new Promise((resolve, reject) => {
-
-                db.collection("components").findOne({
-                    _id: id
-                }, function (error, component) {
-                    if (error != null) {
-                        reject(error);
-                    } else {
-                        resolve(component);
-                    }
-                });
-
-            });
-
+        var id = mongo.ObjectID(componentId);
+        return this._findOneAsync(COMPONENTS_COLLECTION, {
+            _id: id
         });
     }
 
@@ -349,25 +411,12 @@ export default class ClarityTransactionDispatcher {
      * @return {Promise<Array>}
      */
     getComponentsByEntityAsync(entity: { _id: string }) {
-        return this._getDatabaseAsync().then((db: any) => {
+        var entityId = mongo.ObjectID(entity._id);
+        var filter = {
+            entity_id: entityId
+        };
 
-            var entityId = mongo.ObjectID(entity._id);
-
-            return new Promise((resolve, reject) => {
-
-                db.collection("components").find({
-                    entity_id: entityId
-                }, function (error, components) {
-                    if (error != null) {
-                        reject(error);
-                    } else {
-                        resolve(components);
-                    }
-                });
-
-            });
-
-        });
+        return this._findAsync(COMPONENTS_COLLECTION, filter);
     }
 
     /**
@@ -375,27 +424,14 @@ export default class ClarityTransactionDispatcher {
      * @param {object} entity - The entity of the needed components.
      * @param {string} type - The type of the component needed.
      */
-    getComponentsByTypeAsync(entity: { _id: string }, type: string) {
-        return this._getDatabaseAsync().then((db: any) => {
+    getComponentsByEntityAndTypeAsync(entity: { _id: string }, type: string) {
+        var entityId = mongo.ObjectID(entity._id);
+        var filter = {
+            entity_id: entityId,
+            type: type
+        };
 
-            var entityId = mongo.ObjectID(entity._id);
-
-            return new Promise((resolve, reject) => {
-
-                db.collection("components").find({
-                    entity_id: entityId,
-                    type: type
-                }, function (error, components) {
-                    if (error != null) {
-                        reject(error);
-                    } else {
-                        resolve(components);
-                    }
-                });
-
-            });
-
-        });
+        return this._findAsync(COMPONENTS_COLLECTION, filter);
     }
 
     /**
@@ -404,25 +440,11 @@ export default class ClarityTransactionDispatcher {
      * @return {Promise<Entity>} - A Promise resolved with the entity or null.
      */
     getEntityByIdAsync(entityId: string) {
-        return this._getDatabaseAsync().then((db: any) => {
+        var filter = {
+            _id: entityId
+        };
 
-            var id = mongo.ObjectID(entityId);
-
-            return new Promise((resolve, reject) => {
-
-                db.collection("entities").findOne({
-                    entity_id: id
-                }, function (error, entity) {
-                    if (error != null) {
-                        reject(error);
-                    } else {
-                        resolve(entity);
-                    }
-                });
-
-            });
-
-        });
+        return this._findOneAsync(ENTITIES_COLLECTION, filter);
     }
 
     /**
@@ -446,7 +468,6 @@ export default class ClarityTransactionDispatcher {
      */
     getEntityContentStreamByContentIdAsync(contentId: string) {
         return this._getGridFsAsync().then((gfs: any) => {
-
             var id = mongo.ObjectId(contentId);
             return gfs.createReadStream({
                 _id: id
@@ -482,7 +503,7 @@ export default class ClarityTransactionDispatcher {
      * @returns {Promise<undefined>}
      */
     removeComponentAsync(component: { _id: string, type: string, entity_id: string }) {
-        return this._removeItemfromCollection(component, "components").then(() => {
+        return this._removeItemfromCollection(component, COMPONENTS_COLLECTION).then(() => {
             return this.getEntityByIdAsync(component.entity_id);
         }).then((entity) => {
             return this._notifySystemsAsync("entityComponentRemovedAsync", [entity, component]);
