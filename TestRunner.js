@@ -7,7 +7,8 @@ fs.readdir("tests", function (err, files) {
         files.forEach((file) => {
             if (path.extname(file) === ".js") {
                 var tests = require(path.resolve(__dirname, "tests", file));
-                var defaultModules = tests.default;
+                var defaultModules = tests.default || tests;
+
                 
                 Object.keys(defaultModules).forEach(function (testName) {
                     try {

@@ -1,6 +1,7 @@
 "use strict";
 const mongodb_1 = require("mongodb");
 const Grid = require("gridfs-stream");
+const uuid = require("node-uuid");
 const MongoDbIterator_1 = require("./MongoDbIterator");
 const NullableLogger_1 = require("./NullableLogger");
 const nullableLogger = new NullableLogger_1.default();
@@ -34,6 +35,8 @@ class ClarityTransactionDispatcher {
     constructor(config) {
         this.MongoClient = config.MongoClient;
         this.databaseUrl = config.databaseUrl;
+        this.systems = [];
+        this.services = {};
     }
     /**
      * Add an item to a collection.
@@ -349,12 +352,13 @@ class ClarityTransactionDispatcher {
      *  - serviceRemovedAsync(name: string, service: any);
      *  - validateEntityAsync(entity: {_id: string})
      *  - validateComponentAsync(component: {_id: string})
-     *  - validateEntityContentAsync(entity: {_id: string}, newContentId: string)
+     *  - validateEntityContentAsync(entity: {_id: string}, oldContentId: string, newContentId: string)
      * @param {ISystem} system - The system to add.
      * @return {Promise} - An undefined Promise.
      */
     addSystemAsync(system) {
         this.systems.push(system);
+        return this._invokeMethodAsync(system, "activatedAsync", []);
     }
     /**
      * Deactivates a system and removes it from the systems being notified. To activate again use addSystemAsync.
@@ -555,22 +559,63 @@ class ClarityTransactionDispatcher {
         }
     }
     /**
-     * Updated an entity.
+     * Updated an entity. The dispatcher will perform the following actions when updating.
+     * This really shouldn't be used much. The entity is really just a container for the
+     * content_id and the components.
+     *
+     * - Validate the entity. All interested systems need to validate to pass.
+     * - Entity's updates are saved.
+     * - The systems are notified about the update.
      * @param {object} entity - The updated entity.
      * @returns {Promise<undefined>} - Resolves when the entity is saved.
      */
     updateEntityAsync(entity) {
+        return this._validateEntityAsync(entity).then(() => {
+            return this._findOneAsync("entities", {
+                _id: mongodb_1.default.ObjectID(entity._id)
+            });
+        }).then((oldEntity) => {
+            return this._updateItemInCollection(entity, "entities").then(() => {
+                return oldEntity;
+            });
+        }).then((oldEntity) => {
+            return this._notifySystemsWithRecoveryAsync("entityUpdatedAsync", [oldEntity, entity]);
+        });
     }
     /**
-     * Update an entity's content.
+     * Update an entity's content. The dispatcher will perform the following actions when
+     * updated the content of an entity.
+     *
+     * - Save the new content to the datastore.
+     * - Validate the new content. All interested systems need to validate to pass.
+     * - The entity.content_id is updated and saved.
+     * - Notify the systems of the updated content.
+     * - The old content is now removed from the datastore.
+     *
      * @param {object} entity - The entity whos content is to be update.
      * @param {NodeJS.WritableStream}  - The stream to save to the content of the entity.
-     * @return {undefined}
+     * @return {Promise<undefined>}
      */
-    updateEntityContentByStream(entity, stream) {
+    updateEntityContentByStreamAsync(entity, stream) {
+        // We need to pause this until we are ready to pipe to the gridfs.
+        var newContentId = uuid.v4();
+        stream.pause();
+        this._getGridFsAsync().then((gfs) => {
+            var writeStream = gfs.createWriteStream({
+                _id: newContentId
+            });
+            stream.pipe(writeStream);
+            stream.resume();
+        });
     }
     /**
-     * Update a component.
+     * Update a component. The dispatcher will perform the following actions when
+     * updating the component of an entity.
+     *
+     * - Validate the component. All interested systesm need to validate to pass.
+     * - Save the component to the datastore.
+     * - Notify the systems that the component was updated.
+     *
      * @param {object} component - The component to be updated.
      */
     updateComponentAsync(component) {

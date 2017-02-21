@@ -36,7 +36,7 @@ export interface ISystem {
     serviceRemovedAsync(name: string, service: any);
     validateEntityAsync(entity: { _id: string });
     validateComponentAsync(component: { _id: string });
-    validateEntityContentAsync(entity: { _id: string }, newContentId: string);
+    validateEntityContentAsync(entity: { _id: string }, oldContentId: string, newContentId: string);
 }
 
 export interface ILogger {

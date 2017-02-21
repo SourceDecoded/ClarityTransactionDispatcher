@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "gridfs-stream": "^1.1.1",
-    "mongodb": "^2.2.24"
+    "mongodb": "^2.2.24",
+    "node-uuid": "^1.4.7"
   }
 }
