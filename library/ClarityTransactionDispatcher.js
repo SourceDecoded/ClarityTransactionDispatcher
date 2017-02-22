@@ -1,4 +1,5 @@
 "use strict";
+const mongo = require("mongodb");
 const mongodb_1 = require("mongodb");
 const Grid = require("gridfs-stream");
 const uuid = require("node-uuid");
@@ -116,7 +117,7 @@ class ClarityTransactionDispatcher {
      */
     _getGridFsAsync() {
         return this._getDatabaseAsync().then((db) => {
-            return Grid(db, mongodb_1.default);
+            return Grid(db, mongo);
         });
     }
     /**
@@ -218,7 +219,7 @@ class ClarityTransactionDispatcher {
         return this._getDatabaseAsync().then((db) => {
             return new Promise((resolve, reject) => {
                 db.collection(collectionName).deleteOne({
-                    _id: mongodb_1.default.ObjectID(item._id)
+                    _id: mongo.ObjectID(item._id)
                 }, item, (error, result) => {
                     if (error != null) {
                         reject(error);
@@ -239,7 +240,7 @@ class ClarityTransactionDispatcher {
         return this._getDatabaseAsync().then((db) => {
             return new Promise((resolve, reject) => {
                 db.collection(collectionName).update({
-                    _id: mongodb_1.default.ObjectID(item._id)
+                    _id: mongo.ObjectID(item._id)
                 }, item, (error, result) => {
                     if (error != null) {
                         reject(error);
@@ -320,6 +321,7 @@ class ClarityTransactionDispatcher {
      */
     addServiceAsync(name, service) {
         this.services[name] = service;
+        return resolvedPromise;
     }
     /**
      * Add a system to the dispatcher. The systems are really where the work
@@ -391,7 +393,7 @@ class ClarityTransactionDispatcher {
      * @returns {Promise<undefined>} - Resolves when the system is disposed.
      */
     disposeSystemAsync(system) {
-        var deactivatedPromise;
+        var disposedPromise;
         var index = this.systems.indexOf(system);
         if (index === -1) {
             return Promise.reject(new Error("Couldn't find system to be disposed."));
@@ -399,7 +401,7 @@ class ClarityTransactionDispatcher {
         else {
             this.systems.splice(index, 1);
             try {
-                return deactivatedPromise = this._invokeMethodAsync(system, "disposeAsync", []).catch(() => {
+                return disposedPromise = this._invokeMethodAsync(system, "disposeAsync", []).catch(() => {
                     return resolvedPromise;
                 });
             }
@@ -414,7 +416,7 @@ class ClarityTransactionDispatcher {
      * @return {Promise<Array>}
      */
     getComponentAsync(componentId) {
-        var id = mongodb_1.default.ObjectID(componentId);
+        var id = mongo.ObjectID(componentId);
         return this._findOneAsync(COMPONENTS_COLLECTION, {
             _id: id
         });
@@ -425,7 +427,7 @@ class ClarityTransactionDispatcher {
      * @return {Promise<Array>}
      */
     getComponentsByEntityAsync(entity) {
-        var entityId = mongodb_1.default.ObjectID(entity._id);
+        var entityId = mongo.ObjectID(entity._id);
         var filter = {
             entity_id: entityId
         };
@@ -437,7 +439,7 @@ class ClarityTransactionDispatcher {
      * @param {string} type - The type of the component needed.
      */
     getComponentsByEntityAndTypeAsync(entity, type) {
-        var entityId = mongodb_1.default.ObjectID(entity._id);
+        var entityId = mongo.ObjectID(entity._id);
         var filter = {
             entity_id: entityId,
             type: type
@@ -462,7 +464,7 @@ class ClarityTransactionDispatcher {
      */
     getEntityContentStreamByEntityAsync(entity) {
         return this._getGridFsAsync().then((gfs) => {
-            var id = mongodb_1.default.ObjectId(entity.content_id);
+            var id = mongo.ObjectId(entity.content_id);
             return gfs.createReadStream({
                 _id: id
             });
@@ -475,7 +477,7 @@ class ClarityTransactionDispatcher {
      */
     getEntityContentStreamByContentIdAsync(contentId) {
         return this._getGridFsAsync().then((gfs) => {
-            var id = mongodb_1.default.ObjectId(contentId);
+            var id = mongo.ObjectId(contentId);
             return gfs.createReadStream({
                 _id: id
             });
@@ -572,7 +574,7 @@ class ClarityTransactionDispatcher {
     updateEntityAsync(entity) {
         return this._validateEntityAsync(entity).then(() => {
             return this._findOneAsync("entities", {
-                _id: mongodb_1.default.ObjectID(entity._id)
+                _id: mongo.ObjectID(entity._id)
             });
         }).then((oldEntity) => {
             return this._updateItemInCollection(entity, "entities").then(() => {

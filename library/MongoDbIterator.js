@@ -1,4 +1,5 @@
 "use strict";
+const mongo = require("mongodb");
 const mongodb_1 = require("mongodb");
 class MongoDbIterator {
     constructor(config) {
@@ -44,7 +45,7 @@ class MongoDbIterator {
                 else {
                     query = db.collection(this.collectionName).find({
                         _id: {
-                            $gt: mongodb_1.default.ObjectID(this.lastId)
+                            $gt: mongo.ObjectID(this.lastId)
                         }
                     }).limit(this.pageSize);
                 }

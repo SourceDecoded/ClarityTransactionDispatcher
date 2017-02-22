@@ -102,9 +102,9 @@ exports["MockMongoDB: Successfully invoking collection.insertOne."] = function (
                 } else {
                     collection.insertOne(document, function (error, result) {
                         if (error) {
-                            assert.fail(error)
+                            assert.fail(error);
                         } else {
-                            assert.equal(document, result)
+                            assert.equal(document, result);
                         }
                     });
                 }
@@ -131,7 +131,7 @@ exports["MockMongoDB: Error out with callback when invoking collection.insertOne
                 } else {
                     collection.insertOne(document, function (error, result) {
                         if (error) {
-                            assert.ok(true)
+                            assert.ok(true);
                         } else {
                             assert.fail();
                         }
@@ -159,9 +159,9 @@ exports["MockMongoDB: Successfully invoking collection.deleteOne."] = function (
                 } else {
                     collection.deleteOne(filter, function (error, result) {
                         if (error) {
-                            assert.fail(error)
+                            assert.fail(error);
                         } else {
-                            assert.equal(filter, result)
+                            assert.equal(filter, result);
                         }
                     });
                 }
@@ -187,7 +187,7 @@ exports["MockMongoDB: Error out with callback when invoking collection.deleteOne
                 } else {
                     collection.deleteOne(filter, function (error, result) {
                         if (error) {
-                            assert.ok(true)
+                            assert.ok(true);
                         } else {
                             assert.fail();
                         }
@@ -215,9 +215,9 @@ exports["MockMongoDB: Successfully invoking collection.update."] = function () {
                 } else {
                     collection.update(filter, function (error, result) {
                         if (error) {
-                            assert.fail(error)
+                            assert.fail(error);
                         } else {
-                            assert.equal(filter, result)
+                            assert.equal(filter, result);
                         }
                     });
                 }
@@ -243,7 +243,7 @@ exports["MockMongoDB: Error out with callback when invoking collection.update."]
                 } else {
                     collection.update(filter, function (error, result) {
                         if (error) {
-                            assert.ok(true)
+                            assert.ok(true);
                         } else {
                             assert.fail();
                         }
@@ -271,9 +271,9 @@ exports["MockMongoDB: Successfully invoking collection.find."] = function () {
                 } else {
                     collection.find(filter, function (error, result) {
                         if (error) {
-                            assert.fail(error)
+                            assert.fail(error);
                         } else {
-                            assert.equal(filter, result)
+                            assert.equal(filter, result);
                         }
                     });
                 }
@@ -299,7 +299,7 @@ exports["MockMongoDB: Error out with callback when invoking collection.find."] =
                 } else {
                     collection.find(filter, function (error, result) {
                         if (error) {
-                            assert.ok(true)
+                            assert.ok(true);
                         } else {
                             assert.fail();
                         }
@@ -327,9 +327,9 @@ exports["MockMongoDB: Successfully invoking collection.findOne."] = function () 
                 } else {
                     collection.findOne(filter, function (error, result) {
                         if (error) {
-                            assert.fail(error)
+                            assert.fail(error);
                         } else {
-                            assert.equal(filter, result)
+                            assert.equal(filter, result);
                         }
                     });
                 }
@@ -355,7 +355,7 @@ exports["MockMongoDB: Error out with callback when invoking collection.findOne."
                 } else {
                     collection.findOne(filter, function (error, result) {
                         if (error) {
-                            assert.ok(true)
+                            assert.ok(true);
                         } else {
                             assert.fail();
                         }

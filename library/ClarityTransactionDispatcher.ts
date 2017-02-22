@@ -1,5 +1,6 @@
 import { ISystem, ILogger } from "./interfaces";
-import mongo, { MongoClient } from "mongodb";
+import * as mongo from "mongodb";
+import { MongoClient } from "mongodb";
 import * as Grid from "gridfs-stream";
 import * as fs from "fs";
 import * as uuid from "node-uuid";
@@ -58,7 +59,6 @@ export default class ClarityTransactionDispatcher {
             return new Promise((resolve, reject) => {
 
                 db.collection(collectionName).insertOne(item, (error, result) => {
-
                     if (error != null) {
                         reject(error);
                     } else {
@@ -335,13 +335,11 @@ export default class ClarityTransactionDispatcher {
      * @return {Promise}
      */
     addEntityAsync(entity: any) {
-
         return this._validateEntityAsync(entity).then(() => {
             return this._addItemToCollectionAsync(entity, ENTITIES_COLLECTION);
         }).then(() => {
             return this._notifySystemsWithRecoveryAsync("entityAddedAsync", [entity]);
         });
-
     }
 
     /**
@@ -363,7 +361,6 @@ export default class ClarityTransactionDispatcher {
         }).then(() => {
             return this._notifySystemsWithRecoveryAsync("entityComponentAddedAsync", [entity, component]);
         });
-
     }
 
     /**
@@ -375,6 +372,7 @@ export default class ClarityTransactionDispatcher {
      */
     addServiceAsync(name: string, service: any) {
         this.services[name] = service;
+        return resolvedPromise;
     }
 
     /**
@@ -441,7 +439,6 @@ export default class ClarityTransactionDispatcher {
                 return resolvedPromise;
             }
         }
-
     }
 
     /**
@@ -451,7 +448,7 @@ export default class ClarityTransactionDispatcher {
      * @returns {Promise<undefined>} - Resolves when the system is disposed.
      */
     disposeSystemAsync(system: ISystem) {
-        var deactivatedPromise;
+        var disposedPromise;
         var index = this.systems.indexOf(system);
 
         if (index === -1) {
@@ -461,14 +458,13 @@ export default class ClarityTransactionDispatcher {
             this.systems.splice(index, 1);
 
             try {
-                return deactivatedPromise = this._invokeMethodAsync(system, "disposeAsync", []).catch(() => {
+                return disposedPromise = this._invokeMethodAsync(system, "disposeAsync", []).catch(() => {
                     return resolvedPromise;
                 })
             } catch (e) {
                 return resolvedPromise;
             }
         }
-
     }
 
     /**

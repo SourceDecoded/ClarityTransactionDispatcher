@@ -1,4 +1,5 @@
-import mongo, { MongoClient } from "mongodb";
+import * as mongo from "mongodb";
+import { MongoClient } from "mongodb";
 
 export default class MongoDbIterator {
     private lastId: string;
