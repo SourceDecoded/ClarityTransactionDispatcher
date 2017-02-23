@@ -1,5 +1,4 @@
-import { ISystem, ILogger } from "./interfaces";
-import * as mongo from "mongodb";
+import { ISystem, ILogger, IMongo, IMongoDb, IMongoClient } from "./interfaces";
 import { MongoClient } from "mongodb";
 import * as Grid from "gridfs-stream";
 import * as fs from "fs";
@@ -12,6 +11,7 @@ const resolvedPromise = Promise.resolve();
 
 const ENTITIES_COLLECTION = "entities";
 const COMPONENTS_COLLECTION = "components";
+
 
 /**
  * Class that organizes systems to respond to data transactions.
@@ -33,7 +33,8 @@ const COMPONENTS_COLLECTION = "components";
  * fulfill their responsibilities efficiently.
  */
 export default class ClarityTransactionDispatcher {
-    private MongoClient: MongoClient;
+    private mongoDb: IMongo;
+    private MongoClient: IMongoClient;
     private databaseUrl: string;
     private services: { [key: string]: any };
     private systems: Array<ISystem>;
@@ -42,8 +43,9 @@ export default class ClarityTransactionDispatcher {
      * Create a Dispatcher.
      * @constructor
      */
-    constructor(config: { MongoClient: MongoClient; databaseUrl: string }) {
-        this.MongoClient = config.MongoClient;
+    constructor(config: { mongodb: IMongo; databaseUrl: string }) {
+        this.mongoDb = config.mongodb;
+        this.MongoClient = this.mongoDb.MongoClient;
         this.databaseUrl = config.databaseUrl;
         this.systems = [];
         this.services = {};

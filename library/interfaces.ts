@@ -1,5 +1,18 @@
 import ClarityTransactionDispatcher from "./ClarityTransactionDispatcher";
 
+export interface IMongoDb {
+
+}
+
+export interface IMongoClient {
+    connect: (connectionString: string, callback: (err, db: IMongoDb) => void) => void;
+}
+
+
+export interface IMongo {
+    MongoClient: IMongoClient;
+}
+
 /**
  * Describes the possible and require life-cycle hooks available
  * to systems registering with ClarityTransactionDispatcher.
