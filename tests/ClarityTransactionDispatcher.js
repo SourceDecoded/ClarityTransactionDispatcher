@@ -213,7 +213,7 @@ exports["ClarityTransactionDispatcher: Error out with promise when invoking deac
     dispatcher.addSystemAsync(system).then(() => {
         return dispatcher.deactivateSystemAsync(system);
     }).then(() => {
-         invokeAssert(() => {
+        invokeAssert(() => {
             assert.equal(calledDeactivated, true);
         });
     });
@@ -539,6 +539,78 @@ exports["ClarityTransactionDispatcher: Error out with promise when invoking remo
     }).then(() => {
         invokeAssert(() => {
             assert.fail();
+        });
+    }).catch((error) => {
+        invokeAssert(() => {
+            assert.ok(true);
+        });
+    });
+};
+
+exports["ClarityTransactionDispatcher: Successfully invoking updateComponentAsync."] = function () {
+    var entity = {
+        _id: 1
+    };
+
+    var component = {
+        _id: 1,
+        type: "test",
+        entity_id: 1
+    };
+
+    var dispatcher = new ClarityTransactionDispatcher({
+        mongodb: new MockMongo({
+            responses: [
+                {
+                    collectionMethodResult: {}
+                },
+                {
+                    collectionMethodResult: { component }
+                }
+            ]
+        }),
+        databaseUrl: ""
+    });
+
+    dispatcher.updateComponentAsync(entity, component).then(() => {
+        invokeAssert(() => {
+            assert.ok(true);
+        });
+    }).catch((error) => {
+        invokeAssert(() => {
+            assert.ok(false);
+        });
+    });
+};
+
+exports["ClarityTransactionDispatcher:  Error out with promise when invoking updateComponentAsync."] = function () {
+    var entity = {
+        _id: 1
+    };
+
+    var component = {
+        _id: 1,
+        type: "test",
+        entity_id: 1
+    };
+
+    var dispatcher = new ClarityTransactionDispatcher({
+        mongodb: new MockMongo({
+            responses: [
+                {
+                    collectionMethodResult: {}
+                },
+                {
+                    collectionErrorToThrow: "ERROR"
+                }
+            ]
+        }),
+        databaseUrl: ""
+    });
+
+    dispatcher.updateComponentAsync(entity, component).then(() => {
+        invokeAssert(() => {
+            assert.ok(false);
         });
     }).catch((error) => {
         invokeAssert(() => {

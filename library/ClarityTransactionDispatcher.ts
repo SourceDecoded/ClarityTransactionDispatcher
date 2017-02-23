@@ -312,7 +312,7 @@ export default class ClarityTransactionDispatcher {
                     } else {
                         collection.update({
                             _id: this.ObjectID(item._id)
-                        }, item, (error, result) => {
+                        }, (error, result) => {
 
                             if (error != null) {
                                 reject(error);
@@ -332,7 +332,7 @@ export default class ClarityTransactionDispatcher {
      * This allows systems to validate the component being saved.
      * @private
      */
-    private _validateComponentAsync(entity: { _id: string }, component: { type: string, entity_id: string }) {
+    private _validateComponentAsync(entity: { _id: string }, component: { _id: string, type: string, entity_id: string }) {
         return this._notifySystemsAsync("validateComponentAsync", [entity, component]);
     }
 
@@ -732,8 +732,18 @@ export default class ClarityTransactionDispatcher {
      * 
      * @param {object} component - The component to be updated.
      */
-    updateComponentAsync(component: { _id: string, type: string }) {
-
+    updateComponentAsync(entity: {_id: string}, component: { _id: string, type: string, entity_id: string }) {
+        return this._validateComponentAsync(entity, component).then(() => {
+            return this._findOneAsync(COMPONENTS_COLLECTION, {
+                _id: this.ObjectID(component._id)
+            });
+        }).then((oldComponent) => {
+            return this._updateItemInCollection(component, COMPONENTS_COLLECTION).then(() => {
+                return oldComponent;
+            });
+        }).then((oldComponent) => {
+            return this._notifySystemsWithRecoveryAsync("componentUpdatedAsync", [oldComponent, component]);
+        });
     }
 
 }

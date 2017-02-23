@@ -274,7 +274,7 @@ class ClarityTransactionDispatcher {
                     else {
                         collection.update({
                             _id: this.ObjectID(item._id)
-                        }, item, (error, result) => {
+                        }, (error, result) => {
                             if (error != null) {
                                 reject(error);
                             }
@@ -655,7 +655,18 @@ class ClarityTransactionDispatcher {
      *
      * @param {object} component - The component to be updated.
      */
-    updateComponentAsync(component) {
+    updateComponentAsync(entity, component) {
+        return this._validateComponentAsync(entity, component).then(() => {
+            return this._findOneAsync(COMPONENTS_COLLECTION, {
+                _id: this.ObjectID(component._id)
+            });
+        }).then((oldComponent) => {
+            return this._updateItemInCollection(component, COMPONENTS_COLLECTION).then(() => {
+                return oldComponent;
+            });
+        }).then((oldComponent) => {
+            return this._notifySystemsWithRecoveryAsync("componentUpdatedAsync", [oldComponent, component]);
+        });
     }
 }
 Object.defineProperty(exports, "__esModule", { value: true });
