@@ -1,7 +1,15 @@
 import ClarityTransactionDispatcher from "./ClarityTransactionDispatcher";
 
-export interface IMongoDb {
+export interface IMongoCollection {
+    insertOne: (document: any, callback: (error, result: any) => void) => void;
+    deleteOne: (filter: any, callback: (error, result: any) => void) => void;
+    update: (filter: any, callback: (error, result: any) => void) => void;
+    find: (filter: any, callback: (error, result: any) => void) => void;
+    findOne: (filter: any, callback: (error, result: any) => void) => void;
+}
 
+export interface IMongoDb {
+    collection: (name: string, callback: (error, MongoCollection: IMongoCollection) => void) => void;
 }
 
 export interface IMongoClient {

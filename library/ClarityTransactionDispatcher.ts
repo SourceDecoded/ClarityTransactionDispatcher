@@ -1,4 +1,4 @@
-import { ISystem, ILogger, IMongo, IMongoDb, IMongoClient } from "./interfaces";
+import { ISystem, ILogger, IMongo, IMongoDb, IMongoClient, IMongoCollection } from "./interfaces";
 import { MongoClient } from "mongodb";
 import * as Grid from "gridfs-stream";
 import * as fs from "fs";
