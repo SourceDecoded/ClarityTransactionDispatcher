@@ -589,7 +589,7 @@ export default class ClarityTransactionDispatcher {
     getEntitiesIterator() {
         return new MongoDbIterator({
             databaseUrl: this.databaseUrl,
-            collectionName: "enities",
+            collectionName: ENTITIES_COLLECTION,
             MongoClient: this.MongoClient
         });
     }
@@ -683,11 +683,11 @@ export default class ClarityTransactionDispatcher {
      */
     updateEntityAsync(entity: { _id: string }) {
         return this._validateEntityAsync(entity).then(() => {
-            return this._findOneAsync("entities", {
+            return this._findOneAsync(ENTITIES_COLLECTION, {
                 _id: this.ObjectID(entity._id)
             });
         }).then((oldEntity) => {
-            return this._updateItemInCollection(entity, "entities").then(() => {
+            return this._updateItemInCollection(entity, ENTITIES_COLLECTION).then(() => {
                 return oldEntity;
             });
         }).then((oldEntity) => {
