@@ -2,6 +2,10 @@ var assert = require("assert");
 var ClarityTransactionDispatcher = require("./../library/ClarityTransactionDispatcher").default;
 var MockMongo = require("./../mock/MockMongoDB").default;
 
+var invokeAssert = function (callback) {
+    setTimeout(callback);
+};
+
 exports["ClarityTransactionDispatcher: Successfully invoking addEntityAsync."] = function () {
     var entity = {
         _id: 1
@@ -13,9 +17,13 @@ exports["ClarityTransactionDispatcher: Successfully invoking addEntityAsync."] =
     });
 
     dispatcher.addEntityAsync(entity).then(() => {
-        assert.ok(true);
+        invokeAssert(() => {
+            assert.ok(true);
+        });
     }).catch((error) => {
-        assert.fail(error);
+        invokeAssert(() => {
+            assert.ok(false);
+        });
     });
 };
 
