@@ -1,7 +1,7 @@
 "use strict";
 const stream = require("stream");
 class GridFs {
-    constructor(db, mongodb, config) {
+    constructor(config) {
         this.readContent = config.readContent;
         this.config = config;
     }
@@ -23,7 +23,7 @@ class GridFs {
         };
         return writable;
     }
-    remove(id, callback) {
+    remove(filter, callback) {
         var response = this.config.responses.shift();
         var errorToThrow = response.errorToThrow;
         setTimeout(function () {

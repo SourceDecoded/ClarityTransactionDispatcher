@@ -1,7 +1,7 @@
 var assert = require("assert");
-var MockMongo = require("./../mock/MockMongoDB").default;
+var MockMongo = require("./../mock/Mongo").default;
 
-exports["MockMongoDB: Successfully invoking MongoClient.connect."] = function () {
+exports["Mongo: Successfully invoking MongoClient.connect."] = function () {
     var mongo = new MockMongo({ responses: [{}] });
     var MongoClient = mongo.MongoClient;
 
@@ -14,7 +14,7 @@ exports["MockMongoDB: Successfully invoking MongoClient.connect."] = function ()
     });
 };
 
-exports["MockMongoDB: Error out with callback when invoking MongoClient.connect."] = function () {
+exports["Mongo: Error out with callback when invoking MongoClient.connect."] = function () {
     var mongo = new MockMongo({ responses: [{ connectErrorToThrow: "ERROR" }] });
     var MongoClient = mongo.MongoClient;
 
@@ -27,7 +27,7 @@ exports["MockMongoDB: Error out with callback when invoking MongoClient.connect.
     });
 };
 
-exports["MockMongoDB: Successfully invoking db.collection."] = function () {
+exports["Mongo: Successfully invoking db.collection."] = function () {
     var mongo = new MockMongo({ responses: [{}] });
     var MongoClient = mongo.MongoClient;
 
@@ -46,7 +46,7 @@ exports["MockMongoDB: Successfully invoking db.collection."] = function () {
     });
 };
 
-exports["MockMongoDB: Error out with callback when invoking db.collection."] = function () {
+exports["Mongo: Error out with callback when invoking db.collection."] = function () {
     var mongo = new MockMongo({ responses: [{ collectionErrorToThrow: "ERROR" }] });
     var MongoClient = mongo.MongoClient;
 
@@ -65,7 +65,7 @@ exports["MockMongoDB: Error out with callback when invoking db.collection."] = f
     });
 };
 
-exports["MockMongoDB: Successfully invoking collection.insertOne."] = function () {
+exports["Mongo: Successfully invoking collection.insertOne."] = function () {
     var document = {
         _id: 1,
         name: "test"
@@ -94,7 +94,7 @@ exports["MockMongoDB: Successfully invoking collection.insertOne."] = function (
     });
 };
 
-exports["MockMongoDB: Error out with callback when invoking collection.insertOne."] = function () {
+exports["Mongo: Error out with callback when invoking collection.insertOne."] = function () {
     var document = {
         _id: 1,
         name: "test"
@@ -123,7 +123,7 @@ exports["MockMongoDB: Error out with callback when invoking collection.insertOne
     });
 };
 
-exports["MockMongoDB: Successfully invoking collection.deleteOne."] = function () {
+exports["Mongo: Successfully invoking collection.deleteOne."] = function () {
     var filter = {
         _id: 1
     };
@@ -151,7 +151,7 @@ exports["MockMongoDB: Successfully invoking collection.deleteOne."] = function (
     });
 };
 
-exports["MockMongoDB: Error out with callback when invoking collection.deleteOne."] = function () {
+exports["Mongo: Error out with callback when invoking collection.deleteOne."] = function () {
     var filter = {
         _id: 1
     };
@@ -179,7 +179,7 @@ exports["MockMongoDB: Error out with callback when invoking collection.deleteOne
     });
 };
 
-exports["MockMongoDB: Successfully invoking collection.update."] = function () {
+exports["Mongo: Successfully invoking collection.update."] = function () {
     var filter = {
         _id: 1
     };
@@ -207,7 +207,7 @@ exports["MockMongoDB: Successfully invoking collection.update."] = function () {
     });
 };
 
-exports["MockMongoDB: Error out with callback when invoking collection.update."] = function () {
+exports["Mongo: Error out with callback when invoking collection.update."] = function () {
     var filter = {
         _id: 1
     };
@@ -235,7 +235,7 @@ exports["MockMongoDB: Error out with callback when invoking collection.update."]
     });
 };
 
-exports["MockMongoDB: Successfully invoking collection.find."] = function () {
+exports["Mongo: Successfully invoking collection.find."] = function () {
     var filter = {
         _id: 1
     };
@@ -263,7 +263,7 @@ exports["MockMongoDB: Successfully invoking collection.find."] = function () {
     });
 };
 
-exports["MockMongoDB: Error out with callback when invoking collection.find."] = function () {
+exports["Mongo: Error out with callback when invoking collection.find."] = function () {
     var filter = {
         _id: 1
     };
@@ -291,7 +291,7 @@ exports["MockMongoDB: Error out with callback when invoking collection.find."] =
     });
 };
 
-exports["MockMongoDB: Successfully invoking collection.findOne."] = function () {
+exports["Mongo: Successfully invoking collection.findOne."] = function () {
     var filter = {
         _id: 1
     };
@@ -319,7 +319,7 @@ exports["MockMongoDB: Successfully invoking collection.findOne."] = function () 
     });
 };
 
-exports["MockMongoDB: Error out with callback when invoking collection.findOne."] = function () {
+exports["Mongo: Error out with callback when invoking collection.findOne."] = function () {
     var filter = {
         _id: 1
     };

@@ -1,6 +1,6 @@
 "use strict";
-const GridFs_1 = require("GridFs");
-const Mongo_1 = require("Mongo");
+const GridFs_1 = require("./GridFs");
+const Mongo_1 = require("./Mongo");
 class MongoFactory {
     constructor(config) {
         this.gridFs = new GridFs_1.default(config.gridFsConfig);

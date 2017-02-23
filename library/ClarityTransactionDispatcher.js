@@ -525,7 +525,7 @@ class ClarityTransactionDispatcher {
     getEntitiesIterator() {
         return new MongoDbIterator_1.default({
             databaseUrl: this.databaseUrl,
-            collectionName: "enities",
+            collectionName: ENTITIES_COLLECTION,
             MongoClient: this.MongoClient
         });
     }
@@ -581,6 +581,8 @@ class ClarityTransactionDispatcher {
             }, resolvedPromise);
         }).then(() => {
             return this.removeEntityContentAsync(entity);
+        }).then(() => {
+            return this._removeItemfromCollection(entity, "entities");
         });
     }
     /**
@@ -608,11 +610,11 @@ class ClarityTransactionDispatcher {
      */
     updateEntityAsync(entity) {
         return this._validateEntityAsync(entity).then(() => {
-            return this._findOneAsync("entities", {
+            return this._findOneAsync(ENTITIES_COLLECTION, {
                 _id: this.ObjectID(entity._id)
             });
         }).then((oldEntity) => {
-            return this._updateItemInCollection(entity, "entities").then(() => {
+            return this._updateItemInCollection(entity, ENTITIES_COLLECTION).then(() => {
                 return oldEntity;
             });
         }).then((oldEntity) => {
@@ -634,8 +636,8 @@ class ClarityTransactionDispatcher {
      * @return {Promise<undefined>}
      */
     updateEntityContentByStreamAsync(entity, stream) {
-        // We need to pause this until we are ready to pipe to the gridfs.
         var newContentId = uuid.v4();
+        // We need to pause this until we are ready to pipe to the gridfs.
         stream.pause();
         this._getGridFsAsync().then((gfs) => {
             var writeStream = gfs.createWriteStream({

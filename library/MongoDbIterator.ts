@@ -24,7 +24,7 @@ export default class MongoDbIterator {
 
     _getDatabaseAsync() {
         return new Promise((resolve, reject) => {
-            MongoClient.connect(this.databaseUrl, (error, db) => {
+            this.MongoClient.connect(this.databaseUrl, (error, db) => {
                 if (error != null) {
                     reject(error);
                 } else {

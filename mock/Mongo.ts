@@ -8,7 +8,14 @@ export default class Mongo {
     MongoClient: { connect: (databaseUrl: string, callback: (error, db: MongoDB) => void) => void };
     ObjectID: IObjectID;
 
-    constructor(config: { responses: Array<{ connectErrorToThrow?: any, collectionErrorToThrow?: any, collectionMethodErrorToThrow?: any, collectionMethodResult?: any }> }) {
+    constructor(config: {
+        responses: Array<{
+            connectErrorToThrow?: any;
+            collectionErrorToThrow?: any;
+            collectionMethodErrorToThrow?: any;
+            collectionMethodResult?: any
+        }>
+    }) {
         this._config = <any>config || {};
         this.MongoClient = new MongoClient(this._config);
         this.ObjectID = ObjectID;

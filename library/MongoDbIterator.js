@@ -1,6 +1,5 @@
 "use strict";
 const mongo = require("mongodb");
-const mongodb_1 = require("mongodb");
 class MongoDbIterator {
     constructor(config) {
         config = config || { MongoClient: null, collectionName: null, databaseUrl: null };
@@ -15,7 +14,7 @@ class MongoDbIterator {
     }
     _getDatabaseAsync() {
         return new Promise((resolve, reject) => {
-            mongodb_1.MongoClient.connect(this.databaseUrl, (error, db) => {
+            this.MongoClient.connect(this.databaseUrl, (error, db) => {
                 if (error != null) {
                     reject(error);
                 }

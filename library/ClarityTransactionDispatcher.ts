@@ -654,6 +654,8 @@ export default class ClarityTransactionDispatcher {
 
         }).then(() => {
             return this.removeEntityContentAsync(entity);
+        }).then(() => {
+            return this._removeItemfromCollection(entity, "entities");
         });
     }
 

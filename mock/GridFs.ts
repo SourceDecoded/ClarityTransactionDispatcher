@@ -5,7 +5,7 @@ export default class GridFs implements IGridFs {
     private readContent: string;
     private config;
 
-    constructor(db, mongodb, config) {
+    constructor(config) {
         this.readContent = config.readContent;
         this.config = config;
     }

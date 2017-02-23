@@ -1,6 +1,7 @@
 var assert = require("assert");
 var ClarityTransactionDispatcher = require("./../library/ClarityTransactionDispatcher").default;
 var MockMongo = require("./../mock/Mongo").default;
+var MongoFactory = require("./../mock/MongoFactory").default;
 
 var invokeAssert = function (callback) {
     setTimeout(callback);
@@ -11,8 +12,13 @@ exports["ClarityTransactionDispatcher: Successfully invoking addEntityAsync."] =
         _id: 1
     };
 
+    var mongoFactory = new MongoFactory({
+        gridFsConfig: { responses: [] },
+        mongodbConfig: { responses: [{ result: entity }] }
+    });
+
     var dispatcher = new ClarityTransactionDispatcher({
-        mongodb: new MockMongo({ responses: [{ collectionMethodResult: entity }] }),
+        mongoFactory: mongoFactory,
         databaseUrl: ""
     });
 
@@ -32,8 +38,13 @@ exports["ClarityTransactionDispatcher: Error out with promise when invoking addE
         _id: 1
     };
 
+    var mongoFactory = new MongoFactory({
+        gridFsConfig: { responses: [] },
+        mongodbConfig: { responses: [{ collectionErrorToThrow: "ERROR" }] }
+    });
+
     var dispatcher = new ClarityTransactionDispatcher({
-        mongodb: new MockMongo({ responses: [{ collectionErrorToThrow: "ERROR" }] }),
+        mongoFactory: mongoFactory,
         databaseUrl: ""
     });
 
@@ -58,8 +69,13 @@ exports["ClarityTransactionDispatcher: Successfully invoking addComponentAsync."
         type: "Test"
     };
 
+    var mongoFactory = new MongoFactory({
+        gridFsConfig: { responses: [] },
+        mongodbConfig: { responses: [{ result: entity }] }
+    });
+
     var dispatcher = new ClarityTransactionDispatcher({
-        mongodb: new MockMongo({ responses: [{ collectionMethodResult: entity }] }),
+        mongoFactory: mongoFactory,
         databaseUrl: ""
     });
 
@@ -84,8 +100,13 @@ exports["ClarityTransactionDispatcher: Error out with promise when invoking addC
         type: "Test"
     };
 
+    var mongoFactory = new MongoFactory({
+        gridFsConfig: { responses: [] },
+        mongodbConfig: { responses: [{ collectionErrorToThrow: "ERROR" }] }
+    });
+
     var dispatcher = new ClarityTransactionDispatcher({
-        mongodb: new MockMongo({ responses: [{ collectionErrorToThrow: "ERROR" }] }),
+        mongoFactory: mongoFactory,
         databaseUrl: ""
     });
 
@@ -101,8 +122,13 @@ exports["ClarityTransactionDispatcher: Error out with promise when invoking addC
 };
 
 exports["ClarityTransactionDispatcher: Successfully invoking addServiceAsync."] = function () {
+    var mongoFactory = new MongoFactory({
+        gridFsConfig: { responses: [] },
+        mongodbConfig: {}
+    });
+
     var dispatcher = new ClarityTransactionDispatcher({
-        mongodb: new MockMongo(),
+        mongoFactory: mongoFactory,
         databaseUrl: ""
     });
 
@@ -120,8 +146,13 @@ exports["ClarityTransactionDispatcher: Successfully invoking addServiceAsync."] 
 exports["ClarityTransactionDispatcher: Successfully invoking addSystemAsync."] = function () {
     var calledActivated = false;
 
+    var mongoFactory = new MongoFactory({
+        gridFsConfig: { responses: [] },
+        mongodbConfig: {}
+    });
+
     var dispatcher = new ClarityTransactionDispatcher({
-        mongodb: new MockMongo(),
+        mongoFactory: mongoFactory,
         databaseUrl: ""
     });
 
@@ -145,8 +176,13 @@ exports["ClarityTransactionDispatcher: Successfully invoking addSystemAsync."] =
 exports["ClarityTransactionDispatcher: Error out with promise when invoking addSystemAsync."] = function () {
     var calledActivated = false;
 
+    var mongoFactory = new MongoFactory({
+        gridFsConfig: { responses: [] },
+        mongodbConfig: {}
+    });
+
     var dispatcher = new ClarityTransactionDispatcher({
-        mongodb: new MockMongo(),
+        mongoFactory: mongoFactory,
         databaseUrl: ""
     });
 
@@ -171,8 +207,13 @@ exports["ClarityTransactionDispatcher: Error out with promise when invoking addS
 exports["ClarityTransactionDispatcher: Successfully invoking deactivateSystemAsync."] = function () {
     var calledDeactivated = false;
 
+    var mongoFactory = new MongoFactory({
+        gridFsConfig: { responses: [] },
+        mongodbConfig: {}
+    });
+
     var dispatcher = new ClarityTransactionDispatcher({
-        mongodb: new MockMongo(),
+        mongoFactory: mongoFactory,
         databaseUrl: ""
     });
 
@@ -198,8 +239,13 @@ exports["ClarityTransactionDispatcher: Successfully invoking deactivateSystemAsy
 exports["ClarityTransactionDispatcher: Error out with promise when invoking deactivateSystemAsync."] = function () {
     var calledDeactivated = false;
 
+    var mongoFactory = new MongoFactory({
+        gridFsConfig: { responses: [] },
+        mongodbConfig: {}
+    });
+
     var dispatcher = new ClarityTransactionDispatcher({
-        mongodb: new MockMongo(),
+        mongoFactory: mongoFactory,
         databaseUrl: ""
     });
 
@@ -222,8 +268,13 @@ exports["ClarityTransactionDispatcher: Error out with promise when invoking deac
 exports["ClarityTransactionDispatcher: Successfully invoking disposeSystemAsync."] = function () {
     var calledDispose = false;
 
+    var mongoFactory = new MongoFactory({
+        gridFsConfig: { responses: [] },
+        mongodbConfig: {}
+    });
+
     var dispatcher = new ClarityTransactionDispatcher({
-        mongodb: new MockMongo(),
+        mongoFactory: mongoFactory,
         databaseUrl: ""
     });
 
@@ -249,8 +300,13 @@ exports["ClarityTransactionDispatcher: Successfully invoking disposeSystemAsync.
 exports["ClarityTransactionDispatcher: Error out with promise when invoking disposeSystemAsync."] = function () {
     var calledDispose = false;
 
+    var mongoFactory = new MongoFactory({
+        gridFsConfig: { responses: [] },
+        mongodbConfig: {}
+    });
+
     var dispatcher = new ClarityTransactionDispatcher({
-        mongodb: new MockMongo(),
+        mongoFactory: mongoFactory,
         databaseUrl: ""
     });
 
@@ -276,8 +332,13 @@ exports["ClarityTransactionDispatcher: Successfully invoking getComponentAsync."
         type: "Test"
     };
 
+    var mongoFactory = new MongoFactory({
+        gridFsConfig: { responses: [] },
+        mongodbConfig: { responses: [{ result: component }] }
+    });
+
     var dispatcher = new ClarityTransactionDispatcher({
-        mongodb: new MockMongo({ responses: [{ collectionMethodResult: component }] }),
+        mongoFactory: mongoFactory,
         databaseUrl: ""
     });
 
@@ -298,8 +359,13 @@ exports["ClarityTransactionDispatcher: Error out with promise when invoking getC
         type: "Test"
     };
 
+    var mongoFactory = new MongoFactory({
+        gridFsConfig: { responses: [] },
+        mongodbConfig: { responses: [{ collectionErrorToThrow: "ERROR" }] }
+    });
+
     var dispatcher = new ClarityTransactionDispatcher({
-        mongodb: new MockMongo({ responses: [{ collectionErrorToThrow: "ERROR" }] }),
+        mongoFactory: mongoFactory,
         databaseUrl: ""
     });
 
@@ -321,8 +387,13 @@ exports["ClarityTransactionDispatcher: Successfully invoking getComponentsByEnti
 
     var components = [{ _id: 1, entity_id: 1, type: "test" }, { _id: 2, entity_id: 1, type: "test" }, { _id: 3, entity_id: 1, type: "test" }];
 
+    var mongoFactory = new MongoFactory({
+        gridFsConfig: { responses: [] },
+        mongodbConfig: { responses: [{ result: components }] }
+    });
+
     var dispatcher = new ClarityTransactionDispatcher({
-        mongodb: new MockMongo({ responses: [{ collectionMethodResult: components }] }),
+        mongoFactory: mongoFactory,
         databaseUrl: ""
     });
 
@@ -342,8 +413,13 @@ exports["ClarityTransactionDispatcher: Error out with promise when invoking getC
         _id: 1
     };
 
+    var mongoFactory = new MongoFactory({
+        gridFsConfig: { responses: [] },
+        mongodbConfig: { responses: [{ collectionErrorToThrow: "ERROR" }] }
+    });
+
     var dispatcher = new ClarityTransactionDispatcher({
-        mongodb: new MockMongo({ responses: [{ collectionErrorToThrow: "ERROR" }] }),
+        mongoFactory: mongoFactory,
         databaseUrl: ""
     });
 
@@ -365,8 +441,13 @@ exports["ClarityTransactionDispatcher: Successfully invoking getComponentsByEnti
 
     var components = [{ _id: 1, entity_id: 1, type: "test" }, { _id: 2, entity_id: 1, type: "test" }, { _id: 3, entity_id: 1, type: "test" }];
 
+    var mongoFactory = new MongoFactory({
+        gridFsConfig: { responses: [] },
+        mongodbConfig: { responses: [{ result: components }] }
+    });
+
     var dispatcher = new ClarityTransactionDispatcher({
-        mongodb: new MockMongo({ responses: [{ collectionMethodResult: components }] }),
+        mongoFactory: mongoFactory,
         databaseUrl: ""
     });
 
@@ -386,8 +467,13 @@ exports["ClarityTransactionDispatcher: Error out with promise when invoking getC
         _id: 1
     };
 
+    var mongoFactory = new MongoFactory({
+        gridFsConfig: { responses: [] },
+        mongodbConfig: { responses: [{ collectionErrorToThrow: "ERROR" }] }
+    });
+
     var dispatcher = new ClarityTransactionDispatcher({
-        mongodb: new MockMongo({ responses: [{ collectionErrorToThrow: "ERROR" }] }),
+        mongoFactory: mongoFactory,
         databaseUrl: ""
     });
 
@@ -407,8 +493,13 @@ exports["ClarityTransactionDispatcher: Successfully invoking getEntityByIdAsync.
         _id: 1
     };
 
+    var mongoFactory = new MongoFactory({
+        gridFsConfig: { responses: [] },
+        mongodbConfig: { responses: [{ result: entity }] }
+    });
+
     var dispatcher = new ClarityTransactionDispatcher({
-        mongodb: new MockMongo({ responses: [{ collectionMethodResult: entity }] }),
+        mongoFactory: mongoFactory,
         databaseUrl: ""
     });
 
@@ -428,8 +519,13 @@ exports["ClarityTransactionDispatcher: Error out with promise when invoking getE
         _id: 1
     };
 
+    var mongoFactory = new MongoFactory({
+        gridFsConfig: { responses: [] },
+        mongodbConfig: { responses: [{ collectionErrorToThrow: "ERROR" }] }
+    });
+
     var dispatcher = new ClarityTransactionDispatcher({
-        mongodb: new MockMongo({ responses: [{ collectionErrorToThrow: "ERROR" }] }),
+        mongoFactory: mongoFactory,
         databaseUrl: ""
     });
 
@@ -445,8 +541,13 @@ exports["ClarityTransactionDispatcher: Error out with promise when invoking getE
 };
 
 exports["ClarityTransactionDispatcher: Successfully invoking getEntitiesIterator."] = function () {
+    var mongoFactory = new MongoFactory({
+        gridFsConfig: { responses: [] },
+        mongodbConfig: { responses: [] }
+    });
+
     var dispatcher = new ClarityTransactionDispatcher({
-        mongodb: new MockMongo(),
+        mongoFactory: mongoFactory,
         databaseUrl: ""
     });
 
@@ -464,8 +565,13 @@ exports["ClarityTransactionDispatcher: Successfully invoking getEntitiesIterator
 };
 
 exports["ClarityTransactionDispatcher: Successfully invoking getService."] = function () {
+    var mongoFactory = new MongoFactory({
+        gridFsConfig: { responses: [] },
+        mongodbConfig: { responses: [] }
+    });
+
     var dispatcher = new ClarityTransactionDispatcher({
-        mongodb: new MockMongo(),
+        mongoFactory: mongoFactory,
         databaseUrl: ""
     });
 
@@ -493,17 +599,22 @@ exports["ClarityTransactionDispatcher: Successfully invoking removeComponentAsyn
         entity_id: 1
     };
 
-    var dispatcher = new ClarityTransactionDispatcher({
-        mongodb: new MockMongo({
+    var mongoFactory = new MongoFactory({
+        gridFsConfig: { responses: [] },
+        mongodbConfig: {
             responses: [
                 {
-                    collectionMethodResult: {}
+                    result: {}
                 },
                 {
-                    collectionMethodResult: { entity_id: 1 }
+                    result: { entity_id: 1 }
                 }
             ]
-        }),
+        }
+    });
+
+    var dispatcher = new ClarityTransactionDispatcher({
+        mongoFactory: mongoFactory,
         databaseUrl: ""
     });
 
@@ -529,8 +640,13 @@ exports["ClarityTransactionDispatcher: Error out with promise when invoking remo
         entity_id: 1
     };
 
+    var mongoFactory = new MongoFactory({
+        gridFsConfig: { responses: [] },
+        mongodbConfig: { responses: [{ collectionErrorToThrow: "ERROR" }] }
+    });
+
     var dispatcher = new ClarityTransactionDispatcher({
-        mongodb: new MockMongo({ responses: [{ collectionErrorToThrow: "ERROR" }] }),
+        mongoFactory: mongoFactory,
         databaseUrl: ""
     });
 
@@ -548,8 +664,13 @@ exports["ClarityTransactionDispatcher: Error out with promise when invoking remo
 };
 
 exports["ClarityTransactionDispatcher: Successfully invoking removeServiceAsync."] = function () {
+    var mongoFactory = new MongoFactory({
+        gridFsConfig: { responses: [] },
+        mongodbConfig: { responses: [] }
+    });
+
     var dispatcher = new ClarityTransactionDispatcher({
-        mongodb: new MockMongo(),
+        mongoFactory: mongoFactory,
         databaseUrl: ""
     });
 
@@ -577,17 +698,22 @@ exports["ClarityTransactionDispatcher: Successfully invoking updateEntityAsync."
         entity_id: 1
     };
 
-    var dispatcher = new ClarityTransactionDispatcher({
-        mongodb: new MockMongo({
+    var mongoFactory = new MongoFactory({
+        gridFsConfig: { responses: [] },
+        mongodbConfig: {
             responses: [
                 {
-                    collectionMethodResult: {}
+                    result: {}
                 },
                 {
-                    collectionMethodResult: { component }
+                    result: { component }
                 }
             ]
-        }),
+        }
+    });
+
+    var dispatcher = new ClarityTransactionDispatcher({
+        mongoFactory: mongoFactory,
         databaseUrl: ""
     });
 
@@ -613,8 +739,13 @@ exports["ClarityTransactionDispatcher:  Error out with promise when invoking upd
         entity_id: 1
     };
 
+    var mongoFactory = new MongoFactory({
+        gridFsConfig: { responses: [] },
+        mongodbConfig: { responses: [{ collectionErrorToThrow: "ERROR" }] }
+    });
+
     var dispatcher = new ClarityTransactionDispatcher({
-        mongodb: new MockMongo({ responses: [{ collectionErrorToThrow: "ERROR" }] }),
+        mongoFactory: mongoFactory,
         databaseUrl: ""
     });
 
@@ -640,17 +771,22 @@ exports["ClarityTransactionDispatcher: Successfully invoking updateComponentAsyn
         entity_id: 1
     };
 
-    var dispatcher = new ClarityTransactionDispatcher({
-        mongodb: new MockMongo({
+   var mongoFactory = new MongoFactory({
+        gridFsConfig: { responses: [] },
+        mongodbConfig: {
             responses: [
                 {
-                    collectionMethodResult: {}
+                    result: {}
                 },
                 {
-                    collectionMethodResult: { component }
+                    result: { component }
                 }
             ]
-        }),
+        }
+    });
+
+    var dispatcher = new ClarityTransactionDispatcher({
+        mongoFactory: mongoFactory,
         databaseUrl: ""
     });
 
@@ -676,8 +812,13 @@ exports["ClarityTransactionDispatcher:  Error out with promise when invoking upd
         entity_id: 1
     };
 
+     var mongoFactory = new MongoFactory({
+        gridFsConfig: { responses: [] },
+        mongodbConfig: { responses: [{ collectionErrorToThrow: "ERROR" }] }
+    });
+
     var dispatcher = new ClarityTransactionDispatcher({
-        mongodb: new MockMongo({ responses: [{ collectionErrorToThrow: "ERROR" }] }),
+        mongoFactory: mongoFactory,
         databaseUrl: ""
     });
 
