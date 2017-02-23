@@ -547,6 +547,88 @@ exports["ClarityTransactionDispatcher: Error out with promise when invoking remo
     });
 };
 
+exports["ClarityTransactionDispatcher: Successfully invoking removeServiceAsync."] = function () {
+    var dispatcher = new ClarityTransactionDispatcher({
+        mongodb: new MockMongo(),
+        databaseUrl: ""
+    });
+
+    dispatcher.addServiceAsync("test", {}).then(() => {
+        return dispatcher.removeServiceAsync("test");
+    }).then(() => {
+        invokeAssert(() => {
+            assert.ok(true);
+        });
+    }).catch((error) => {
+        invokeAssert(() => {
+            assert.fail(error);
+        });
+    });
+};
+
+exports["ClarityTransactionDispatcher: Successfully invoking updateEntityAsync."] = function () {
+    var entity = {
+        _id: 1
+    };
+
+    var component = {
+        _id: 1,
+        type: "test",
+        entity_id: 1
+    };
+
+    var dispatcher = new ClarityTransactionDispatcher({
+        mongodb: new MockMongo({
+            responses: [
+                {
+                    collectionMethodResult: {}
+                },
+                {
+                    collectionMethodResult: { component }
+                }
+            ]
+        }),
+        databaseUrl: ""
+    });
+
+    dispatcher.updateEntityAsync(entity, component).then(() => {
+        invokeAssert(() => {
+            assert.ok(true);
+        });
+    }).catch((error) => {
+        invokeAssert(() => {
+            assert.ok(false);
+        });
+    });
+};
+
+exports["ClarityTransactionDispatcher:  Error out with promise when invoking updateEntityAsync."] = function () {
+    var entity = {
+        _id: 1
+    };
+
+    var component = {
+        _id: 1,
+        type: "test",
+        entity_id: 1
+    };
+
+    var dispatcher = new ClarityTransactionDispatcher({
+        mongodb: new MockMongo({ responses: [{ collectionErrorToThrow: "ERROR" }] }),
+        databaseUrl: ""
+    });
+
+    dispatcher.updateEntityAsync(entity, component).then(() => {
+        invokeAssert(() => {
+            assert.ok(false);
+        });
+    }).catch((error) => {
+        invokeAssert(() => {
+            assert.ok(true);
+        });
+    });
+};
+
 exports["ClarityTransactionDispatcher: Successfully invoking updateComponentAsync."] = function () {
     var entity = {
         _id: 1
@@ -595,16 +677,7 @@ exports["ClarityTransactionDispatcher:  Error out with promise when invoking upd
     };
 
     var dispatcher = new ClarityTransactionDispatcher({
-        mongodb: new MockMongo({
-            responses: [
-                {
-                    collectionMethodResult: {}
-                },
-                {
-                    collectionErrorToThrow: "ERROR"
-                }
-            ]
-        }),
+        mongodb: new MockMongo({ responses: [{ collectionErrorToThrow: "ERROR" }] }),
         databaseUrl: ""
     });
 
