@@ -1,4 +1,4 @@
-import { ISystem, IObjectID, ILogger, IMongo, IMongoDb, IMongoClient, IMongoCollection } from "./interfaces";
+import { ISystem, IGridFs, IObjectID, ILogger, IMongo, IMongoDb, IMongoClient, IMongoCollection, IMongoFactory } from "./interfaces";
 import * as Grid from "gridfs-stream";
 import * as fs from "fs";
 import * as uuid from "node-uuid";
@@ -10,7 +10,6 @@ const resolvedPromise = Promise.resolve();
 
 const ENTITIES_COLLECTION = "entities";
 const COMPONENTS_COLLECTION = "components";
-
 
 /**
  * Class that organizes systems to respond to data transactions.
@@ -33,6 +32,7 @@ const COMPONENTS_COLLECTION = "components";
  */
 export default class ClarityTransactionDispatcher {
     private mongodb: IMongo;
+    private mongoFactory: IMongoFactory;
     private MongoClient: IMongoClient;
     private ObjectID: IObjectID;
     private databaseUrl: string;
@@ -43,8 +43,9 @@ export default class ClarityTransactionDispatcher {
      * Create a Dispatcher.
      * @constructor
      */
-    constructor(config: { mongodb: IMongo; databaseUrl: string }) {
-        this.mongodb = config.mongodb;
+    constructor(config: { mongoFactory: IMongoFactory; databaseUrl: string }) {
+        this.mongoFactory = config.mongoFactory;
+        this.mongodb = this.mongoFactory.createMongodb();
         this.MongoClient = this.mongodb.MongoClient;
         this.ObjectID = this.mongodb.ObjectID;
         this.databaseUrl = config.databaseUrl;
@@ -156,8 +157,8 @@ export default class ClarityTransactionDispatcher {
      * @returns {Promise<gridfs>}
      */
     private _getGridFsAsync() {
-        return this._getDatabaseAsync().then((db) => {
-            return Grid(db, this.mongodb);
+        return this._getDatabaseAsync().then((db: any) => {
+            return this.mongoFactory.createGridFs(db, this.mongodb);
         });
     }
 
@@ -243,7 +244,7 @@ export default class ClarityTransactionDispatcher {
      * @private
      */
     private _removeEntityContentAsync(contentId: string) {
-        return this._getGridFsAsync().then((gfs) => {
+        return this._getGridFsAsync().then((gfs: IGridFs) => {
             return new Promise((resolve, reject) => {
 
                 gfs.remove({
@@ -709,11 +710,11 @@ export default class ClarityTransactionDispatcher {
      * @return {Promise<undefined>}
      */
     updateEntityContentByStreamAsync(entity: { _id: string }, stream: NodeJS.ReadableStream) {
-        // We need to pause this until we are ready to pipe to the gridfs.
         var newContentId = uuid.v4();
 
+        // We need to pause this until we are ready to pipe to the gridfs.
         stream.pause();
-        this._getGridFsAsync().then((gfs) => {
+        this._getGridFsAsync().then((gfs: IGridFs) => {
             var writeStream = gfs.createWriteStream({
                 _id: newContentId
             });
@@ -732,7 +733,7 @@ export default class ClarityTransactionDispatcher {
      * 
      * @param {object} component - The component to be updated.
      */
-    updateComponentAsync(entity: {_id: string}, component: { _id: string, type: string, entity_id: string }) {
+    updateComponentAsync(entity: { _id: string }, component: { _id: string, type: string, entity_id: string }) {
         return this._validateComponentAsync(entity, component).then(() => {
             return this._findOneAsync(COMPONENTS_COLLECTION, {
                 _id: this.ObjectID(component._id)

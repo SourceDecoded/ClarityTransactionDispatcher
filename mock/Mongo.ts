@@ -3,7 +3,7 @@ import MongoDB from "./MongoDB";
 import ObjectID from "./ObjectID";
 import { IObjectID } from "./../library/interfaces";
 
-export default class MockMongoDB {
+export default class Mongo {
     private _config;
     MongoClient: { connect: (databaseUrl: string, callback: (error, db: MongoDB) => void) => void };
     ObjectID: IObjectID;

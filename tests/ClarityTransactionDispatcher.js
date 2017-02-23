@@ -1,6 +1,6 @@
 var assert = require("assert");
 var ClarityTransactionDispatcher = require("./../library/ClarityTransactionDispatcher").default;
-var MockMongo = require("./../mock/MockMongoDB").default;
+var MockMongo = require("./../mock/Mongo").default;
 
 var invokeAssert = function (callback) {
     setTimeout(callback);

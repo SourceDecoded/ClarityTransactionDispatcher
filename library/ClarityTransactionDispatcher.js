@@ -1,5 +1,4 @@
 "use strict";
-const Grid = require("gridfs-stream");
 const uuid = require("node-uuid");
 const MongoDbIterator_1 = require("./MongoDbIterator");
 const NullableLogger_1 = require("./NullableLogger");
@@ -32,7 +31,8 @@ class ClarityTransactionDispatcher {
      * @constructor
      */
     constructor(config) {
-        this.mongodb = config.mongodb;
+        this.mongoFactory = config.mongoFactory;
+        this.mongodb = this.mongoFactory.createMongodb();
         this.MongoClient = this.mongodb.MongoClient;
         this.ObjectID = this.mongodb.ObjectID;
         this.databaseUrl = config.databaseUrl;
@@ -138,7 +138,7 @@ class ClarityTransactionDispatcher {
      */
     _getGridFsAsync() {
         return this._getDatabaseAsync().then((db) => {
-            return Grid(db, this.mongodb);
+            return this.mongoFactory.createGridFs(db, this.mongodb);
         });
     }
     /**

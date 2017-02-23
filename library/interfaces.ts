@@ -1,7 +1,26 @@
 import ClarityTransactionDispatcher from "./ClarityTransactionDispatcher";
+import * as stream from "stream";
+
+export interface IMongoFactory {
+    createGridFs: (db: IMongoDb, mongo: IMongo) => IGridFs;
+    createMongodb: () => IMongo;
+}
 
 export interface IMongoCursor {
     toArray: (callback: (err, results: Array<any>) => void) => void;
+}
+
+export interface IGridFs {
+    createReadStream: (filter: {
+        _id?: string;
+        filename?: string;
+    }) => stream.Readable;
+
+    createWriteStream: (filter: {
+        _id?: string;
+        filename?: string;
+    }) => stream.Writable;
+    remove: (filter: { _id: string; }, callback: (err) => void) => void;
 }
 
 export interface IObjectIDInstance {
@@ -12,9 +31,9 @@ export interface IObjectIDInstance {
 
 export interface IObjectID {
     (id?: string): IObjectIDInstance;
-    createFromTime(time: number): IObjectIDInstance;
-    createFromHexString(hexString: string): IObjectIDInstance;
-    isValid(): boolean;
+    createFromTime: (time: number) => IObjectIDInstance;
+    createFromHexString: (hexString: string) => IObjectIDInstance;
+    isValid: () => boolean;
 }
 
 export interface IMongoCollection {
