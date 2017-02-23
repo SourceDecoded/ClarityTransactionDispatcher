@@ -2,21 +2,29 @@ import MongoDB from "./MongoDB";
 
 export default class MongoClient  {
     private _config;
-    private _connectErrorToThrow;
+    private _responses;
 
     constructor(config) {
         this._config = <any>config || {};
-        this._connectErrorToThrow = config.connectErrorToThrow || null;
+        this._responses = this._config.responses;
     }
 
     connect(databaseUrl: string, callback: (error, db: MongoDB) => void) {
+        var response = this._responses.shift();
+
+        if (response == null){
+            throw new Error("Expected a response.");
+        }
+        
+        var connectErrorToThrow = response.connectErrorToThrow;
+
         setTimeout(() => {
-            if (this._connectErrorToThrow != null) {
-                callback(this._connectErrorToThrow, null);
+            if (connectErrorToThrow != null) {
+                callback(connectErrorToThrow, null);
                 return;
             }
 
-            callback(null, new MongoDB(this._config));
+            callback(null, new MongoDB(response));
         }, 0);
     }
 

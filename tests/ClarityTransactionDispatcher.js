@@ -12,7 +12,7 @@ exports["ClarityTransactionDispatcher: Successfully invoking addEntityAsync."] =
     };
 
     var dispatcher = new ClarityTransactionDispatcher({
-        MongoClient: new MockMongo({ collectionMethodResult: entity }).MongoClient,
+        mongodb: new MockMongo({ responses: [{ collectionMethodResult: entity }] }),
         databaseUrl: ""
     });
 
@@ -33,14 +33,18 @@ exports["ClarityTransactionDispatcher: Error out with promise when invoking addE
     };
 
     var dispatcher = new ClarityTransactionDispatcher({
-        MongoClient: new MockMongo({ collectionErrorToThrow: "ERROR" }).MongoClient,
+        mongodb: new MockMongo({ responses: [{ collectionErrorToThrow: "ERROR" }] }),
         databaseUrl: ""
     });
 
     dispatcher.addEntityAsync(entity).then(() => {
-        assert.fail();
+        invokeAssert(() => {
+            assert.fail();
+        });
     }).catch((error) => {
-        assert.ok(true);
+        invokeAssert(() => {
+            assert.ok(true);
+        });
     });
 };
 
@@ -55,14 +59,18 @@ exports["ClarityTransactionDispatcher: Successfully invoking addComponentAsync."
     };
 
     var dispatcher = new ClarityTransactionDispatcher({
-        MongoClient: new MockMongo({ collectionMethodResult: entity }).MongoClient,
+        mongodb: new MockMongo({ responses: [{ collectionMethodResult: entity }] }),
         databaseUrl: ""
     });
 
     dispatcher.addComponentAsync(entity, component).then(() => {
-        assert.ok(true);
+        invokeAssert(() => {
+            assert.ok(true);
+        });
     }).catch((error) => {
-        assert.fail(error);
+        invokeAssert(() => {
+            assert.fail(error);
+        });
     });
 };
 
@@ -77,27 +85,35 @@ exports["ClarityTransactionDispatcher: Error out with promise when invoking addC
     };
 
     var dispatcher = new ClarityTransactionDispatcher({
-        MongoClient: new MockMongo({ collectionErrorToThrow: "ERROR" }).MongoClient,
+        mongodb: new MockMongo({ responses: [{ collectionErrorToThrow: "ERROR" }] }),
         databaseUrl: ""
     });
 
     dispatcher.addComponentAsync(entity, component).then(() => {
-        assert.fail();
+        invokeAssert(() => {
+            assert.fail();
+        });
     }).catch((error) => {
-        assert.ok(true);
+        invokeAssert(() => {
+            assert.ok(true);
+        });
     });
 };
 
 exports["ClarityTransactionDispatcher: Successfully invoking addServiceAsync."] = function () {
     var dispatcher = new ClarityTransactionDispatcher({
-        MongoClient: new MockMongo().MongoClient,
+        mongodb: new MockMongo(),
         databaseUrl: ""
     });
 
     dispatcher.addServiceAsync("test", {}).then(() => {
-        assert.ok(true);
+        invokeAssert(() => {
+            assert.ok(true);
+        });
     }).catch((error) => {
-        assert.fail(error);
+        invokeAssert(() => {
+            assert.fail(error);
+        });
     });
 };
 
@@ -105,7 +121,7 @@ exports["ClarityTransactionDispatcher: Successfully invoking addSystemAsync."] =
     var calledActivated = false;
 
     var dispatcher = new ClarityTransactionDispatcher({
-        MongoClient: new MockMongo().MongoClient,
+        mongodb: new MockMongo(),
         databaseUrl: ""
     });
 
@@ -116,9 +132,13 @@ exports["ClarityTransactionDispatcher: Successfully invoking addSystemAsync."] =
     };
 
     dispatcher.addSystemAsync(system).then(() => {
-        assert.equal(calledActivated, true);
+        invokeAssert(() => {
+            assert.equal(calledActivated, true);
+        });
     }).catch((error) => {
-        assert.fail(error);
+        invokeAssert(() => {
+            assert.fail(error);
+        });
     });
 };
 
@@ -126,7 +146,7 @@ exports["ClarityTransactionDispatcher: Error out with promise when invoking addS
     var calledActivated = false;
 
     var dispatcher = new ClarityTransactionDispatcher({
-        MongoClient: new MockMongo().MongoClient,
+        mongodb: new MockMongo(),
         databaseUrl: ""
     });
 
@@ -138,9 +158,13 @@ exports["ClarityTransactionDispatcher: Error out with promise when invoking addS
     };
 
     dispatcher.addSystemAsync(system).then(() => {
-        assert.fail();
+        invokeAssert(() => {
+            assert.fail();
+        });
     }).catch((error) => {
-        assert.equal(calledActivated, true);
+        invokeAssert(() => {
+            assert.equal(calledActivated, true);
+        });
     });
 };
 
@@ -148,7 +172,7 @@ exports["ClarityTransactionDispatcher: Successfully invoking deactivateSystemAsy
     var calledDeactivated = false;
 
     var dispatcher = new ClarityTransactionDispatcher({
-        MongoClient: new MockMongo().MongoClient,
+        mongodb: new MockMongo(),
         databaseUrl: ""
     });
 
@@ -161,9 +185,13 @@ exports["ClarityTransactionDispatcher: Successfully invoking deactivateSystemAsy
     dispatcher.addSystemAsync(system).then(() => {
         return dispatcher.deactivateSystemAsync(system);
     }).then(() => {
-        assert.equal(calledDeactivated, true);
+        invokeAssert(() => {
+            assert.equal(calledDeactivated, true);
+        });
     }).catch((error) => {
-        assert.fail(error);
+        invokeAssert(() => {
+            assert.fail(error);
+        });
     });
 };
 
@@ -171,7 +199,7 @@ exports["ClarityTransactionDispatcher: Error out with promise when invoking deac
     var calledDeactivated = false;
 
     var dispatcher = new ClarityTransactionDispatcher({
-        MongoClient: new MockMongo().MongoClient,
+        mongodb: new MockMongo(),
         databaseUrl: ""
     });
 
@@ -185,9 +213,9 @@ exports["ClarityTransactionDispatcher: Error out with promise when invoking deac
     dispatcher.addSystemAsync(system).then(() => {
         return dispatcher.deactivateSystemAsync(system);
     }).then(() => {
-        assert.fail();
-    }).catch((error) => {
-        assert.equal(calledDeactivated, true);
+         invokeAssert(() => {
+            assert.equal(calledDeactivated, true);
+        });
     });
 };
 
@@ -195,7 +223,7 @@ exports["ClarityTransactionDispatcher: Successfully invoking disposeSystemAsync.
     var calledDispose = false;
 
     var dispatcher = new ClarityTransactionDispatcher({
-        MongoClient: new MockMongo().MongoClient,
+        mongodb: new MockMongo(),
         databaseUrl: ""
     });
 
@@ -208,9 +236,13 @@ exports["ClarityTransactionDispatcher: Successfully invoking disposeSystemAsync.
     dispatcher.addSystemAsync(system).then(() => {
         return dispatcher.disposeSystemAsync(system);
     }).then(() => {
-        assert.equal(calledDispose, true);
+        invokeAssert(() => {
+            assert.equal(calledDispose, true);
+        });
     }).catch((error) => {
-        assert.fail(error);
+        invokeAssert(() => {
+            assert.fail(error);
+        });
     });
 };
 
@@ -218,7 +250,7 @@ exports["ClarityTransactionDispatcher: Error out with promise when invoking disp
     var calledDispose = false;
 
     var dispatcher = new ClarityTransactionDispatcher({
-        MongoClient: new MockMongo().MongoClient,
+        mongodb: new MockMongo(),
         databaseUrl: ""
     });
 
@@ -232,9 +264,9 @@ exports["ClarityTransactionDispatcher: Error out with promise when invoking disp
     dispatcher.addSystemAsync(system).then(() => {
         return dispatcher.disposeSystemAsync(system);
     }).then(() => {
-        assert.fail();
-    }).catch((error) => {
-        assert.equal(calledDispose, true);
+        invokeAssert(() => {
+            assert.equal(calledDispose, true);
+        });
     });
 };
 
@@ -245,14 +277,18 @@ exports["ClarityTransactionDispatcher: Successfully invoking getComponentAsync."
     };
 
     var dispatcher = new ClarityTransactionDispatcher({
-        MongoClient: new MockMongo({ collectionMethodResult: component }).MongoClient,
+        mongodb: new MockMongo({ responses: [{ collectionMethodResult: component }] }),
         databaseUrl: ""
     });
 
     dispatcher.getComponentAsync(component._id).then(() => {
-        assert.ok(true);
+        invokeAssert(() => {
+            assert.ok(true);
+        });
     }).catch((error) => {
-        assert.fail(error);
+        invokeAssert(() => {
+            assert.fail(error);
+        });
     });
 };
 
@@ -263,14 +299,18 @@ exports["ClarityTransactionDispatcher: Error out with promise when invoking getC
     };
 
     var dispatcher = new ClarityTransactionDispatcher({
-        MongoClient: new MockMongo({ collectionErrorToThrow: "ERROR" }).MongoClient,
+        mongodb: new MockMongo({ responses: [{ collectionErrorToThrow: "ERROR" }] }),
         databaseUrl: ""
     });
 
     dispatcher.getComponentAsync(component._id).then(() => {
-        assert.fail(error);
+        invokeAssert(() => {
+            assert.fail(error);
+        });
     }).catch((error) => {
-        assert.ok(true);
+        invokeAssert(() => {
+            assert.ok(true);
+        });
     });
 };
 
@@ -282,14 +322,18 @@ exports["ClarityTransactionDispatcher: Successfully invoking getComponentsByEnti
     var components = [{ _id: 1, entity_id: 1, type: "test" }, { _id: 2, entity_id: 1, type: "test" }, { _id: 3, entity_id: 1, type: "test" }];
 
     var dispatcher = new ClarityTransactionDispatcher({
-        MongoClient: new MockMongo({ collectionMethodResult: components }).MongoClient,
+        mongodb: new MockMongo({ responses: [{ collectionMethodResult: components }] }),
         databaseUrl: ""
     });
 
     dispatcher.getComponentsByEntityAsync(entity).then(() => {
-        assert.ok(true);
+        invokeAssert(() => {
+            assert.ok(true);
+        });
     }).catch((error) => {
-        assert.fail(error);
+        invokeAssert(() => {
+            assert.fail(error);
+        });
     });
 };
 
@@ -299,14 +343,18 @@ exports["ClarityTransactionDispatcher: Error out with promise when invoking getC
     };
 
     var dispatcher = new ClarityTransactionDispatcher({
-        MongoClient: new MockMongo({ collectionErrorToThrow: "ERROR" }).MongoClient,
+        mongodb: new MockMongo({ responses: [{ collectionErrorToThrow: "ERROR" }] }),
         databaseUrl: ""
     });
 
     dispatcher.getComponentsByEntityAsync(entity).then(() => {
-        assert.fail(error);
+        invokeAssert(() => {
+            assert.fail(error);
+        });
     }).catch((error) => {
-        assert.ok(true);
+        invokeAssert(() => {
+            assert.ok(true);
+        });
     });
 };
 
@@ -318,14 +366,18 @@ exports["ClarityTransactionDispatcher: Successfully invoking getComponentsByEnti
     var components = [{ _id: 1, entity_id: 1, type: "test" }, { _id: 2, entity_id: 1, type: "test" }, { _id: 3, entity_id: 1, type: "test" }];
 
     var dispatcher = new ClarityTransactionDispatcher({
-        MongoClient: new MockMongo({ collectionMethodResult: components }).MongoClient,
+        mongodb: new MockMongo({ responses: [{ collectionMethodResult: components }] }),
         databaseUrl: ""
     });
 
     dispatcher.getComponentsByEntityAndTypeAsync(entity, "test").then(() => {
-        assert.ok(true);
+        invokeAssert(() => {
+            assert.ok(true);
+        });
     }).catch((error) => {
-        assert.fail(error);
+        invokeAssert(() => {
+            assert.fail(error);
+        });
     });
 };
 
@@ -335,14 +387,18 @@ exports["ClarityTransactionDispatcher: Error out with promise when invoking getC
     };
 
     var dispatcher = new ClarityTransactionDispatcher({
-        MongoClient: new MockMongo({ collectionErrorToThrow: "ERROR" }).MongoClient,
+        mongodb: new MockMongo({ responses: [{ collectionErrorToThrow: "ERROR" }] }),
         databaseUrl: ""
     });
 
     dispatcher.getComponentsByEntityAndTypeAsync(entity, "test").then(() => {
-        assert.fail(error);
+        invokeAssert(() => {
+            assert.fail(error);
+        });
     }).catch((error) => {
-        assert.ok(true);
+        invokeAssert(() => {
+            assert.ok(true);
+        });
     });
 };
 
@@ -352,14 +408,18 @@ exports["ClarityTransactionDispatcher: Successfully invoking getEntityByIdAsync.
     };
 
     var dispatcher = new ClarityTransactionDispatcher({
-        MongoClient: new MockMongo({ collectionMethodResult: entity }).MongoClient,
+        mongodb: new MockMongo({ responses: [{ collectionMethodResult: entity }] }),
         databaseUrl: ""
     });
 
     dispatcher.getEntityByIdAsync(entity._id).then(() => {
-        assert.ok(true);
+        invokeAssert(() => {
+            assert.ok(true);
+        });
     }).catch((error) => {
-        assert.fail(error);
+        invokeAssert(() => {
+            assert.fail(error);
+        });
     });
 };
 
@@ -369,44 +429,56 @@ exports["ClarityTransactionDispatcher: Error out with promise when invoking getE
     };
 
     var dispatcher = new ClarityTransactionDispatcher({
-        MongoClient: new MockMongo({ collectionErrorToThrow: "ERROR" }).MongoClient,
+        mongodb: new MockMongo({ responses: [{ collectionErrorToThrow: "ERROR" }] }),
         databaseUrl: ""
     });
 
     dispatcher.getEntityByIdAsync(entity._id).then(() => {
-        assert.fail(error);
+        invokeAssert(() => {
+            assert.fail(error);
+        });
     }).catch((error) => {
-        assert.ok(true);
+        invokeAssert(() => {
+            assert.ok(true);
+        });
     });
 };
 
 exports["ClarityTransactionDispatcher: Successfully invoking getEntitiesIterator."] = function () {
     var dispatcher = new ClarityTransactionDispatcher({
-        MongoClient: new MockMongo().MongoClient,
+        mongodb: new MockMongo(),
         databaseUrl: ""
     });
 
     var iterator = dispatcher.getEntitiesIterator();
 
     if (iterator) {
-        assert.ok(true);
+        invokeAssert(() => {
+            assert.ok(true);
+        });
     } else {
-        assert.fail();
+        invokeAssert(() => {
+            assert.fail();
+        });
     }
 };
 
 exports["ClarityTransactionDispatcher: Successfully invoking getService."] = function () {
     var dispatcher = new ClarityTransactionDispatcher({
-        MongoClient: new MockMongo().MongoClient,
+        mongodb: new MockMongo(),
         databaseUrl: ""
     });
 
     dispatcher.addServiceAsync("test", {}).then(() => {
         return dispatcher.getService("test");
     }).then(() => {
-        assert.ok(true);
+        invokeAssert(() => {
+            assert.ok(true);
+        });
     }).catch((error) => {
-        assert.fail(error);
+        invokeAssert(() => {
+            assert.fail(error);
+        });
     });
 };
 
@@ -422,16 +494,27 @@ exports["ClarityTransactionDispatcher: Successfully invoking removeComponentAsyn
     };
 
     var dispatcher = new ClarityTransactionDispatcher({
-        MongoClient: new MockMongo({ collectionMethodResult: entity }).MongoClient,
+        mongodb: new MockMongo({
+            responses: [
+                {
+                    collectionMethodResult: {}
+                },
+                {
+                    collectionMethodResult: { entity_id: 1 }
+                }
+            ]
+        }),
         databaseUrl: ""
     });
 
-    dispatcher.addComponentAsync(entity, component).then(() => {
-        return dispatcher.removeComponentAsync(component);
-    }).then(() => {
-        assert.ok(true);
+    dispatcher.removeComponentAsync(component).then(() => {
+        invokeAssert(() => {
+            assert.ok(true);
+        });
     }).catch((error) => {
-        assert.fail(error);
+        invokeAssert(() => {
+            assert.fail(error);
+        });
     });
 };
 
@@ -447,15 +530,19 @@ exports["ClarityTransactionDispatcher: Error out with promise when invoking remo
     };
 
     var dispatcher = new ClarityTransactionDispatcher({
-        MongoClient: new MockMongo({ collectionErrorToThrow: "ERROR" }).MongoClient,
+        mongodb: new MockMongo({ responses: [{ collectionErrorToThrow: "ERROR" }] }),
         databaseUrl: ""
     });
 
     dispatcher.addComponentAsync(entity, component).then(() => {
         return dispatcher.removeComponentAsync(component);
     }).then(() => {
-        assert.fail();
+        invokeAssert(() => {
+            assert.fail();
+        });
     }).catch((error) => {
-        assert.ok(true);
+        invokeAssert(() => {
+            assert.ok(true);
+        });
     });
 };

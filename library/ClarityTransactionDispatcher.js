@@ -1,6 +1,4 @@
 "use strict";
-const mongo = require("mongodb");
-const mongodb_1 = require("mongodb");
 const Grid = require("gridfs-stream");
 const uuid = require("node-uuid");
 const MongoDbIterator_1 = require("./MongoDbIterator");
@@ -34,7 +32,9 @@ class ClarityTransactionDispatcher {
      * @constructor
      */
     constructor(config) {
-        this.MongoClient = config.MongoClient;
+        this.mongodb = config.mongodb;
+        this.MongoClient = this.mongodb.MongoClient;
+        this.ObjectID = this.mongodb.ObjectID;
         this.databaseUrl = config.databaseUrl;
         this.systems = [];
         this.services = {};
@@ -46,12 +46,19 @@ class ClarityTransactionDispatcher {
     _addItemToCollectionAsync(item, collectionName) {
         return this._getDatabaseAsync().then((db) => {
             return new Promise((resolve, reject) => {
-                db.collection(collectionName).insertOne(item, (error, result) => {
-                    if (error != null) {
-                        reject(error);
+                db.collection(collectionName, (err, collection) => {
+                    if (err != null) {
+                        reject(err);
                     }
                     else {
-                        resolve(result);
+                        collection.insertOne(item, (error, result) => {
+                            if (error != null) {
+                                reject(error);
+                            }
+                            else {
+                                resolve(result);
+                            }
+                        });
                     }
                 });
             });
@@ -64,12 +71,19 @@ class ClarityTransactionDispatcher {
     _findOneAsync(collectionName, filter) {
         return this._getDatabaseAsync().then((db) => {
             return new Promise((resolve, reject) => {
-                db.collection(collectionName).findOne(filter, function (error, item) {
-                    if (error != null) {
-                        reject(error);
+                db.collection(collectionName, (err, collection) => {
+                    if (err != null) {
+                        reject(err);
                     }
                     else {
-                        resolve(item);
+                        collection.findOne(filter, function (error, item) {
+                            if (error != null) {
+                                reject(error);
+                            }
+                            else {
+                                resolve(item);
+                            }
+                        });
                     }
                 });
             });
@@ -82,12 +96,19 @@ class ClarityTransactionDispatcher {
     _findAsync(collectionName, filter) {
         return this._getDatabaseAsync().then((db) => {
             return new Promise((resolve, reject) => {
-                db.collection(collectionName).find(filter).toArray((error, items) => {
-                    if (error != null) {
-                        reject(error);
+                db.collection(collectionName, (err, collection) => {
+                    if (err != null) {
+                        reject(err);
                     }
                     else {
-                        resolve(items);
+                        collection.find(filter).toArray((error, items) => {
+                            if (error != null) {
+                                reject(error);
+                            }
+                            else {
+                                resolve(items);
+                            }
+                        });
                     }
                 });
             });
@@ -100,7 +121,7 @@ class ClarityTransactionDispatcher {
      */
     _getDatabaseAsync() {
         return new Promise((resolve, reject) => {
-            mongodb_1.MongoClient.connect(this.databaseUrl, (error, db) => {
+            this.MongoClient.connect(this.databaseUrl, (error, db) => {
                 if (error != null) {
                     reject(error);
                 }
@@ -117,7 +138,7 @@ class ClarityTransactionDispatcher {
      */
     _getGridFsAsync() {
         return this._getDatabaseAsync().then((db) => {
-            return Grid(db, mongo);
+            return Grid(db, this.mongodb);
         });
     }
     /**
@@ -218,14 +239,21 @@ class ClarityTransactionDispatcher {
     _removeItemfromCollection(item, collectionName) {
         return this._getDatabaseAsync().then((db) => {
             return new Promise((resolve, reject) => {
-                db.collection(collectionName).deleteOne({
-                    _id: mongo.ObjectID(item._id)
-                }, item, (error, result) => {
-                    if (error != null) {
-                        reject(error);
+                db.collection(collectionName, (err, collection) => {
+                    if (err != null) {
+                        reject(err);
                     }
                     else {
-                        resolve(result);
+                        collection.deleteOne({
+                            _id: this.ObjectID(item._id)
+                        }, (error, result) => {
+                            if (error != null) {
+                                reject(error);
+                            }
+                            else {
+                                resolve(result);
+                            }
+                        });
                     }
                 });
             });
@@ -239,14 +267,21 @@ class ClarityTransactionDispatcher {
     _updateItemInCollection(item, collectionName) {
         return this._getDatabaseAsync().then((db) => {
             return new Promise((resolve, reject) => {
-                db.collection(collectionName).update({
-                    _id: mongo.ObjectID(item._id)
-                }, item, (error, result) => {
-                    if (error != null) {
-                        reject(error);
+                db.collection(collectionName, (err, collection) => {
+                    if (err != null) {
+                        reject(err);
                     }
                     else {
-                        resolve(result);
+                        collection.update({
+                            _id: this.ObjectID(item._id)
+                        }, item, (error, result) => {
+                            if (error != null) {
+                                reject(error);
+                            }
+                            else {
+                                resolve(result);
+                            }
+                        });
                     }
                 });
             });
@@ -416,7 +451,7 @@ class ClarityTransactionDispatcher {
      * @return {Promise<Array>}
      */
     getComponentAsync(componentId) {
-        var id = mongo.ObjectID(componentId);
+        var id = this.ObjectID(componentId);
         return this._findOneAsync(COMPONENTS_COLLECTION, {
             _id: id
         });
@@ -427,7 +462,7 @@ class ClarityTransactionDispatcher {
      * @return {Promise<Array>}
      */
     getComponentsByEntityAsync(entity) {
-        var entityId = mongo.ObjectID(entity._id);
+        var entityId = this.ObjectID(entity._id);
         var filter = {
             entity_id: entityId
         };
@@ -439,7 +474,7 @@ class ClarityTransactionDispatcher {
      * @param {string} type - The type of the component needed.
      */
     getComponentsByEntityAndTypeAsync(entity, type) {
-        var entityId = mongo.ObjectID(entity._id);
+        var entityId = this.ObjectID(entity._id);
         var filter = {
             entity_id: entityId,
             type: type
@@ -464,7 +499,7 @@ class ClarityTransactionDispatcher {
      */
     getEntityContentStreamByEntityAsync(entity) {
         return this._getGridFsAsync().then((gfs) => {
-            var id = mongo.ObjectId(entity.content_id);
+            var id = this.ObjectID(entity.content_id);
             return gfs.createReadStream({
                 _id: id
             });
@@ -477,7 +512,7 @@ class ClarityTransactionDispatcher {
      */
     getEntityContentStreamByContentIdAsync(contentId) {
         return this._getGridFsAsync().then((gfs) => {
-            var id = mongo.ObjectId(contentId);
+            var id = this.ObjectID(contentId);
             return gfs.createReadStream({
                 _id: id
             });
@@ -491,7 +526,7 @@ class ClarityTransactionDispatcher {
         return new MongoDbIterator_1.default({
             databaseUrl: this.databaseUrl,
             collectionName: "enities",
-            MongoClient: mongodb_1.MongoClient
+            MongoClient: this.MongoClient
         });
     }
     /**
@@ -574,7 +609,7 @@ class ClarityTransactionDispatcher {
     updateEntityAsync(entity) {
         return this._validateEntityAsync(entity).then(() => {
             return this._findOneAsync("entities", {
-                _id: mongo.ObjectID(entity._id)
+                _id: this.ObjectID(entity._id)
             });
         }).then((oldEntity) => {
             return this._updateItemInCollection(entity, "entities").then(() => {

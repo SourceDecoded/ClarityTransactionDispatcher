@@ -1,16 +1,19 @@
 "use strict";
+const MongoCursor_1 = require("./MongoCursor");
 class MongoCollection {
     constructor(config) {
+        this._config = config;
         this._collectionMethodErrorToThrow = config.collectionMethodErrorToThrow || null;
         this._collectionMethodResult = config.collectionMethodResult || null;
     }
     _mockAsyncResponse(callback) {
+        var self = this;
         setTimeout(() => {
-            if (this._collectionMethodErrorToThrow != null) {
-                callback(this._collectionMethodErrorToThrow, null);
+            if (self._collectionMethodErrorToThrow != null) {
+                callback(self._collectionMethodErrorToThrow, null);
                 return;
             }
-            callback(null, this._collectionMethodResult);
+            callback(null, self._collectionMethodResult);
         }, 0);
     }
     insertOne(document, callback) {
@@ -23,7 +26,7 @@ class MongoCollection {
         this._mockAsyncResponse(callback);
     }
     find(filter, callback) {
-        this._mockAsyncResponse(callback);
+        return new MongoCursor_1.default(this._config);
     }
     findOne(filter, callback) {
         this._mockAsyncResponse(callback);

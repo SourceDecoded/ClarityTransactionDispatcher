@@ -1,5 +1,22 @@
 import ClarityTransactionDispatcher from "./ClarityTransactionDispatcher";
 
+export interface IMongoCursor {
+    toArray: (callback: (err, results: Array<any>) => void) => void;
+}
+
+export interface IObjectIDInstance {
+    equals: (id: IObjectIDInstance) => boolean;
+    toHexString: () => string;
+    getTimestamp: () => Date;
+}
+
+export interface IObjectID {
+    (id?: string): IObjectIDInstance;
+    createFromTime(time: number): IObjectIDInstance;
+    createFromHexString(hexString: string): IObjectIDInstance;
+    isValid(): boolean;
+}
+
 export interface IMongoCollection {
     insertOne: (document: any, callback: (error, result: any) => void) => void;
     deleteOne: (filter: any, callback: (error, result: any) => void) => void;
@@ -18,6 +35,7 @@ export interface IMongoClient {
 
 
 export interface IMongo {
+    ObjectID: IObjectID;
     MongoClient: IMongoClient;
 }
 

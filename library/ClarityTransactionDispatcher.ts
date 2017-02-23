@@ -1,5 +1,4 @@
-import { ISystem, ILogger, IMongo, IMongoDb, IMongoClient, IMongoCollection } from "./interfaces";
-import { MongoClient } from "mongodb";
+import { ISystem, IObjectID, ILogger, IMongo, IMongoDb, IMongoClient, IMongoCollection } from "./interfaces";
 import * as Grid from "gridfs-stream";
 import * as fs from "fs";
 import * as uuid from "node-uuid";
@@ -33,8 +32,9 @@ const COMPONENTS_COLLECTION = "components";
  * fulfill their responsibilities efficiently.
  */
 export default class ClarityTransactionDispatcher {
-    private mongoDb: IMongo;
+    private mongodb: IMongo;
     private MongoClient: IMongoClient;
+    private ObjectID: IObjectID;
     private databaseUrl: string;
     private services: { [key: string]: any };
     private systems: Array<ISystem>;
@@ -44,8 +44,9 @@ export default class ClarityTransactionDispatcher {
      * @constructor
      */
     constructor(config: { mongodb: IMongo; databaseUrl: string }) {
-        this.mongoDb = config.mongodb;
-        this.MongoClient = this.mongoDb.MongoClient;
+        this.mongodb = config.mongodb;
+        this.MongoClient = this.mongodb.MongoClient;
+        this.ObjectID = this.mongodb.ObjectID;
         this.databaseUrl = config.databaseUrl;
         this.systems = [];
         this.services = {};
@@ -60,14 +61,19 @@ export default class ClarityTransactionDispatcher {
 
             return new Promise((resolve, reject) => {
 
-                db.collection(collectionName).insertOne(item, (error, result) => {
-                    if (error != null) {
-                        reject(error);
+                db.collection(collectionName, (err, collection) => {
+                    if (err != null) {
+                        reject(err);
                     } else {
-                        resolve(result);
+                        collection.insertOne(item, (error, result) => {
+                            if (error != null) {
+                                reject(error);
+                            } else {
+                                resolve(result);
+                            }
+                        });
                     }
-
-                });
+                })
 
             });
         });
@@ -81,13 +87,19 @@ export default class ClarityTransactionDispatcher {
         return this._getDatabaseAsync().then((db: any) => {
             return new Promise((resolve, reject) => {
 
-                db.collection(collectionName).findOne(filter, function (error, item) {
-                    if (error != null) {
-                        reject(error);
+                db.collection(collectionName, (err, collection) => {
+                    if (err != null) {
+                        reject(err);
                     } else {
-                        resolve(item);
+                        collection.findOne(filter, function (error, item) {
+                            if (error != null) {
+                                reject(error);
+                            } else {
+                                resolve(item);
+                            }
+                        });
                     }
-                });
+                })
 
             });
 
@@ -102,11 +114,17 @@ export default class ClarityTransactionDispatcher {
         return this._getDatabaseAsync().then((db: any) => {
             return new Promise((resolve, reject) => {
 
-                db.collection(collectionName).find(filter).toArray((error, items) => {
-                    if (error != null) {
-                        reject(error);
+                db.collection(collectionName, (err, collection) => {
+                    if (err != null) {
+                        reject(err);
                     } else {
-                        resolve(items);
+                        collection.find(filter).toArray((error, items) => {
+                            if (error != null) {
+                                reject(error);
+                            } else {
+                                resolve(items);
+                            }
+                        });
                     }
                 });
 
@@ -122,7 +140,7 @@ export default class ClarityTransactionDispatcher {
      */
     private _getDatabaseAsync() {
         return new Promise((resolve, reject) => {
-            MongoClient.connect(this.databaseUrl, (error, db) => {
+            this.MongoClient.connect(this.databaseUrl, (error, db) => {
                 if (error != null) {
                     reject(error);
                 } else {
@@ -139,7 +157,7 @@ export default class ClarityTransactionDispatcher {
      */
     private _getGridFsAsync() {
         return this._getDatabaseAsync().then((db) => {
-            return Grid(db, mongo);
+            return Grid(db, this.mongodb);
         });
     }
 
@@ -257,17 +275,22 @@ export default class ClarityTransactionDispatcher {
 
             return new Promise((resolve, reject) => {
 
-                db.collection(collectionName).deleteOne({
-                    _id: mongo.ObjectID(item._id)
-                }, item, (error, result) => {
-
-                    if (error != null) {
-                        reject(error);
+                db.collection(collectionName, (err, collection) => {
+                    if (err != null) {
+                        reject(err);
                     } else {
-                        resolve(result);
-                    }
+                        collection.deleteOne({
+                            _id: this.ObjectID(item._id)
+                        }, (error, result) => {
 
-                });
+                            if (error != null) {
+                                reject(error);
+                            } else {
+                                resolve(result);
+                            }
+                        });
+                    }
+                })
 
             });
         });
@@ -283,16 +306,22 @@ export default class ClarityTransactionDispatcher {
 
             return new Promise((resolve, reject) => {
 
-                db.collection(collectionName).update({
-                    _id: mongo.ObjectID(item._id)
-                }, item, (error, result) => {
-
-                    if (error != null) {
-                        reject(error);
+                db.collection(collectionName, (err, collection) => {
+                    if (err != null) {
+                        reject(err);
                     } else {
-                        resolve(result);
-                    }
+                        collection.update({
+                            _id: this.ObjectID(item._id)
+                        }, item, (error, result) => {
 
+                            if (error != null) {
+                                reject(error);
+                            } else {
+                                resolve(result);
+                            }
+
+                        });
+                    }
                 });
 
             });
@@ -475,7 +504,7 @@ export default class ClarityTransactionDispatcher {
      * @return {Promise<Array>}
      */
     getComponentAsync(componentId: string) {
-        var id = mongo.ObjectID(componentId);
+        var id = this.ObjectID(componentId);
         return this._findOneAsync(COMPONENTS_COLLECTION, {
             _id: id
         });
@@ -487,7 +516,7 @@ export default class ClarityTransactionDispatcher {
      * @return {Promise<Array>}
      */
     getComponentsByEntityAsync(entity: { _id: string }) {
-        var entityId = mongo.ObjectID(entity._id);
+        var entityId = this.ObjectID(entity._id);
         var filter = {
             entity_id: entityId
         };
@@ -501,7 +530,7 @@ export default class ClarityTransactionDispatcher {
      * @param {string} type - The type of the component needed.
      */
     getComponentsByEntityAndTypeAsync(entity: { _id: string }, type: string) {
-        var entityId = mongo.ObjectID(entity._id);
+        var entityId = this.ObjectID(entity._id);
         var filter = {
             entity_id: entityId,
             type: type
@@ -530,7 +559,7 @@ export default class ClarityTransactionDispatcher {
      */
     getEntityContentStreamByEntityAsync(entity: { _id: string, content_id: string }) {
         return this._getGridFsAsync().then((gfs: any) => {
-            var id = mongo.ObjectId(entity.content_id);
+            var id = this.ObjectID(entity.content_id);
             return gfs.createReadStream({
                 _id: id
             });
@@ -544,7 +573,7 @@ export default class ClarityTransactionDispatcher {
      */
     getEntityContentStreamByContentIdAsync(contentId: string) {
         return this._getGridFsAsync().then((gfs: any) => {
-            var id = mongo.ObjectId(contentId);
+            var id = this.ObjectID(contentId);
             return gfs.createReadStream({
                 _id: id
             });
@@ -560,7 +589,7 @@ export default class ClarityTransactionDispatcher {
         return new MongoDbIterator({
             databaseUrl: this.databaseUrl,
             collectionName: "enities",
-            MongoClient: MongoClient
+            MongoClient: this.MongoClient
         });
     }
 
@@ -654,7 +683,7 @@ export default class ClarityTransactionDispatcher {
     updateEntityAsync(entity: { _id: string }) {
         return this._validateEntityAsync(entity).then(() => {
             return this._findOneAsync("entities", {
-                _id: mongo.ObjectID(entity._id)
+                _id: this.ObjectID(entity._id)
             });
         }).then((oldEntity) => {
             return this._updateItemInCollection(entity, "entities").then(() => {

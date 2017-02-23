@@ -3,15 +3,20 @@ const MongoDB_1 = require("./MongoDB");
 class MongoClient {
     constructor(config) {
         this._config = config || {};
-        this._connectErrorToThrow = config.connectErrorToThrow || null;
+        this._responses = this._config.responses;
     }
     connect(databaseUrl, callback) {
+        var response = this._responses.shift();
+        if (response == null) {
+            throw new Error("Expected a response.");
+        }
+        var connectErrorToThrow = response.connectErrorToThrow;
         setTimeout(() => {
-            if (this._connectErrorToThrow != null) {
-                callback(this._connectErrorToThrow, null);
+            if (connectErrorToThrow != null) {
+                callback(connectErrorToThrow, null);
                 return;
             }
-            callback(null, new MongoDB_1.default(this._config));
+            callback(null, new MongoDB_1.default(response));
         }, 0);
     }
 }
