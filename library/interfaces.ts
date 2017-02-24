@@ -97,6 +97,12 @@ export interface ISystem {
     validateEntityContentAsync(entity: { _id: string }, oldContentId: string, newContentId: string);
 }
 
+export interface ISystemData {
+    _id: string;
+    systemGuid: string;
+    isInitialized: boolean;
+}
+
 export interface ILogger {
     warn(message: string, ...data: any[]): void;
     error(message: string, ...data: any[]): void;
