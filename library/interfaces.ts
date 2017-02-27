@@ -12,13 +12,13 @@ export interface IMongoCursor {
 
 export interface IGridFs {
     createReadStream: (filter: {
-        _id?: string;
-        filename?: string;
+        _id?: any;
+        filename?: any;
     }) => stream.Readable;
 
     createWriteStream: (filter: {
-        _id?: string;
-        filename?: string;
+        _id?: any;
+        filename?: any;
     }) => stream.Writable;
     remove: (filter: { _id: string; }, callback: (err) => void) => void;
 }

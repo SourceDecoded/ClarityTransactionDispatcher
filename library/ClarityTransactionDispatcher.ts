@@ -495,6 +495,25 @@ export default class ClarityTransactionDispatcher {
     }
 
     /**
+     * Add temporary data to the data store.
+     * @param {NodeJS.WritableStream} stream - The stream of data to add.
+     * @return {Promise<undefined>}
+     */
+    addTemporaryDataByStreamAsync(stream: NodeJS.ReadableStream) {
+        var newContentId = uuid.v4();
+
+        // We need to pause this until we are ready to pipe to the gridfs.
+        stream.pause();
+        return this._getGridFsAsync().then((gfs: IGridFs) => {
+            var writeStream = gfs.createWriteStream({
+                _id: newContentId
+            });
+            stream.pipe(writeStream);
+            stream.resume();
+        });
+    }
+
+    /**
      * Deactivates a system and removes it from the systems being notified. To activate again use addSystemAsync.
      * Think of this like a pause. The dispatcher calls deactivatedAsync on the system being removed.
      * @param {ISystem} system - The system to be deactivate.
@@ -621,11 +640,22 @@ export default class ClarityTransactionDispatcher {
      */
     getEntityContentStreamByContentIdAsync(contentId: string) {
         return this._getGridFsAsync().then((gfs: any) => {
-            var id = this.ObjectID(contentId);
             return gfs.createReadStream({
-                _id: id
+                _id: this.ObjectID(contentId)
             });
+        });
+    }
 
+    /**
+     * Get a stream of the content of the entity by its id.
+     * @param {string} contentId - The id of the content needed..
+     * @returns {NodeJS.ReadableStream} - Node read stream.
+     */
+    getTemporaryDataStreamByIdAsync(id: string) {
+        return this._getGridFsAsync().then((gfs: any) => {
+            return gfs.createReadStream({
+                _id: this.ObjectID(id)
+            });
         });
     }
 
@@ -742,24 +772,6 @@ export default class ClarityTransactionDispatcher {
     }
 
     /**
-     * Save temporary data to the data store.
-     * @param {NodeJS.WritableStream}  - The stream of data to save.
-     */
-    saveTemporaryDataByStreamAsync(stream: NodeJS.ReadableStream) {
-        var newContentId = uuid.v4();
-
-        // We need to pause this until we are ready to pipe to the gridfs.
-        stream.pause();
-        return this._getGridFsAsync().then((gfs: IGridFs) => {
-            var writeStream = gfs.createWriteStream({
-                _id: newContentId
-            });
-            stream.pipe(writeStream);
-            stream.resume();
-        });
-    }
-
-    /**
      * Updated an entity. The dispatcher will perform the following actions when updating.
      * This really shouldn't be used much. The entity is really just a container for the 
      * content_id and the components.
@@ -805,7 +817,7 @@ export default class ClarityTransactionDispatcher {
         stream.pause();
         return this._getGridFsAsync().then((gfs: IGridFs) => {
             var writeStream = gfs.createWriteStream({
-                _id: newContentId
+                _id: this.ObjectID(newContentId)
             });
             stream.pipe(writeStream);
             stream.resume();
