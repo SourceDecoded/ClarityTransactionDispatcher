@@ -1,4 +1,4 @@
-import { ISystem, IGridFs, IObjectID, ILogger, IMongo, IMongoDb, IMongoClient, IMongoCollection, IMongoFactory } from "./interfaces";
+import { ISystem, ISystemData, IGridFs, IObjectID, ILogger, IMongo, IMongoDb, IMongoClient, IMongoCollection, IMongoFactory } from "./interfaces";
 import * as Grid from "gridfs-stream";
 import * as fs from "fs";
 import * as uuid from "node-uuid";
@@ -10,6 +10,7 @@ const resolvedPromise = Promise.resolve();
 
 const ENTITIES_COLLECTION = "entities";
 const COMPONENTS_COLLECTION = "components";
+const SYSTEM_DATA_COLLECTION = "systemData";
 
 /**
  * Class that organizes systems to respond to data transactions.
@@ -168,6 +169,36 @@ export default class ClarityTransactionDispatcher {
      */
     private _getLogger() {
         return <ILogger>this.services["logger"] || nullableLogger;
+    }
+
+    /**
+     * Initialize a system.
+     * @private
+     */
+    private _initializingSystemAsync(system: ISystem) {
+        var filter = {
+            systemGuid: system.getGuid()
+        };
+
+        return this._findOneAsync(SYSTEM_DATA_COLLECTION, filter).then((systemData: ISystemData) => {
+            if (systemData === null) {
+                var newSystemData = {
+                    systemGuid: system.getGuid(),
+                    isInitialized: false
+                };
+
+                return this._addItemToCollectionAsync(newSystemData, SYSTEM_DATA_COLLECTION);
+            } else {
+                return systemData;
+            }
+        }).then((systemData: ISystemData) => {
+            if (!systemData.isInitialized) {
+                return this._invokeMethodAsync(system, "initializeAsync", []).then(() => {
+                    systemData.isInitialized = true;
+                    return this._updateItemInCollection(systemData, SYSTEM_DATA_COLLECTION);
+                });
+            }
+        });
     }
 
     /**
@@ -356,6 +387,14 @@ export default class ClarityTransactionDispatcher {
         return this._notifySystemsAsync("validateEntityContentAsync", [entity, newContentId]);
     }
 
+    private _validateSystem(system: ISystem) {
+        if (typeof system.getGuid !== "function" ||
+            typeof system.getName !== "function") {
+            return false;
+        }
+        return true;
+    }
+
     /**
      * Adds a component to an entity.
      * 
@@ -443,8 +482,16 @@ export default class ClarityTransactionDispatcher {
      * @return {Promise} - An undefined Promise.
      */
     addSystemAsync(system: ISystem) {
-        this.systems.push(system);
-        return this._invokeMethodAsync(system, "activatedAsync", []);
+        if (!this._validateSystem(system)) {
+            return Promise.reject(new Error("Invalid system: Systems need to have a getName and a getGuid method on them."));
+        } else {
+            this.systems.push(system);
+            return this._initializingSystemAsync(system).then(() => {
+                return this._invokeMethodAsync(system, "activatedAsync", []);
+            }).catch((error) => {
+                return Promise.reject(error);
+            });
+        }
     }
 
     /**
