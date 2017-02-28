@@ -348,23 +348,6 @@ class ClarityTransactionDispatcher {
         return true;
     }
     /**
-     * Add an Entity to the datastore. The steps the dispatcher takes when saving an
-     * entity are.
-     *
-     * - Validate the entity with all systems. All systems have to validate to pass.
-     * - Save the entity to the datastore.
-     * - Notify the systems that an entity has been saved to the datastore.
-     * @param {object} entity - The entity you want to add.
-     * @return {Promise}
-     */
-    addEntityAsync(entity) {
-        return this._validateEntityAsync(entity).then(() => {
-            return this._addItemToCollectionAsync(entity, ENTITIES_COLLECTION);
-        }).then(() => {
-            return this._notifySystemsWithRecoveryAsync("entityAddedAsync", [entity]);
-        });
-    }
-    /**
      * Adds a component to an entity.
      *
      * The dispatcher does the following when adding a component.
@@ -381,6 +364,23 @@ class ClarityTransactionDispatcher {
             return this._addItemToCollectionAsync(component, COMPONENTS_COLLECTION);
         }).then(() => {
             return this._notifySystemsWithRecoveryAsync("entityComponentAddedAsync", [entity, component]);
+        });
+    }
+    /**
+     * Add an Entity to the datastore. The steps the dispatcher takes when saving an
+     * entity are.
+     *
+     * - Validate the entity with all systems. All systems have to validate to pass.
+     * - Save the entity to the datastore.
+     * - Notify the systems that an entity has been saved to the datastore.
+     * @param {object} entity - The entity you want to add.
+     * @return {Promise}
+     */
+    addEntityAsync(entity) {
+        return this._validateEntityAsync(entity).then(() => {
+            return this._addItemToCollectionAsync(entity, ENTITIES_COLLECTION);
+        }).then(() => {
+            return this._notifySystemsWithRecoveryAsync("entityAddedAsync", [entity]);
         });
     }
     /**
@@ -441,6 +441,23 @@ class ClarityTransactionDispatcher {
                 return Promise.reject(error);
             });
         }
+    }
+    /**
+     * Add temporary data to the data store.
+     * @param {NodeJS.WritableStream} stream - The stream of data to add.
+     * @return {Promise<undefined>}
+     */
+    addTemporaryDataByStreamAsync(stream) {
+        var newContentId = uuid.v4();
+        // We need to pause this until we are ready to pipe to the gridfs.
+        stream.pause();
+        return this._getGridFsAsync().then((gfs) => {
+            var writeStream = gfs.createWriteStream({
+                _id: newContentId
+            });
+            stream.pipe(writeStream);
+            stream.resume();
+        });
     }
     /**
      * Deactivates a system and removes it from the systems being notified. To activate again use addSystemAsync.
@@ -533,7 +550,7 @@ class ClarityTransactionDispatcher {
      */
     getEntityByIdAsync(entityId) {
         var filter = {
-            _id: entityId
+            _id: this.ObjectID(entityId)
         };
         return this._findOneAsync(ENTITIES_COLLECTION, filter);
     }
@@ -557,9 +574,20 @@ class ClarityTransactionDispatcher {
      */
     getEntityContentStreamByContentIdAsync(contentId) {
         return this._getGridFsAsync().then((gfs) => {
-            var id = this.ObjectID(contentId);
             return gfs.createReadStream({
-                _id: id
+                _id: this.ObjectID(contentId)
+            });
+        });
+    }
+    /**
+     * Get a stream of the content of the entity by its id.
+     * @param {string} contentId - The id of the content needed..
+     * @returns {NodeJS.ReadableStream} - Node read stream.
+     */
+    getTemporaryDataStreamByIdAsync(id) {
+        return this._getGridFsAsync().then((gfs) => {
+            return gfs.createReadStream({
+                _id: this.ObjectID(id)
             });
         });
     }
@@ -641,6 +669,30 @@ class ClarityTransactionDispatcher {
             delete this.services[name];
             return this._notifySystemsWithRecoveryAsync("serviceRemovedAsync", [name, this.services[name]]);
         }
+        else {
+            return Promise.reject(new Error("Couldn't find service to be removed."));
+        }
+    }
+    /**
+     * Remove temporary data to the data store.
+     * @param {string} id - The id of the data being removed.
+     * @return {Promise<undefined>}
+     */
+    removeTemporaryDataByIdAsync(id) {
+        this._getGridFsAsync().then((gfs) => {
+            return new Promise((resolve, reject) => {
+                gfs.remove({
+                    _id: id
+                }, (error) => {
+                    if (error) {
+                        reject(error);
+                    }
+                    else {
+                        resolve();
+                    }
+                });
+            });
+        });
     }
     /**
      * Updated an entity. The dispatcher will perform the following actions when updating.
@@ -684,9 +736,9 @@ class ClarityTransactionDispatcher {
         var newContentId = uuid.v4();
         // We need to pause this until we are ready to pipe to the gridfs.
         stream.pause();
-        this._getGridFsAsync().then((gfs) => {
+        return this._getGridFsAsync().then((gfs) => {
             var writeStream = gfs.createWriteStream({
-                _id: newContentId
+                _id: this.ObjectID(newContentId)
             });
             stream.pipe(writeStream);
             stream.resume();

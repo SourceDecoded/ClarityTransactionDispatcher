@@ -613,7 +613,7 @@ export default class ClarityTransactionDispatcher {
      */
     getEntityByIdAsync(entityId: string) {
         var filter = {
-            _id: entityId
+            _id: this.ObjectID(entityId)
         };
 
         return this._findOneAsync(ENTITIES_COLLECTION, filter);
@@ -746,6 +746,8 @@ export default class ClarityTransactionDispatcher {
         if (this.services[name]) {
             delete this.services[name];
             return this._notifySystemsWithRecoveryAsync("serviceRemovedAsync", [name, this.services[name]]);
+        } else {
+            return Promise.reject(new Error("Couldn't find service to be removed."));
         }
     }
 
