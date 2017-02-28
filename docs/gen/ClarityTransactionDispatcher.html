@@ -354,7 +354,7 @@ fulfill their responsibilities efficiently.</p></div>
             
 <hr>
 <dt>
-    <h4 class="name" id="addEntityAsync"><span class="type-signature"></span>addEntityAsync(entity)</h4>
+    <h4 class="name" id="addEntityAsync"><span class="type-signature"></span>addEntityAsync(entity, stream, components)</h4>
     
     
 </dt>
@@ -365,9 +365,12 @@ fulfill their responsibilities efficiently.</p></div>
         <p>Add an Entity to the datastore. The steps the dispatcher takes when saving an
 entity are.</p>
 <ul>
+<li>Saves the content of the entity to a datastore.</li>
 <li>Validate the entity with all systems. All systems have to validate to pass.</li>
 <li>Save the entity to the datastore.</li>
-<li>Notify the systems that an entity has been saved to the datastore.</li>
+<li>Validate and save the components.</li>
+<li>Notify the systems that an entity with its components and content have been saved.</li>
+<li>If any of the steps above fail, it will retract the whole transaction and notify the systems of doing so.</li>
 </ul>
     </div>
     
@@ -421,6 +424,54 @@ entity are.</p>
             
 
             <td class="description last"><p>The entity you want to add.</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>stream</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">NodeJS.ReadableStream</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>The content of the entity.</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>components</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Array.&lt;component></span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>An array of components belonging to the entity.</p></td>
         </tr>
 
     
@@ -850,154 +901,6 @@ component of image</p>
     <dd>
         
 <span class="param-type">Promise</span>
-
-
-
-    </dd>
-</dl>
-
-
-        
-
-    
-</dd>
-
-        
-            
-<hr>
-<dt>
-    <h4 class="name" id="addTemporaryDataByStreamAsync"><span class="type-signature"></span>addTemporaryDataByStreamAsync(stream)</h4>
-    
-    
-</dt>
-<dd>
-
-    
-    <div class="description">
-        <p>Add temporary data to the data store.</p>
-    </div>
-    
-
-    
-
-    
-
-    
-    
-        <h5>Parameters:</h5>
-        
-
-<table class="params table table-striped">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>stream</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">NodeJS.WritableStream</span>
-
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>The stream of data to add.</p></td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-    
-
-    
-<dl class="details">
-    
-
-	
-
-	
-
-	
-
-    
-
-    
-
-    
-
-    
-
-	
-
-	
-
-	
-
-	
-
-	
-
-
-
-	
-
-	
-
-	
-
-	
-</dl>
-
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <h5>Returns:</h5>
-    
-            
-
-
-<dl>
-    <dt>
-        Type
-    </dt>
-    <dd>
-        
-<span class="param-type">Promise.&lt;undefined></span>
 
 
 
@@ -2486,160 +2389,6 @@ good. This allows the system to clean up after itself if needed. The dispatcher 
             
 <hr>
 <dt>
-    <h4 class="name" id="getTemporaryDataStreamByIdAsync"><span class="type-signature"></span>getTemporaryDataStreamByIdAsync(contentId)</h4>
-    
-    
-</dt>
-<dd>
-
-    
-    <div class="description">
-        <p>Get a stream of the content of the entity by its id.</p>
-    </div>
-    
-
-    
-
-    
-
-    
-    
-        <h5>Parameters:</h5>
-        
-
-<table class="params table table-striped">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>contentId</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">string</span>
-
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>The id of the content needed..</p></td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-    
-
-    
-<dl class="details">
-    
-
-	
-
-	
-
-	
-
-    
-
-    
-
-    
-
-    
-
-	
-
-	
-
-	
-
-	
-
-	
-
-
-
-	
-
-	
-
-	
-
-	
-</dl>
-
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <h5>Returns:</h5>
-    
-            
-<div class="param-desc">
-    <ul>
-<li>Node read stream.</li>
-</ul>
-</div>
-
-
-
-<dl>
-    <dt>
-        Type
-    </dt>
-    <dd>
-        
-<span class="param-type">NodeJS.ReadableStream</span>
-
-
-
-    </dd>
-</dl>
-
-
-        
-
-    
-</dd>
-
-        
-            
-<hr>
-<dt>
     <h4 class="name" id="removeComponentAsync"><span class="type-signature"></span>removeComponentAsync(component)</h4>
     
     
@@ -3168,154 +2917,6 @@ removed.</p>
             
 <hr>
 <dt>
-    <h4 class="name" id="removeTemporaryDataByIdAsync"><span class="type-signature"></span>removeTemporaryDataByIdAsync(id)</h4>
-    
-    
-</dt>
-<dd>
-
-    
-    <div class="description">
-        <p>Remove temporary data to the data store.</p>
-    </div>
-    
-
-    
-
-    
-
-    
-    
-        <h5>Parameters:</h5>
-        
-
-<table class="params table table-striped">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>id</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">string</span>
-
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>The id of the data being removed.</p></td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-    
-
-    
-<dl class="details">
-    
-
-	
-
-	
-
-	
-
-    
-
-    
-
-    
-
-    
-
-	
-
-	
-
-	
-
-	
-
-	
-
-
-
-	
-
-	
-
-	
-
-	
-</dl>
-
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <h5>Returns:</h5>
-    
-            
-
-
-<dl>
-    <dt>
-        Type
-    </dt>
-    <dd>
-        
-<span class="param-type">Promise.&lt;undefined></span>
-
-
-
-    </dd>
-</dl>
-
-
-        
-
-    
-</dd>
-
-        
-            
-<hr>
-<dt>
     <h4 class="name" id="updateComponentAsync"><span class="type-signature"></span>updateComponentAsync(component)</h4>
     
     
@@ -3787,6 +3388,243 @@ updated the content of an entity.</p>
     
 </dd>
 
+        
+            
+<hr>
+<dt>
+    <h4 class="name" id="validateComponentAsync"><span class="type-signature"></span>validateComponentAsync()</h4>
+    
+    
+</dt>
+<dd>
+
+    
+    <div class="description">
+        <p>This allows systems to validate the component being saved.</p>
+    </div>
+    
+
+    
+
+    
+
+    
+    
+
+    
+<dl class="details">
+    
+
+	
+
+	
+
+	
+
+    
+
+    
+
+    
+
+    
+
+	
+
+	
+
+	
+
+	
+
+	
+
+
+
+	
+
+	
+
+	
+
+	
+</dl>
+
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dd>
+
+        
+            
+<hr>
+<dt>
+    <h4 class="name" id="validateEntityAsync"><span class="type-signature"></span>validateEntityAsync()</h4>
+    
+    
+</dt>
+<dd>
+
+    
+    <div class="description">
+        <p>This allows systems to validate the entity being saved.</p>
+    </div>
+    
+
+    
+
+    
+
+    
+    
+
+    
+<dl class="details">
+    
+
+	
+
+	
+
+	
+
+    
+
+    
+
+    
+
+    
+
+	
+
+	
+
+	
+
+	
+
+	
+
+
+
+	
+
+	
+
+	
+
+	
+</dl>
+
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dd>
+
+        
+            
+<hr>
+<dt>
+    <h4 class="name" id="validateEntityContentAsync"><span class="type-signature"></span>validateEntityContentAsync()</h4>
+    
+    
+</dt>
+<dd>
+
+    
+    <div class="description">
+        <p>This allows the systems to validate content before its accepted.
+The dispatcher saves it to a temporary location so systems can validate it
+independently. The content could be an extremely large file so we don't want
+to hold it in memory.</p>
+    </div>
+    
+
+    
+
+    
+
+    
+    
+
+    
+<dl class="details">
+    
+
+	
+
+	
+
+	
+
+    
+
+    
+
+    
+
+    
+
+	
+
+	
+
+	
+
+	
+
+	
+
+
+
+	
+
+	
+
+	
+
+	
+</dl>
+
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dd>
+
         </dl>
     
 
@@ -3837,7 +3675,7 @@ updated the content of an entity.</p>
 <span class="jsdoc-message">
 	Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.3</a>
 	
-		on February 28th 2017, 2:53:34 pm
+		on February 28th 2017, 3:21:46 pm
 	
 	using the <a href="https://github.com/docstrap/docstrap">DocStrap template</a>.
 </span>

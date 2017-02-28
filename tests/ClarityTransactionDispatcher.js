@@ -209,181 +209,181 @@ exports["ClarityTransactionDispatcher: Successfully call initializeAsync when in
     });
 };
 
-exports["ClarityTransactionDispatcher: Successfully invoking addEntityAsync."] = () => {
-    var entity = {
-        _id: 1
-    };
+// exports["ClarityTransactionDispatcher: Successfully invoking addEntityAsync."] = () => {
+//     var entity = {
+//         _id: 1
+//     };
 
-    var mongoFactory = new MongoFactory({
-        gridFsConfig: { responses: [] },
-        mongodbConfig: { responses: [{ collectionMethodResult: entity }] }
-    });
+//     var mongoFactory = new MongoFactory({
+//         gridFsConfig: { responses: [] },
+//         mongodbConfig: { responses: [{ collectionMethodResult: entity }] }
+//     });
 
-    var dispatcher = new ClarityTransactionDispatcher({
-        mongoFactory: mongoFactory,
-        databaseUrl: ""
-    });
+//     var dispatcher = new ClarityTransactionDispatcher({
+//         mongoFactory: mongoFactory,
+//         databaseUrl: ""
+//     });
 
-    dispatcher.addEntityAsync(entity).then(() => {
-        invokeAssert(() => {
-            assert.ok(true);
-        });
-    }).catch((error) => {
-        invokeAssert(() => {
-            assert.ok(false);
-        });
-    });
-};
+//     dispatcher.addEntityAsync(entity).then(() => {
+//         invokeAssert(() => {
+//             assert.ok(true);
+//         });
+//     }).catch((error) => {
+//         invokeAssert(() => {
+//             assert.ok(false);
+//         });
+//     });
+// };
 
-exports["ClarityTransactionDispatcher: Error out with validating addEntityAsync."] = () => {
-    var entity = {
-        _id: 1
-    };
+// exports["ClarityTransactionDispatcher: Error out with validating addEntityAsync."] = () => {
+//     var entity = {
+//         _id: 1
+//     };
 
-    var expectedError = "Error: validation of entity."
+//     var expectedError = "Error: validation of entity."
 
-    var system = {
-        guid: "*TEST*",
-        name: "Test",
-        getGuid: () => {
-            return system.guid;
-        },
-        getName: () => {
-            return system.name;
-        },
-        validateEntityAsync: () => {
-            return Promise.reject(new Error(expectedError));
-        }
-    };
+//     var system = {
+//         guid: "*TEST*",
+//         name: "Test",
+//         getGuid: () => {
+//             return system.guid;
+//         },
+//         getName: () => {
+//             return system.name;
+//         },
+//         validateEntityAsync: () => {
+//             return Promise.reject(new Error(expectedError));
+//         }
+//     };
 
-    var mongoFactory = new MongoFactory({
-        gridFsConfig: { responses: [] },
-        mongodbConfig: { responses: [{ collectionMethodResult: { isInitialized: false, systemGuid: "*TEST*" } }, {}] }
-    });
+//     var mongoFactory = new MongoFactory({
+//         gridFsConfig: { responses: [] },
+//         mongodbConfig: { responses: [{ collectionMethodResult: { isInitialized: false, systemGuid: "*TEST*" } }, {}] }
+//     });
 
-    var dispatcher = new ClarityTransactionDispatcher({
-        mongoFactory: mongoFactory,
-        databaseUrl: ""
-    });
+//     var dispatcher = new ClarityTransactionDispatcher({
+//         mongoFactory: mongoFactory,
+//         databaseUrl: ""
+//     });
 
-    dispatcher.addSystemAsync(system).then(() => {
-        return dispatcher.addEntityAsync(entity);
-    }).then(() => {
-        assert.ok(false);
-    }).catch(error => {
-        invokeAssert(() => {
-            assert.equal(expectedError, error.message);
-        });
-    });
-};
+//     dispatcher.addSystemAsync(system).then(() => {
+//         return dispatcher.addEntityAsync(entity);
+//     }).then(() => {
+//         assert.ok(false);
+//     }).catch(error => {
+//         invokeAssert(() => {
+//             assert.equal(expectedError, error.message);
+//         });
+//     });
+// };
 
-exports["ClarityTransactionDispatcher: Successfully call entityAddedAsync on systems after addEntityAsync."] = () => {
-    var entity = {
-        _id: 1
-    };
+// exports["ClarityTransactionDispatcher: Successfully call entityAddedAsync on systems after addEntityAsync."] = () => {
+//     var entity = {
+//         _id: 1
+//     };
 
-    var entityAddedAsyncCalled = false;
+//     var entityAddedAsyncCalled = false;
 
-    var system = {
-        guid: "*TEST*",
-        name: "Test",
-        getGuid: () => {
-            return system.guid;
-        },
-        getName: () => {
-            return system.name;
-        },
-        entityAddedAsync: () => {
-            entityAddedAsyncCalled = true;
-        }
-    };
+//     var system = {
+//         guid: "*TEST*",
+//         name: "Test",
+//         getGuid: () => {
+//             return system.guid;
+//         },
+//         getName: () => {
+//             return system.name;
+//         },
+//         entityAddedAsync: () => {
+//             entityAddedAsyncCalled = true;
+//         }
+//     };
 
-    var mongoFactory = new MongoFactory({
-        gridFsConfig: { responses: [] },
-        mongodbConfig: { responses: [{ collectionMethodResult: { isInitialized: false, systemGuid: "*TEST*" } }, { collectionMethodResult: entity }, {}] }
-    });
+//     var mongoFactory = new MongoFactory({
+//         gridFsConfig: { responses: [] },
+//         mongodbConfig: { responses: [{ collectionMethodResult: { isInitialized: false, systemGuid: "*TEST*" } }, { collectionMethodResult: entity }, {}] }
+//     });
 
-    var dispatcher = new ClarityTransactionDispatcher({
-        mongoFactory: mongoFactory,
-        databaseUrl: ""
-    });
+//     var dispatcher = new ClarityTransactionDispatcher({
+//         mongoFactory: mongoFactory,
+//         databaseUrl: ""
+//     });
 
-    dispatcher.addSystemAsync(system).then(() => {
-        return dispatcher.addEntityAsync(entity);
-    }).then(() => {
-        assert.equal(entityAddedAsyncCalled, true);
-    }).catch(error => {
-        invokeAssert(() => {
-            assert.ok(false);
-        });
-    });
-};
+//     dispatcher.addSystemAsync(system).then(() => {
+//         return dispatcher.addEntityAsync(entity);
+//     }).then(() => {
+//         assert.equal(entityAddedAsyncCalled, true);
+//     }).catch(error => {
+//         invokeAssert(() => {
+//             assert.ok(false);
+//         });
+//     });
+// };
 
-exports["ClarityTransactionDispatcher: Successfully call entityAddedAsync on systems after error on first system addEntityAsync."] = () => {
-    var entity = {
-        _id: 1
-    };
+// exports["ClarityTransactionDispatcher: Successfully call entityAddedAsync on systems after error on first system addEntityAsync."] = () => {
+//     var entity = {
+//         _id: 1
+//     };
 
-    var entityAddedAsyncCalled = false;
+//     var entityAddedAsyncCalled = false;
 
-    var system1 = {
-        guid: "*TEST1*",
-        name: "Test1",
-        getGuid: () => {
-            return system1.guid;
-        },
-        getName: () => {
-            return system1.name;
-        },
-        entityAddedAsync: () => {
-            return Promise.reject(new Error("ERROR"));
-        }
-    };
+//     var system1 = {
+//         guid: "*TEST1*",
+//         name: "Test1",
+//         getGuid: () => {
+//             return system1.guid;
+//         },
+//         getName: () => {
+//             return system1.name;
+//         },
+//         entityAddedAsync: () => {
+//             return Promise.reject(new Error("ERROR"));
+//         }
+//     };
 
-    var system2 = {
-        guid: "*TEST2*",
-        name: "Test2",
-        getGuid: () => {
-            return system2.guid;
-        },
-        getName: () => {
-            return system2.name;
-        },
-        entityAddedAsync: () => {
-            entityAddedAsyncCalled = true;
-        }
-    };
+//     var system2 = {
+//         guid: "*TEST2*",
+//         name: "Test2",
+//         getGuid: () => {
+//             return system2.guid;
+//         },
+//         getName: () => {
+//             return system2.name;
+//         },
+//         entityAddedAsync: () => {
+//             entityAddedAsyncCalled = true;
+//         }
+//     };
 
-    var mongoFactory = new MongoFactory({
-        gridFsConfig: { responses: [] },
-        mongodbConfig: {
-            responses: [
-                { collectionMethodResult: { isInitialized: false, systemGuid: "*TEST1*" } },
-                { collectionMethodResult: { isInitialized: false, systemGuid: "*TEST2*" } },
-                { collectionMethodResult: entity },
-                {},
-                {}
-            ]
-        }
-    });
+//     var mongoFactory = new MongoFactory({
+//         gridFsConfig: { responses: [] },
+//         mongodbConfig: {
+//             responses: [
+//                 { collectionMethodResult: { isInitialized: false, systemGuid: "*TEST1*" } },
+//                 { collectionMethodResult: { isInitialized: false, systemGuid: "*TEST2*" } },
+//                 { collectionMethodResult: entity },
+//                 {},
+//                 {}
+//             ]
+//         }
+//     });
 
-    var dispatcher = new ClarityTransactionDispatcher({
-        mongoFactory: mongoFactory,
-        databaseUrl: ""
-    });
+//     var dispatcher = new ClarityTransactionDispatcher({
+//         mongoFactory: mongoFactory,
+//         databaseUrl: ""
+//     });
 
-    dispatcher.addSystemAsync(system1).then(() => {
-        return dispatcher.addSystemAsync(system2);
-    }).then(() => {
-        return dispatcher.addEntityAsync(entity);
-    }).then(() => {
-        assert.equal(entityAddedAsyncCalled, true);
-    }).catch(error => {
-        invokeAssert(() => {
-            assert.ok(false);
-        });
-    });
-};
+//     dispatcher.addSystemAsync(system1).then(() => {
+//         return dispatcher.addSystemAsync(system2);
+//     }).then(() => {
+//         return dispatcher.addEntityAsync(entity);
+//     }).then(() => {
+//         assert.equal(entityAddedAsyncCalled, true);
+//     }).catch(error => {
+//         invokeAssert(() => {
+//             assert.ok(false);
+//         });
+//     });
+// };
 
 exports["ClarityTransactionDispatcher: Successfully invoking addComponentAsync."] = () => {
     var entity = {
