@@ -206,7 +206,7 @@ export default class ClarityTransactionDispatcher {
         };
 
         return this._findOneAsync(SYSTEM_DATA_COLLECTION, filter).then((systemData: ISystemData) => {
-            if (systemData === null) {
+            if (systemData == null) {
                 var newSystemData = {
                     systemGuid: system.getGuid(),
                     isInitialized: false
@@ -386,39 +386,6 @@ export default class ClarityTransactionDispatcher {
     }
 
     /**
-     * This allows systems to validate the component being saved.
-     */
-    validateComponentAsync(entity: { _id: string }, component: { _id: string, type: string, entity_id: string }) {
-        return this._notifySystemsAsync("validateComponentAsync", [entity, component]);
-    }
-
-    /**
-     * This allows systems to validate the entity being saved.
-     */
-    validateEntityAsync(entity: { _id: string }) {
-        return this._notifySystemsAsync("validateEntityAsync", [entity]);
-    }
-
-    /**
-     * This allows the systems to validate content before its accepted.
-     * The dispatcher saves it to a temporary location so systems can validate it
-     * independently. The content could be an extremely large file so we don't want 
-     * to hold it in memory.
-     */
-    validateEntityContentAsync(entity: { _id: string }, newContentId: string) {
-        return this._notifySystemsAsync("validateEntityContentAsync", [entity, newContentId]);
-    }
-
-
-    validateSystem(system: ISystem) {
-        if (typeof system.getGuid !== "function" ||
-            typeof system.getName !== "function") {
-            return false;
-        }
-        return true;
-    }
-
-    /**
      * Adds a component to an entity.
      * 
      * The dispatcher does the following when adding a component.
@@ -429,11 +396,11 @@ export default class ClarityTransactionDispatcher {
      * @param {object} entity - The entity of the component being added.
      * @param {object} component - The component being added.
      */
-    addComponentAsync(entity: { _id: string }, component: { type: string, entity_id: string }) {
+    addComponentAsync(entity: { _id: string }, component: { _id: string, type: string, entity_id: string }) {
         component.entity_id = entity._id;
 
-        return this.validateEntityAsync(entity).then(() => {
-            return this._addItemToCollectionAsync(entity, COMPONENTS_COLLECTION);
+        return this.validateComponentAsync(entity, component).then(() => {
+            return this._addItemToCollectionAsync(component, COMPONENTS_COLLECTION);
         }).then(() => {
             return this._notifySystemsWithRecoveryAsync("entityComponentAddedAsync", [entity, component]);
         });
@@ -469,7 +436,7 @@ export default class ClarityTransactionDispatcher {
 
         return contentPromise.then(() => {
             // Validate the entity.
-            
+
             return this.validateEntityAsync(entity);
         }).then((id) => {
             // Save the entity.
@@ -517,7 +484,7 @@ export default class ClarityTransactionDispatcher {
                     this._removeItemFromGridFsAsync(contentId);
                 }
             }
-            
+
             return Promise.reject(error);
         });
 
@@ -683,7 +650,7 @@ export default class ClarityTransactionDispatcher {
      */
     getEntityByIdAsync(entityId: string) {
         var filter = {
-            _id: entityId
+            _id: this.ObjectID(entityId)
         };
 
         return this._findOneAsync(ENTITIES_COLLECTION, filter);
@@ -811,7 +778,7 @@ export default class ClarityTransactionDispatcher {
             delete this.services[name];
             return this._notifySystemsWithRecoveryAsync("serviceRemovedAsync", [name, this.services[name]]);
         } else {
-            return resolvedPromise;
+            return Promise.reject(new Error("Couldn't find service to be removed."));
         }
     }
 
@@ -892,6 +859,39 @@ export default class ClarityTransactionDispatcher {
         }).then((oldComponent) => {
             return this._notifySystemsWithRecoveryAsync("componentUpdatedAsync", [oldComponent, component]);
         });
+    }
+
+    /**
+     * This allows systems to validate the component being saved.
+     */
+    validateComponentAsync(entity: { _id: string }, component: { _id: string, type: string, entity_id: string }) {
+        return this._notifySystemsAsync("validateComponentAsync", [entity, component]);
+    }
+
+    /**
+     * This allows systems to validate the entity being saved.
+     */
+    validateEntityAsync(entity: { _id: string }) {
+        return this._notifySystemsAsync("validateEntityAsync", [entity]);
+    }
+
+    /**
+     * This allows the systems to validate content before its accepted.
+     * The dispatcher saves it to a temporary location so systems can validate it
+     * independently. The content could be an extremely large file so we don't want 
+     * to hold it in memory.
+     */
+    validateEntityContentAsync(entity: { _id: string }, newContentId: string) {
+        return this._notifySystemsAsync("validateEntityContentAsync", [entity, newContentId]);
+    }
+
+
+    validateSystem(system: ISystem) {
+        if (typeof system.getGuid !== "function" ||
+            typeof system.getName !== "function") {
+            return false;
+        }
+        return true;
     }
 
 }

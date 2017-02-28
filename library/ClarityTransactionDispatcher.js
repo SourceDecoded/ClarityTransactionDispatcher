@@ -6,6 +6,7 @@ const nullableLogger = new NullableLogger_1.default();
 const resolvedPromise = Promise.resolve();
 const ENTITIES_COLLECTION = "entities";
 const COMPONENTS_COLLECTION = "components";
+const SYSTEM_DATA_COLLECTION = "systemData";
 /**
  * Class that organizes systems to respond to data transactions.
  * The dispatcher manages the life-cycle of data entities. They can be
@@ -147,6 +148,34 @@ class ClarityTransactionDispatcher {
      */
     _getLogger() {
         return this.services["logger"] || nullableLogger;
+    }
+    /**
+     * Initialize a system.
+     * @private
+     */
+    _initializingSystemAsync(system) {
+        var filter = {
+            systemGuid: system.getGuid()
+        };
+        return this._findOneAsync(SYSTEM_DATA_COLLECTION, filter).then((systemData) => {
+            if (systemData == null) {
+                var newSystemData = {
+                    systemGuid: system.getGuid(),
+                    isInitialized: false
+                };
+                return this._addItemToCollectionAsync(newSystemData, SYSTEM_DATA_COLLECTION);
+            }
+            else {
+                return systemData;
+            }
+        }).then((systemData) => {
+            if (!systemData.isInitialized) {
+                return this._invokeMethodAsync(system, "initializeAsync", []).then(() => {
+                    systemData.isInitialized = true;
+                    return this._updateItemInCollection(systemData, SYSTEM_DATA_COLLECTION);
+                });
+            }
+        });
     }
     /**
      * Invoke a method on any object and make sure a promise is the returned value.
@@ -311,6 +340,32 @@ class ClarityTransactionDispatcher {
     _validateEntityContentAsync(entity, newContentId) {
         return this._notifySystemsAsync("validateEntityContentAsync", [entity, newContentId]);
     }
+    _validateSystem(system) {
+        if (typeof system.getGuid !== "function" ||
+            typeof system.getName !== "function") {
+            return false;
+        }
+        return true;
+    }
+    /**
+     * Adds a component to an entity.
+     *
+     * The dispatcher does the following when adding a component.
+     *
+     * - Validate the component with all systems. All systems have to validate to pass.
+     * - Saves the component to the datastore.
+     * - Notifies the systems that a component has been added.
+     * @param {object} entity - The entity of the component being added.
+     * @param {object} component - The component being added.
+     */
+    addComponentAsync(entity, component) {
+        component.entity_id = entity._id;
+        return this._validateComponentAsync(entity, component).then(() => {
+            return this._addItemToCollectionAsync(component, COMPONENTS_COLLECTION);
+        }).then(() => {
+            return this._notifySystemsWithRecoveryAsync("entityComponentAddedAsync", [entity, component]);
+        });
+    }
     /**
      * Add an Entity to the datastore. The steps the dispatcher takes when saving an
      * entity are.
@@ -326,25 +381,6 @@ class ClarityTransactionDispatcher {
             return this._addItemToCollectionAsync(entity, ENTITIES_COLLECTION);
         }).then(() => {
             return this._notifySystemsWithRecoveryAsync("entityAddedAsync", [entity]);
-        });
-    }
-    /**
-     * Adds a component to an entity.
-     *
-     * The dispatcher does the following when adding a component.
-     *
-     * - Validate the component with all systems. All systems have to validate to pass.
-     * - Saves the component to the datastore.
-     * - Notifies the systems that a component has been added.
-     * @param {object} entity - The entity of the component being added.
-     * @param {object} component - The component being added.
-     */
-    addComponentAsync(entity, component) {
-        component.entity_id = entity._id;
-        return this._validateEntityAsync(entity).then(() => {
-            return this._addItemToCollectionAsync(entity, COMPONENTS_COLLECTION);
-        }).then(() => {
-            return this._notifySystemsWithRecoveryAsync("entityComponentAddedAsync", [entity, component]);
         });
     }
     /**
@@ -394,8 +430,34 @@ class ClarityTransactionDispatcher {
      * @return {Promise} - An undefined Promise.
      */
     addSystemAsync(system) {
-        this.systems.push(system);
-        return this._invokeMethodAsync(system, "activatedAsync", []);
+        if (!this._validateSystem(system)) {
+            return Promise.reject(new Error("Invalid system: Systems need to have a getName and a getGuid method on them."));
+        }
+        else {
+            this.systems.push(system);
+            return this._initializingSystemAsync(system).then(() => {
+                return this._invokeMethodAsync(system, "activatedAsync", []);
+            }).catch((error) => {
+                return Promise.reject(error);
+            });
+        }
+    }
+    /**
+     * Add temporary data to the data store.
+     * @param {NodeJS.WritableStream} stream - The stream of data to add.
+     * @return {Promise<undefined>}
+     */
+    addTemporaryDataByStreamAsync(stream) {
+        var newContentId = uuid.v4();
+        // We need to pause this until we are ready to pipe to the gridfs.
+        stream.pause();
+        return this._getGridFsAsync().then((gfs) => {
+            var writeStream = gfs.createWriteStream({
+                _id: newContentId
+            });
+            stream.pipe(writeStream);
+            stream.resume();
+        });
     }
     /**
      * Deactivates a system and removes it from the systems being notified. To activate again use addSystemAsync.
@@ -488,7 +550,7 @@ class ClarityTransactionDispatcher {
      */
     getEntityByIdAsync(entityId) {
         var filter = {
-            _id: entityId
+            _id: this.ObjectID(entityId)
         };
         return this._findOneAsync(ENTITIES_COLLECTION, filter);
     }
@@ -512,9 +574,20 @@ class ClarityTransactionDispatcher {
      */
     getEntityContentStreamByContentIdAsync(contentId) {
         return this._getGridFsAsync().then((gfs) => {
-            var id = this.ObjectID(contentId);
             return gfs.createReadStream({
-                _id: id
+                _id: this.ObjectID(contentId)
+            });
+        });
+    }
+    /**
+     * Get a stream of the content of the entity by its id.
+     * @param {string} contentId - The id of the content needed..
+     * @returns {NodeJS.ReadableStream} - Node read stream.
+     */
+    getTemporaryDataStreamByIdAsync(id) {
+        return this._getGridFsAsync().then((gfs) => {
+            return gfs.createReadStream({
+                _id: this.ObjectID(id)
             });
         });
     }
@@ -596,6 +669,30 @@ class ClarityTransactionDispatcher {
             delete this.services[name];
             return this._notifySystemsWithRecoveryAsync("serviceRemovedAsync", [name, this.services[name]]);
         }
+        else {
+            return Promise.reject(new Error("Couldn't find service to be removed."));
+        }
+    }
+    /**
+     * Remove temporary data to the data store.
+     * @param {string} id - The id of the data being removed.
+     * @return {Promise<undefined>}
+     */
+    removeTemporaryDataByIdAsync(id) {
+        this._getGridFsAsync().then((gfs) => {
+            return new Promise((resolve, reject) => {
+                gfs.remove({
+                    _id: id
+                }, (error) => {
+                    if (error) {
+                        reject(error);
+                    }
+                    else {
+                        resolve();
+                    }
+                });
+            });
+        });
     }
     /**
      * Updated an entity. The dispatcher will perform the following actions when updating.
@@ -639,9 +736,9 @@ class ClarityTransactionDispatcher {
         var newContentId = uuid.v4();
         // We need to pause this until we are ready to pipe to the gridfs.
         stream.pause();
-        this._getGridFsAsync().then((gfs) => {
+        return this._getGridFsAsync().then((gfs) => {
             var writeStream = gfs.createWriteStream({
-                _id: newContentId
+                _id: this.ObjectID(newContentId)
             });
             stream.pipe(writeStream);
             stream.resume();
