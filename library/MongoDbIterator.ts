@@ -1,5 +1,6 @@
 import * as mongo from "mongodb";
 import { MongoClient } from "mongodb";
+import { IMongoClient } from "./interfaces"
 
 export default class MongoDbIterator {
     private lastId: string;
@@ -7,15 +8,25 @@ export default class MongoDbIterator {
     private collectionName: string;
     private databaseUrl: string;
     private pageSize: number;
+    private skip: number;
+    private isFinished: boolean;
 
-    constructor(config: { MongoClient: MongoClient; collectionName: string; databaseUrl: string, pageSize?: number; }) {
-        config = config || { MongoClient: null, collectionName: null, databaseUrl: null };
+    constructor(config: {
+        MongoClient: IMongoClient;
+        collectionName: string;
+        databaseUrl: string;
+        skip?: number;
+        pageSize?: number;
+        filter?: any;
+    }) {
+        config = config || { MongoClient: null, collectionName: null, databaseUrl: null, skip: 0, filter: null };
 
         this.lastId = null;
         this.MongoClient = config.MongoClient;
         this.collectionName = config.collectionName;
         this.databaseUrl = config.databaseUrl;
         this.pageSize = config.pageSize || 10;
+        this.skip = config.skip || 0;
 
         if (this.MongoClient == null || this.collectionName == null || this.databaseUrl == null) {
             throw new Error("MongoDbIterator needs to have MongoClient, databaseUrl, and a collectionName to iterate.");
@@ -46,12 +57,16 @@ export default class MongoDbIterator {
      * @returns {Promise<Array>} 
      */
     nextAsync() {
+        if (this.isFinished) {
+            return Promise.resolve(null);
+        }
+
         return this._getDatabaseAsync().then((db: any) => {
             return new Promise((resolve, reject) => {
                 var query;
 
                 if (this.lastId == null) {
-                    query = db.collection(this.collectionName).find().limit(this.pageSize);
+                    query = db.collection(this.collectionName).find().skip(this.skip).limit(this.pageSize);
                 } else {
                     query = db.collection(this.collectionName).find({
                         _id: {
@@ -60,12 +75,16 @@ export default class MongoDbIterator {
                     }).limit(this.pageSize);
                 }
 
-                query.toArray((error, results) => {
+                query.sort([["_id", 1]]).toArray((error, results) => {
                     if (error != null) {
                         reject(error);
                     } else {
                         var lastId = this._getLastId(results);
-                        if (lastId != null) {
+
+                        // Check to see if there is any more.
+                        if (lastId == null) {
+                            this.isFinished = true;
+                        } else {
                             this.lastId = lastId;
                         }
 
