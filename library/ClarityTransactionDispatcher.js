@@ -6,6 +6,7 @@ const nullableLogger = new NullableLogger_1.default();
 const resolvedPromise = Promise.resolve();
 const ENTITIES_COLLECTION = "entities";
 const COMPONENTS_COLLECTION = "components";
+const SYSTEM_DATA_COLLECTION = "systemData";
 /**
  * Class that organizes systems to respond to data transactions.
  * The dispatcher manages the life-cycle of data entities. They can be
@@ -147,6 +148,34 @@ class ClarityTransactionDispatcher {
      */
     _getLogger() {
         return this.services["logger"] || nullableLogger;
+    }
+    /**
+     * Initialize a system.
+     * @private
+     */
+    _initializingSystemAsync(system) {
+        var filter = {
+            systemGuid: system.getGuid()
+        };
+        return this._findOneAsync(SYSTEM_DATA_COLLECTION, filter).then((systemData) => {
+            if (systemData == null) {
+                var newSystemData = {
+                    systemGuid: system.getGuid(),
+                    isInitialized: false
+                };
+                return this._addItemToCollectionAsync(newSystemData, SYSTEM_DATA_COLLECTION);
+            }
+            else {
+                return systemData;
+            }
+        }).then((systemData) => {
+            if (!systemData.isInitialized) {
+                return this._invokeMethodAsync(system, "initializeAsync", []).then(() => {
+                    systemData.isInitialized = true;
+                    return this._updateItemInCollection(systemData, SYSTEM_DATA_COLLECTION);
+                });
+            }
+        });
     }
     /**
      * Invoke a method on any object and make sure a promise is the returned value.
@@ -311,6 +340,13 @@ class ClarityTransactionDispatcher {
     _validateEntityContentAsync(entity, newContentId) {
         return this._notifySystemsAsync("validateEntityContentAsync", [entity, newContentId]);
     }
+    _validateSystem(system) {
+        if (typeof system.getGuid !== "function" ||
+            typeof system.getName !== "function") {
+            return false;
+        }
+        return true;
+    }
     /**
      * Add an Entity to the datastore. The steps the dispatcher takes when saving an
      * entity are.
@@ -341,8 +377,8 @@ class ClarityTransactionDispatcher {
      */
     addComponentAsync(entity, component) {
         component.entity_id = entity._id;
-        return this._validateEntityAsync(entity).then(() => {
-            return this._addItemToCollectionAsync(entity, COMPONENTS_COLLECTION);
+        return this._validateComponentAsync(entity, component).then(() => {
+            return this._addItemToCollectionAsync(component, COMPONENTS_COLLECTION);
         }).then(() => {
             return this._notifySystemsWithRecoveryAsync("entityComponentAddedAsync", [entity, component]);
         });
@@ -394,8 +430,17 @@ class ClarityTransactionDispatcher {
      * @return {Promise} - An undefined Promise.
      */
     addSystemAsync(system) {
-        this.systems.push(system);
-        return this._invokeMethodAsync(system, "activatedAsync", []);
+        if (!this._validateSystem(system)) {
+            return Promise.reject(new Error("Invalid system: Systems need to have a getName and a getGuid method on them."));
+        }
+        else {
+            this.systems.push(system);
+            return this._initializingSystemAsync(system).then(() => {
+                return this._invokeMethodAsync(system, "activatedAsync", []);
+            }).catch((error) => {
+                return Promise.reject(error);
+            });
+        }
     }
     /**
      * Deactivates a system and removes it from the systems being notified. To activate again use addSystemAsync.

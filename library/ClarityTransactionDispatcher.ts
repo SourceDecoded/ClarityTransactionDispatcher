@@ -181,7 +181,7 @@ export default class ClarityTransactionDispatcher {
         };
 
         return this._findOneAsync(SYSTEM_DATA_COLLECTION, filter).then((systemData: ISystemData) => {
-            if (systemData === null) {
+            if (systemData == null) {
                 var newSystemData = {
                     systemGuid: system.getGuid(),
                     isInitialized: false
@@ -424,11 +424,11 @@ export default class ClarityTransactionDispatcher {
      * @param {object} entity - The entity of the component being added.
      * @param {object} component - The component being added.
      */
-    addComponentAsync(entity: { _id: string }, component: { type: string, entity_id: string }) {
+    addComponentAsync(entity: { _id: string }, component: { _id: string, type: string, entity_id: string }) {
         component.entity_id = entity._id;
 
-        return this._validateEntityAsync(entity).then(() => {
-            return this._addItemToCollectionAsync(entity, COMPONENTS_COLLECTION);
+        return this._validateComponentAsync(entity, component).then(() => {
+            return this._addItemToCollectionAsync(component, COMPONENTS_COLLECTION);
         }).then(() => {
             return this._notifySystemsWithRecoveryAsync("entityComponentAddedAsync", [entity, component]);
         });
