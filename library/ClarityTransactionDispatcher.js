@@ -189,7 +189,7 @@ class ClarityTransactionDispatcher {
             }
         }).then((systemData) => {
             if (!systemData.isInitialized) {
-                return this._invokeMethodAsync(system, "initializeAsync", []).then(() => {
+                return this._invokeMethodAsync(system, "initializeAsync", [this]).then(() => {
                     systemData.isInitialized = true;
                     return this._updateItemInCollectionAsync(systemData, SYSTEM_DATA_COLLECTION);
                 });
@@ -322,7 +322,7 @@ class ClarityTransactionDispatcher {
                     else {
                         collection.update({
                             _id: this.ObjectID(item._id)
-                        }, (error, result) => {
+                        }, item, null, (error, result) => {
                             if (error != null) {
                                 reject(error);
                             }
@@ -477,7 +477,7 @@ class ClarityTransactionDispatcher {
         else {
             this.systems.push(system);
             return this._initializingSystemAsync(system).then(() => {
-                return this._invokeMethodAsync(system, "activatedAsync", []);
+                return this._invokeMethodAsync(system, "activatedAsync", [this]);
             }).catch((error) => {
                 return Promise.reject(error);
             });

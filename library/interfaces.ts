@@ -80,21 +80,21 @@ export interface ISystem {
     getName();
 
     // Optional interfaces.
-    activatedAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher);
-    deactivatedAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher);
-    disposeAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher);
-    entityAddedAsync(entity: { _id: string });
-    entityUpdatedAsync(oldEntity: any, newEntity: any);
-    entityRemovedAsync(entity: { _id: string });
-    entityContentUpdatedAsync(oldContentId: string, newContentId: string);
-    entityComponentAddedAsync(entity: { _id: string }, component: any);
-    entityComponentUpdatedAsync(entity: { _id: string }, oldComponent: any, newComponent: any);
-    entityComponentRemovedAsync(entity: { _id: string }, component: any);
-    initializeAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher);
-    serviceRemovedAsync(name: string, service: any);
-    validateEntityAsync(entity: { _id: string });
-    validateComponentAsync(component: { _id: string });
-    validateEntityContentAsync(entity: { _id: string }, oldContentId: string, newContentId: string);
+    activatedAsync?(clarityTransactionDispatcher: ClarityTransactionDispatcher);
+    deactivatedAsync?(clarityTransactionDispatcher: ClarityTransactionDispatcher);
+    disposeAsync?(clarityTransactionDispatcher: ClarityTransactionDispatcher);
+    entityAddedAsync?(entity: { _id: string });
+    entityUpdatedAsync?(oldEntity: any, newEntity: any);
+    entityRemovedAsync?(entity: { _id: string });
+    entityContentUpdatedAsync?(oldContentId: string, newContentId: string);
+    entityComponentAddedAsync?(entity: { _id: string }, component: any);
+    entityComponentUpdatedAsync?(entity: { _id: string }, oldComponent: any, newComponent: any);
+    entityComponentRemovedAsync?(entity: { _id: string }, component: any);
+    initializeAsync?(clarityTransactionDispatcher: ClarityTransactionDispatcher);
+    serviceRemovedAsync?(name: string, service: any);
+    validateEntityAsync?(entity: { _id: string });
+    validateComponentAsync?(component: { _id: string });
+    validateEntityContentAsync?(entity: { _id: string }, oldContentId: string, newContentId: string);
 }
 
 export interface ISystemData {
