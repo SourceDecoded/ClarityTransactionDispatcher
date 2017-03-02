@@ -96,7 +96,8 @@ export default class ClarityTransactionDispatcher {
                             if (error != null) {
                                 reject(error);
                             } else {
-                                resolve(result);
+                                item._id = result.insertedId;
+                                resolve(item);
                             }
                         });
                     }
@@ -207,7 +208,7 @@ export default class ClarityTransactionDispatcher {
 
         return this._findOneAsync(SYSTEM_DATA_COLLECTION, filter).then((systemData: ISystemData) => {
             if (systemData == null) {
-                var newSystemData = {
+                var newSystemData = <ISystemData>{
                     systemGuid: system.getGuid(),
                     isInitialized: false
                 };
@@ -447,14 +448,14 @@ export default class ClarityTransactionDispatcher {
             entity.content_id = contentId;
 
             return this._addItemToCollectionAsync(entity, ENTITIES_COLLECTION);
-        }).then((result) => {
+        }).then((entity) => {
             // Validate and save all the components. 
-            entity._id = result.insertedId;
+            savedEntity = entity;
 
             return components.reduce((promise: Promise<any>, component: any) => {
-                component.entity_id = entity._id;
+                component.entity_id = savedEntity._id;
 
-                return this.validateComponentAsync(entity, component).then(() => {
+                return this.validateComponentAsync(savedEntity, component).then(() => {
                     return this._addItemToCollectionAsync(component, COMPONENTS_COLLECTION);
                 }).then((savedComponent) => {
                     savedComponents.push(savedComponent);
@@ -464,12 +465,12 @@ export default class ClarityTransactionDispatcher {
         }).then(() => {
             // Notify the systems of all that has taken place.
 
-            return this._notifySystemsWithRecoveryAsync("entityAddedAsync", [entity]).then(() => {
+            return this._notifySystemsWithRecoveryAsync("entityAddedAsync", [savedEntity]).then(() => {
                 return this._notifySystemsWithRecoveryAsync("entityContentUpdatedAsync", [null, contentId]);
             }).then(() => {
 
                 return savedComponents.reduce((promise: Promise<any>, component) => {
-                    return this._notifySystemsWithRecoveryAsync("entityComponentAddedAsync", [entity, component]);
+                    return this._notifySystemsWithRecoveryAsync("entityComponentAddedAsync", [savedEntity, component]);
                 }, resolvedPromise);
 
             });
@@ -478,8 +479,8 @@ export default class ClarityTransactionDispatcher {
             // If we were able to save the entity then the removeEntityAsync will take care of removing the content.
             // Otherwise we need to remove the content manually.
 
-            if (entity != null) {
-                this.removeEntityAsync(entity);
+            if (savedEntity != null) {
+                this.removeEntityAsync(savedEntity);
             } else {
                 if (contentId != null) {
                     this._removeItemFromGridFsAsync(contentId);

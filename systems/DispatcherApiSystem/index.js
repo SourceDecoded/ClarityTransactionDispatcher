@@ -10,8 +10,7 @@ class DispatcherApiSystem {
     activatedAsync(clarityTransactionDispatcher) {
         this.clarityTransactionDispatcher = clarityTransactionDispatcher;
         this.app = this.clarityTransactionDispatcher.getService("express");
-        this.buildApi();
-        return Promise.resolve();
+        this._buildApi();
     }
     getGuid() {
         return this.guid;
@@ -19,7 +18,7 @@ class DispatcherApiSystem {
     getName() {
         return this.name;
     }
-    buildApi() {
+    _buildApi() {
         const router = new Router_1.default(this.app, this.clarityTransactionDispatcher);
         router.init();
     }

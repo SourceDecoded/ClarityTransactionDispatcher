@@ -76,7 +76,8 @@ class ClarityTransactionDispatcher {
                                 reject(error);
                             }
                             else {
-                                resolve(result);
+                                item._id = result.insertedId;
+                                resolve(item);
                             }
                         });
                     }
@@ -391,12 +392,12 @@ class ClarityTransactionDispatcher {
             contentId = id;
             entity.content_id = contentId;
             return this._addItemToCollectionAsync(entity, ENTITIES_COLLECTION);
-        }).then((result) => {
+        }).then((entity) => {
             // Validate and save all the components. 
-            entity._id = result.insertedId;
+            savedEntity = entity;
             return components.reduce((promise, component) => {
-                component.entity_id = entity._id;
-                return this.validateComponentAsync(entity, component).then(() => {
+                component.entity_id = savedEntity._id;
+                return this.validateComponentAsync(savedEntity, component).then(() => {
                     return this._addItemToCollectionAsync(component, COMPONENTS_COLLECTION);
                 }).then((savedComponent) => {
                     savedComponents.push(savedComponent);
@@ -404,19 +405,19 @@ class ClarityTransactionDispatcher {
             }, resolvedPromise);
         }).then(() => {
             // Notify the systems of all that has taken place.
-            return this._notifySystemsWithRecoveryAsync("entityAddedAsync", [entity]).then(() => {
+            return this._notifySystemsWithRecoveryAsync("entityAddedAsync", [savedEntity]).then(() => {
                 return this._notifySystemsWithRecoveryAsync("entityContentUpdatedAsync", [null, contentId]);
             }).then(() => {
                 return savedComponents.reduce((promise, component) => {
-                    return this._notifySystemsWithRecoveryAsync("entityComponentAddedAsync", [entity, component]);
+                    return this._notifySystemsWithRecoveryAsync("entityComponentAddedAsync", [savedEntity, component]);
                 }, resolvedPromise);
             });
         }).catch((error) => {
             // Since we save the content first we may have the content saved and not the entity.
             // If we were able to save the entity then the removeEntityAsync will take care of removing the content.
             // Otherwise we need to remove the content manually.
-            if (entity != null) {
-                this.removeEntityAsync(entity);
+            if (savedEntity != null) {
+                this.removeEntityAsync(savedEntity);
             }
             else {
                 if (contentId != null) {

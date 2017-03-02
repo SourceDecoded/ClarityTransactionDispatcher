@@ -7,9 +7,10 @@ import DispatcherMonitorSystem from "./systems/DispatcherMonitorSystem";
 const mongoFactory = new MongoFactory();
 var server;
 
-var createDispatcher = function () {
+var createDispatcher = () => {
     var app = express();
-    server = app.listen(3005, () => console.log("Server is running locally on port 3005"));;
+    server = app.listen(3005, () => console.log("Server is running locally on port 3005..."));
+
     var dispatcher = new ClarityTransactionDispatcher({
         mongoFactory: mongoFactory,
         databaseUrl: "mongodb://localhost:27017/ClarityTransactionDispatcher"
@@ -17,12 +18,14 @@ var createDispatcher = function () {
 
     dispatcher.addServiceAsync("express", app).then(() => {
         return dispatcher.addSystemAsync(new DispatcherApiSystem());
+    }).then(() => {
+        return dispatcher.addSystemAsync(new DispatcherMonitorSystem());
     }).catch((error) => {
         console.log(error);
     });
 };
 
-process.on('uncaughtException', function (err) {
+process.on("uncaughtException", (error) => {
     server.close();
     createDispatcher();
 });

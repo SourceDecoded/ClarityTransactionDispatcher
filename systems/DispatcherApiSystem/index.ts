@@ -17,9 +17,7 @@ export default class DispatcherApiSystem {
         this.clarityTransactionDispatcher = clarityTransactionDispatcher;
         this.app = this.clarityTransactionDispatcher.getService("express");
 
-        this.buildApi();
-
-        return Promise.resolve();
+        this._buildApi();
     }
 
     getGuid() {
@@ -30,10 +28,8 @@ export default class DispatcherApiSystem {
         return this.name;
     }
 
-    buildApi() {
+    _buildApi() {
         const router = new Router(this.app, this.clarityTransactionDispatcher);
         router.init();
-
-        
     }
 }
