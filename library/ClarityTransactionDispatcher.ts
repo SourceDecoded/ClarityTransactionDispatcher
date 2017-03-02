@@ -1,4 +1,4 @@
-import { ISystem, ISystemData, IGridFs, IObjectID, ILogger, IMongo, IMongoDb, IMongoClient, IMongoCollection, IMongoFactory } from "./interfaces";
+import { ISystem, ISystemData, IGridFs, IObjectID, ILogger, IObjectIDInstance, IMongo, IMongoDb, IMongoClient, IMongoCollection, IMongoFactory } from "./interfaces";
 import * as Grid from "gridfs-stream";
 import * as fs from "fs";
 import * as uuid from "node-uuid";
@@ -396,8 +396,8 @@ export default class ClarityTransactionDispatcher {
      * @param {object} entity - The entity of the component being added.
      * @param {object} component - The component being added.
      */
-    addComponentAsync(entity: { _id: string }, component: { _id: string, type: string, entity_id: string }) {
-        component.entity_id = entity._id;
+    addComponentAsync(entity: { _id: string }, component: { _id: string, type: string, entity_id: any }) {
+        component.entity_id = this.ObjectID(entity._id);
 
         return this.validateComponentAsync(entity, component).then(() => {
             return this._addItemToCollectionAsync(component, COMPONENTS_COLLECTION);
@@ -425,7 +425,7 @@ export default class ClarityTransactionDispatcher {
         var contentPromise;
         var entityId;
         var contentId;
-        var savedComponents;
+        var savedComponents = [];
         var savedEntity;
 
         if (contentStream == null) {
@@ -449,13 +449,12 @@ export default class ClarityTransactionDispatcher {
             return this._addItemToCollectionAsync(entity, ENTITIES_COLLECTION);
         }).then((result) => {
             // Validate and save all the components. 
-
-            savedEntity = result;
-            entityId = result._id;
+            entity._id = result.insertedId;
 
             return components.reduce((promise: Promise<any>, component: any) => {
+                component.entity_id = entity._id;
 
-                return this.validateComponentAsync(savedEntity, component).then(() => {
+                return this.validateComponentAsync(entity, component).then(() => {
                     return this._addItemToCollectionAsync(component, COMPONENTS_COLLECTION);
                 }).then((savedComponent) => {
                     savedComponents.push(savedComponent);
@@ -470,17 +469,17 @@ export default class ClarityTransactionDispatcher {
             }).then(() => {
 
                 return savedComponents.reduce((promise: Promise<any>, component) => {
-                    return this._notifySystemsWithRecoveryAsync("entityComponentAddedAsync", [savedEntity, component]);
+                    return this._notifySystemsWithRecoveryAsync("entityComponentAddedAsync", [entity, component]);
                 }, resolvedPromise);
 
             });
         }).catch((error) => {
-            // Sense we save the content first we may have the content saved and not the entity.
+            // Since we save the content first we may have the content saved and not the entity.
             // If we were able to save the entity then the removeEntityAsync will take care of removing the content.
             // Otherwise we need to remove the content manually.
 
-            if (savedEntity != null) {
-                this.removeEntityAsync(savedEntity);
+            if (entity != null) {
+                this.removeEntityAsync(entity);
             } else {
                 if (contentId != null) {
                     this._removeItemFromGridFsAsync(contentId);
@@ -609,7 +608,7 @@ export default class ClarityTransactionDispatcher {
      * @param {string} componentId - The id of the component.
      * @return {Promise<Array>}
      */
-    getComponentAsync(componentId: string) {
+    getComponentByIdAsync(componentId: string) {
         var id = this.ObjectID(componentId);
         return this._findOneAsync(COMPONENTS_COLLECTION, {
             _id: id
@@ -800,7 +799,9 @@ export default class ClarityTransactionDispatcher {
             return this._findOneAsync(ENTITIES_COLLECTION, {
                 _id: this.ObjectID(entity._id)
             });
-        }).then((oldEntity) => {
+        }).then((oldEntity: any) => {
+            entity._id = oldEntity._id;
+
             return this._updateItemInCollectionAsync(entity, ENTITIES_COLLECTION).then(() => {
                 return oldEntity;
             });
@@ -854,7 +855,9 @@ export default class ClarityTransactionDispatcher {
             return this._findOneAsync(COMPONENTS_COLLECTION, {
                 _id: this.ObjectID(component._id)
             });
-        }).then((oldComponent) => {
+        }).then((oldComponent: any) => {
+            component._id = oldComponent._id;
+
             return this._updateItemInCollectionAsync(component, COMPONENTS_COLLECTION).then(() => {
                 return oldComponent;
             });

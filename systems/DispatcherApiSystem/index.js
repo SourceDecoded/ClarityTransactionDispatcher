@@ -22,7 +22,6 @@ class DispatcherApiSystem {
     buildApi() {
         const router = new Router_1.default(this.app, this.clarityTransactionDispatcher);
         router.init();
-        this.app.listen(3005, () => console.log("Server is running locally on port 3005"));
     }
 }
 Object.defineProperty(exports, "__esModule", { value: true });
