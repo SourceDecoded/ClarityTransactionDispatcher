@@ -164,6 +164,7 @@ class ClarityTransactionDispatcher {
     }
     /**
      * Get the logger.
+     * Replace with a system method call logError(error), Error can be
      * @private
      */
     _getLogger() {
@@ -372,7 +373,6 @@ class ClarityTransactionDispatcher {
      */
     addEntityAsync(entity, contentStream, components) {
         var contentPromise;
-        var entityId;
         var contentId;
         var savedComponents = [];
         var savedEntity;
@@ -511,7 +511,7 @@ class ClarityTransactionDispatcher {
         }
     }
     /**
-     * Disposes a system and removes it from the systems being notified. Use then when removing systems for
+     * Disposes a system and removes it from the systems being notified. Use when removing systems for
      * good. This allows the system to clean up after itself if needed. The dispatcher calls disposeAsync on the system being removed.
      * @param {ISystem} system - The system to be disposed.
      * @returns {Promise<undefined>} - Resolves when the system is disposed.
@@ -665,6 +665,7 @@ class ClarityTransactionDispatcher {
     }
     /**
      * Removes the content of an entity.
+     * @param {entity} entity - The entity of the content to be removed.
      */
     removeEntityContentAsync(entity) {
         var contentId = entity.content_id;
@@ -736,12 +737,24 @@ class ClarityTransactionDispatcher {
         var contentId = null;
         var oldContentId = entity.content_id;
         return this._addItemToGridFs(stream).then((id) => {
-            entity.content_id = this.ObjectID(id);
-            return this._updateItemInCollectionAsync(entity, "entities");
+            contentId = id;
+            return this.validateEntityContentAsync(entity, id);
+        }).then((id) => {
+            entity.content_id = this.ObjectID(contentId);
+            return this._updateItemInCollectionAsync(entity, ENTITIES_COLLECTION);
         }).then(() => {
-        }).catch(() => {
+            return this._removeItemFromGridFsAsync(oldContentId);
+        }).catch((error) => {
             if (contentId != null) {
+                entity.content_id = oldContentId;
+                return this._updateItemInCollectionAsync(entity, ENTITIES_COLLECTION).then(() => {
+                    return Promise.reject(error);
+                }).catch(() => {
+                    // Unable to update entity back to old content id.
+                    // We probably aught to log this. To be determined.
+                });
             }
+            return Promise.reject(error);
         });
     }
     /**
@@ -785,10 +798,16 @@ class ClarityTransactionDispatcher {
      * The dispatcher saves it to a temporary location so systems can validate it
      * independently. The content could be an extremely large file so we don't want
      * to hold it in memory.
+     * @param {entity} entity - The entity the content belongs to.
+     * @param {string} newContentId - The id of the new content.
      */
     validateEntityContentAsync(entity, newContentId) {
         return this._notifySystemsAsync("validateEntityContentAsync", [entity, newContentId]);
     }
+    /**
+     * Ensures the system has the required methods.
+     * @param {ISystem} system - The System to be validated.
+     */
     validateSystem(system) {
         if (typeof system.getGuid !== "function" ||
             typeof system.getName !== "function") {

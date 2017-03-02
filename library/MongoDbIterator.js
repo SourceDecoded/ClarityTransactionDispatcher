@@ -2,13 +2,12 @@
 const mongo = require("mongodb");
 class MongoDbIterator {
     constructor(config) {
-        config = config || { MongoClient: null, collectionName: null, databaseUrl: null, skip: 0, filter: null };
-        this.lastId = null;
+        config = config || { MongoClient: null, collectionName: null, databaseUrl: null, filter: null, lastId: null };
         this.MongoClient = config.MongoClient;
         this.collectionName = config.collectionName;
         this.databaseUrl = config.databaseUrl;
         this.pageSize = config.pageSize || 10;
-        this.skip = config.skip || 0;
+        this.lastId = config.lastId || null;
         if (this.MongoClient == null || this.collectionName == null || this.databaseUrl == null) {
             throw new Error("MongoDbIterator needs to have MongoClient, databaseUrl, and a collectionName to iterate.");
         }
@@ -43,7 +42,7 @@ class MongoDbIterator {
             return new Promise((resolve, reject) => {
                 var query;
                 if (this.lastId == null) {
-                    query = db.collection(this.collectionName).find().skip(this.skip).limit(this.pageSize);
+                    query = db.collection(this.collectionName).find().limit(this.pageSize);
                 }
                 else {
                     query = db.collection(this.collectionName).find({
