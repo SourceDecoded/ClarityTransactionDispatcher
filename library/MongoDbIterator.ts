@@ -3,30 +3,29 @@ import { MongoClient } from "mongodb";
 import { IMongoClient } from "./interfaces"
 
 export default class MongoDbIterator {
-    private lastId: string;
     private MongoClient: MongoClient;
     private collectionName: string;
     private databaseUrl: string;
     private pageSize: number;
-    private skip: number;
     private isFinished: boolean;
+
+    lastId: string;
 
     constructor(config: {
         MongoClient: IMongoClient;
         collectionName: string;
         databaseUrl: string;
-        skip?: number;
         pageSize?: number;
         filter?: any;
+        lastId?: string;
     }) {
-        config = config || { MongoClient: null, collectionName: null, databaseUrl: null, skip: 0, filter: null };
+        config = config || { MongoClient: null, collectionName: null, databaseUrl: null, filter: null, lastId: null };
 
-        this.lastId = null;
         this.MongoClient = config.MongoClient;
         this.collectionName = config.collectionName;
         this.databaseUrl = config.databaseUrl;
         this.pageSize = config.pageSize || 10;
-        this.skip = config.skip || 0;
+        this.lastId = config.lastId || null;
 
         if (this.MongoClient == null || this.collectionName == null || this.databaseUrl == null) {
             throw new Error("MongoDbIterator needs to have MongoClient, databaseUrl, and a collectionName to iterate.");

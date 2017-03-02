@@ -371,7 +371,6 @@ class ClarityTransactionDispatcher {
      */
     addEntityAsync(entity, contentStream, components) {
         var contentPromise;
-        var entityId;
         var contentId;
         var savedComponents;
         var savedEntity;
@@ -392,7 +391,6 @@ class ClarityTransactionDispatcher {
         }).then((result) => {
             // Validate and save all the components. 
             savedEntity = result;
-            entityId = result._id;
             return components.reduce((promise, component) => {
                 return this.validateComponentAsync(savedEntity, component).then(() => {
                     return this._addItemToCollectionAsync(component, COMPONENTS_COLLECTION);
@@ -662,6 +660,7 @@ class ClarityTransactionDispatcher {
     }
     /**
      * Removes the content of an entity.
+     * @param {entity} entity - The entity of the content to be removed.
      */
     removeEntityContentAsync(entity) {
         var contentId = entity.content_id;
@@ -780,10 +779,16 @@ class ClarityTransactionDispatcher {
      * The dispatcher saves it to a temporary location so systems can validate it
      * independently. The content could be an extremely large file so we don't want
      * to hold it in memory.
+     * @param {entity} entity - The entity the content belongs to.
+     * @param {string} newContentId - The id of the new content.
      */
     validateEntityContentAsync(entity, newContentId) {
         return this._notifySystemsAsync("validateEntityContentAsync", [entity, newContentId]);
     }
+    /**
+     * Ensures the system has the required methods.
+     * @param {ISystem} system - The System to be validated.
+     */
     validateSystem(system) {
         if (typeof system.getGuid !== "function" ||
             typeof system.getName !== "function") {
