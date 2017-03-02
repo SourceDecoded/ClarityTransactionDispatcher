@@ -18,6 +18,8 @@
     "webpack": "^2.2.1"
   },
   "dependencies": {
+    "busboy": "^0.2.14",
+    "express": "^4.14.1",
     "gridfs-stream": "^1.1.1",
     "mongodb": "^2.2.24",
     "node-uuid": "^1.4.7"

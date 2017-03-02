@@ -65,7 +65,7 @@ export default class MongoDbIterator {
                 var query;
 
                 if (this.lastId == null) {
-                    query = db.collection(this.collectionName).find().skip(this.skip).limit(this.pageSize);
+                    query = db.collection(this.collectionName).find().limit(this.pageSize);
                 } else {
                     query = db.collection(this.collectionName).find({
                         _id: {
