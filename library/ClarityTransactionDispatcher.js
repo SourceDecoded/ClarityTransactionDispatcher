@@ -381,9 +381,11 @@ class ClarityTransactionDispatcher {
         else {
             contentPromise = this._addItemToGridFs(contentStream);
         }
-        return contentPromise.then(() => {
+        return contentPromise.then((id) => {
             // Validate the entity.
-            return this.validateEntityAsync(entity);
+            return this.validateEntityAsync(entity).then(() => {
+                return id;
+            });
         }).then((id) => {
             // Save the entity.
             contentId = id;

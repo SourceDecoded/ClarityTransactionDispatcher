@@ -1,34 +1,34 @@
 "use strict";
 const express = require("express");
-const entityRouter = express.Router();
-entityRouter.get("/", (request, response) => {
+const componentRouter = express.Router();
+componentRouter.get("/", (request, response) => {
     const dispatcher = response.locals.clarityTransactionDispatcher;
     console.log(dispatcher);
     response.status(200).json({
-        message: "Get Entity"
+        message: "Get Component"
     });
 });
-entityRouter.post("/", (request, response) => {
+componentRouter.post("/", (request, response) => {
     const dispatcher = response.locals.clarityTransactionDispatcher;
     console.log(dispatcher);
     response.status(200).json({
-        message: "Post Entity"
+        message: "Post Component"
     });
 });
-entityRouter.patch("/", (request, response) => {
+componentRouter.patch("/", (request, response) => {
     const dispatcher = response.locals.clarityTransactionDispatcher;
     console.log(dispatcher);
     response.status(200).json({
-        message: "Patch Entity"
+        message: "Patch Component"
     });
 });
-entityRouter.delete("/", (request, response) => {
+componentRouter.delete("/", (request, response) => {
     const dispatcher = response.locals.clarityTransactionDispatcher;
     console.log(dispatcher);
     response.status(200).json({
-        message: "Delete Entity"
+        message: "Delete Component"
     });
 });
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.default = entityRouter;
-//# sourceMappingURL=Entities.js.map
+exports.default = componentRouter;
+//# sourceMappingURL=Components.js.map
