@@ -461,10 +461,12 @@ class ClarityTransactionDispatcher {
      *  - entityAddedAsync(entity: {_id: string})
      *  - entityUpdatedAsync(oldEntity: any, newEntity: any)
      *  - entityRemovedAsync(entity: {_id: string})
+     *  - entityRetrievedAsync?(entity: { _id: string });
      *  - entityContentUpdatedAsync(oldContentId: string, newContentId: string)
      *  - entityComponentAddedAsync(entity: {_id: string}, component: any)
      *  - entityComponentUpdatedAsync(entity: {_id: string}, oldComponent: any, newComponent: any)
      *  - entityComponentRemovedAsync(entity: {_id: string}, component: any)
+     *  - entityComponentRetrievedAsync?(entity: { _id: string }, component: any);
      *  - initializeAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher)
      *  - serviceRemovedAsync(name: string, service: any);
      *  - validateEntityAsync(entity: {_id: string})
@@ -540,9 +542,16 @@ class ClarityTransactionDispatcher {
      * @return {Promise<Array>}
      */
     getComponentByIdAsync(componentId) {
-        var id = this.ObjectID(componentId);
-        return this._findOneAsync(COMPONENTS_COLLECTION, {
-            _id: id
+        var filter = {
+            _id: this.ObjectID(componentId)
+        };
+        return this._findOneAsync(COMPONENTS_COLLECTION, filter).then(component => {
+            return this._notifySystemsWithRecoveryAsync("entityComponentRetrievedAsync", [null, component]).then(() => {
+                return component;
+            });
+        }).catch(error => {
+            //TODO: Log Error and call logger optional system method.
+            return error;
         });
     }
     /**
@@ -551,11 +560,21 @@ class ClarityTransactionDispatcher {
      * @return {Promise<Array>}
      */
     getComponentsByEntityAsync(entity) {
-        var entityId = this.ObjectID(entity._id);
+        var retrievedComponents;
         var filter = {
-            entity_id: entityId
+            entity_id: this.ObjectID(entity._id)
         };
-        return this._findAsync(COMPONENTS_COLLECTION, filter);
+        return this._findAsync(COMPONENTS_COLLECTION, filter).then((components) => {
+            retrievedComponents = components;
+            return retrievedComponents.reduce((promise, component) => {
+                return this._notifySystemsWithRecoveryAsync("entityComponentRetrievedAsync", [entity, component]);
+            }, resolvedPromise);
+        }).then(() => {
+            return retrievedComponents;
+        }).catch(error => {
+            //TODO: Log Error and call logger optional system method.
+            return error;
+        });
     }
     /**
      * Get the Components on the entity provided matching the type provided.
@@ -563,12 +582,22 @@ class ClarityTransactionDispatcher {
      * @param {string} type - The type of the component needed.
      */
     getComponentsByEntityAndTypeAsync(entity, type) {
-        var entityId = this.ObjectID(entity._id);
+        var retrievedComponents;
         var filter = {
-            entity_id: entityId,
+            entity_id: this.ObjectID(entity._id),
             type: type
         };
-        return this._findAsync(COMPONENTS_COLLECTION, filter);
+        return this._findAsync(COMPONENTS_COLLECTION, filter).then((components) => {
+            retrievedComponents = components;
+            return retrievedComponents.reduce((promise, component) => {
+                return this._notifySystemsWithRecoveryAsync("entityComponentRetrievedAsync", [entity, component]);
+            }, resolvedPromise);
+        }).then(() => {
+            return retrievedComponents;
+        }).catch(error => {
+            //TODO: Log Error and call logger optional system method.
+            return error;
+        });
     }
     /**
      * Get an entity by its id.
@@ -579,7 +608,14 @@ class ClarityTransactionDispatcher {
         var filter = {
             _id: this.ObjectID(entityId)
         };
-        return this._findOneAsync(ENTITIES_COLLECTION, filter);
+        return this._findOneAsync(ENTITIES_COLLECTION, filter).then(entity => {
+            return this._notifySystemsWithRecoveryAsync("entityRetrievedAsync", [entity]).then(() => {
+                return entity;
+            });
+        }).catch(error => {
+            //TODO: Log Error and call logger optional system method.
+            return error;
+        });
     }
     /**
      * Get a stream of the content of the entity.

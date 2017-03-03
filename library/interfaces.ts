@@ -86,10 +86,12 @@ export interface ISystem {
     entityAddedAsync?(entity: { _id: string });
     entityUpdatedAsync?(oldEntity: any, newEntity: any);
     entityRemovedAsync?(entity: { _id: string });
+    entityRetrievedAsync?(entity: { _id: string });
     entityContentUpdatedAsync?(oldContentId: string, newContentId: string);
     entityComponentAddedAsync?(entity: { _id: string }, component: any);
     entityComponentUpdatedAsync?(entity: { _id: string }, oldComponent: any, newComponent: any);
     entityComponentRemovedAsync?(entity: { _id: string }, component: any);
+    entityComponentRetrievedAsync?(entity: { _id: string }, component: any);
     initializeAsync?(clarityTransactionDispatcher: ClarityTransactionDispatcher);
     serviceRemovedAsync?(name: string, service: any);
     validateEntityAsync?(entity: { _id: string });

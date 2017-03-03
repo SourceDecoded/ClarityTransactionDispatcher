@@ -468,11 +468,9 @@ export default class ClarityTransactionDispatcher {
             return this._notifySystemsWithRecoveryAsync("entityAddedAsync", [savedEntity]).then(() => {
                 return this._notifySystemsWithRecoveryAsync("entityContentUpdatedAsync", [null, contentId]);
             }).then(() => {
-
                 return savedComponents.reduce((promise: Promise<any>, component) => {
                     return this._notifySystemsWithRecoveryAsync("entityComponentAddedAsync", [savedEntity, component]);
                 }, resolvedPromise);
-
             });
         }).catch((error) => {
             // Since we save the content first we may have the content saved and not the entity.
@@ -527,10 +525,12 @@ export default class ClarityTransactionDispatcher {
      *  - entityAddedAsync(entity: {_id: string})
      *  - entityUpdatedAsync(oldEntity: any, newEntity: any)
      *  - entityRemovedAsync(entity: {_id: string})
+     *  - entityRetrievedAsync?(entity: { _id: string });
      *  - entityContentUpdatedAsync(oldContentId: string, newContentId: string)
      *  - entityComponentAddedAsync(entity: {_id: string}, component: any)
      *  - entityComponentUpdatedAsync(entity: {_id: string}, oldComponent: any, newComponent: any)
      *  - entityComponentRemovedAsync(entity: {_id: string}, component: any)
+     *  - entityComponentRetrievedAsync?(entity: { _id: string }, component: any);
      *  - initializeAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher)
      *  - serviceRemovedAsync(name: string, service: any);
      *  - validateEntityAsync(entity: {_id: string})
@@ -610,9 +610,17 @@ export default class ClarityTransactionDispatcher {
      * @return {Promise<Array>}
      */
     getComponentByIdAsync(componentId: string) {
-        var id = this.ObjectID(componentId);
-        return this._findOneAsync(COMPONENTS_COLLECTION, {
-            _id: id
+        var filter = {
+            _id: this.ObjectID(componentId)
+        };
+
+        return this._findOneAsync(COMPONENTS_COLLECTION, filter).then(component => {
+            return this._notifySystemsWithRecoveryAsync("entityComponentRetrievedAsync", [null, component]).then(() => {
+                return component;
+            });
+        }).catch(error => {
+            //TODO: Log Error and call logger optional system method.
+            return error;
         });
     }
 
@@ -622,12 +630,22 @@ export default class ClarityTransactionDispatcher {
      * @return {Promise<Array>}
      */
     getComponentsByEntityAsync(entity: { _id: string }) {
-        var entityId = this.ObjectID(entity._id);
+        var retrievedComponents;
         var filter = {
-            entity_id: entityId
+            entity_id: this.ObjectID(entity._id)
         };
 
-        return this._findAsync(COMPONENTS_COLLECTION, filter);
+        return this._findAsync(COMPONENTS_COLLECTION, filter).then((components: Array<any>) => {
+            retrievedComponents = components;
+            return retrievedComponents.reduce((promise: Promise<any>, component) => {
+                return this._notifySystemsWithRecoveryAsync("entityComponentRetrievedAsync", [entity, component]);
+            }, resolvedPromise);
+        }).then(() => {
+            return retrievedComponents;
+        }).catch(error => {
+            //TODO: Log Error and call logger optional system method.
+            return error;
+        });
     }
 
     /**
@@ -636,13 +654,23 @@ export default class ClarityTransactionDispatcher {
      * @param {string} type - The type of the component needed.
      */
     getComponentsByEntityAndTypeAsync(entity: { _id: string }, type: string) {
-        var entityId = this.ObjectID(entity._id);
+        var retrievedComponents;
         var filter = {
-            entity_id: entityId,
+            entity_id: this.ObjectID(entity._id),
             type: type
         };
 
-        return this._findAsync(COMPONENTS_COLLECTION, filter);
+        return this._findAsync(COMPONENTS_COLLECTION, filter).then((components: Array<any>) => {
+            retrievedComponents = components;
+            return retrievedComponents.reduce((promise: Promise<any>, component) => {
+                return this._notifySystemsWithRecoveryAsync("entityComponentRetrievedAsync", [entity, component]);
+            }, resolvedPromise);
+        }).then(() => {
+            return retrievedComponents;
+        }).catch(error => {
+            //TODO: Log Error and call logger optional system method.
+            return error;
+        });
     }
 
     /**
@@ -655,7 +683,14 @@ export default class ClarityTransactionDispatcher {
             _id: this.ObjectID(entityId)
         };
 
-        return this._findOneAsync(ENTITIES_COLLECTION, filter);
+        return this._findOneAsync(ENTITIES_COLLECTION, filter).then(entity => {
+            return this._notifySystemsWithRecoveryAsync("entityRetrievedAsync", [entity]).then(() => {
+                return entity;
+            });
+        }).catch(error => {
+            //TODO: Log Error and call logger optional system method.
+            return error;
+        });
     }
 
     /**
@@ -749,7 +784,6 @@ export default class ClarityTransactionDispatcher {
             return this._notifySystemsWithRecoveryAsync("entityRemovedAsync", [entity]);
         });
     }
-
 
     /**
      * Removes the content of an entity.

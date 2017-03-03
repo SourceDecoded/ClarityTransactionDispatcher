@@ -31,5 +31,3 @@ process.on("uncaughtException", (error) => {
 });
 
 createDispatcher();
-
-
