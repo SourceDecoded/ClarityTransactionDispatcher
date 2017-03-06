@@ -9,7 +9,7 @@ var server;
 
 var createDispatcher = () => {
     var app = express();
-    server = app.listen(3005, () => console.log("Server is running locally on port 3005..."));
+    server = app.listen(3005, () => console.log("Disptacher Server is running locally on port 3005..."));
 
     var dispatcher = new ClarityTransactionDispatcher({
         mongoFactory: mongoFactory,

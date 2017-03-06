@@ -2,7 +2,9 @@
 const http = require("http");
 const socketIO = require("socket.io");
 const mongodb = require("mongodb");
+const Router_1 = require("./app/Router");
 const TRANSACTIONS_COLLECTION = "transactions";
+const UPTIMES_COLLECTION = "uptimes";
 class DispatcherMonitorSystem {
     constructor() {
         this.clarityTransactionDispatcher;
@@ -39,13 +41,45 @@ class DispatcherMonitorSystem {
             });
         });
     }
+    _buildApi() {
+        const router = new Router_1.default(this.app, this);
+        router.init();
+        this.app.listen(3007, () => console.log("Monitor Server is running locally on port 3007..."));
+    }
     _connectSocketIO() {
         const server = http.createServer(this.app);
         this.io = socketIO(server);
         this.io.on("connection", (client) => {
-            console.log("Client connected on port 3006...");
+            console.log("Monitor Client connected on port 3006...");
         });
-        server.listen(3006);
+        server.listen(3006, () => console.log("Socket Monitor Server is running locally on port 3006..."));
+    }
+    _createUptimeAsync() {
+        return this._getDatabaseAsync().then((db) => {
+            return new Promise((resolve, reject) => {
+                db.collection(UPTIMES_COLLECTION, (err, collection) => {
+                    if (err != null) {
+                        reject(err);
+                    }
+                    else {
+                        const uptime = {
+                            _id: null,
+                            startDate: new Date(),
+                            endDate: null
+                        };
+                        collection.insertOne(uptime, (error, result) => {
+                            if (error != null) {
+                                reject(error);
+                            }
+                            else {
+                                uptime._id = result.insertedId;
+                                resolve(uptime);
+                            }
+                        });
+                    }
+                });
+            });
+        });
     }
     _getDatabaseAsync() {
         return new Promise((resolve, reject) => {
@@ -64,7 +98,9 @@ class DispatcherMonitorSystem {
     activatedAsync(clarityTransactionDispatcher) {
         this.clarityTransactionDispatcher = clarityTransactionDispatcher;
         this.app = this.clarityTransactionDispatcher.getService("express");
+        this._buildApi();
         this._connectSocketIO();
+        this._createUptimeAsync();
     }
     entityAddedAsync(entity) {
         this.io.emit("entityAdded", { entity });

@@ -13,6 +13,11 @@ export default class DispatcherApiSystem {
         this.name = "DispatcherApiSystem";
     }
 
+    private _buildApi() {
+        const router = new Router(this.app, this.clarityTransactionDispatcher);
+        router.init();
+    }
+
     activatedAsync(clarityTransactionDispatcher) {
         this.clarityTransactionDispatcher = clarityTransactionDispatcher;
         this.app = this.clarityTransactionDispatcher.getService("express");
@@ -26,10 +31,5 @@ export default class DispatcherApiSystem {
 
     getName() {
         return this.name;
-    }
-
-    _buildApi() {
-        const router = new Router(this.app, this.clarityTransactionDispatcher);
-        router.init();
     }
 }
