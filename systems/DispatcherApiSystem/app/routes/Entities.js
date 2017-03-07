@@ -31,17 +31,12 @@ entityRouter.post("/", (request, response) => {
     });
     request.pipe(busboy);
 });
-// Parameters: id
+// Parameters: id, count
 entityRouter.get("/", (request, response) => {
     const dispatcher = response.locals.clarityTransactionDispatcher;
     const entityId = request.query.id;
-    if (!entityId) {
-        // TODO: Get entityIterator and return entities.
-        response.status(400).json({
-            message: "Please provide the id to look up the entity with."
-        });
-    }
-    else {
+    const count = request.query.count;
+    if (entityId) {
         dispatcher.getEntityByIdAsync(entityId).then((entity) => {
             response.status(200).json({
                 message: "Entity Found!",
@@ -53,6 +48,48 @@ entityRouter.get("/", (request, response) => {
                 error: error
             });
             ;
+        });
+    }
+    else if (count == "true") {
+        dispatcher._getDatabaseAsync().then((db) => {
+            db.collection("entities", (err, collection) => {
+                if (err != null) {
+                    response.status(400).json({
+                        message: "ERROR!",
+                        error: err
+                    });
+                    ;
+                }
+                else {
+                    collection.count(function (error, total) {
+                        if (error != null) {
+                            response.status(400).json({
+                                message: "ERROR!",
+                                error: error
+                            });
+                            ;
+                        }
+                        else {
+                            response.status(200).json({
+                                message: "Found total number of entities!",
+                                count: total
+                            });
+                        }
+                    });
+                }
+            });
+        }).catch((error) => {
+            response.status(400).json({
+                message: "ERROR!",
+                error: error
+            });
+            ;
+        });
+    }
+    else {
+        // TODO: Get entityIterator and return entities.
+        response.status(400).json({
+            message: "Please provide the id to look up the entity with."
         });
     }
 });

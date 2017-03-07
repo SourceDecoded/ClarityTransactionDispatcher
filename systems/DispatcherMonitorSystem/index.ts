@@ -5,6 +5,7 @@ import Router from "./app/Router";
 
 const TRANSACTIONS_COLLECTION = "transactions";
 const UPTIMES_COLLECTION = "uptimes";
+const ALL_TRANSACTIONS = "allTransactions";
 
 export default class DispatcherMonitorSystem {
     clarityTransactionDispatcher: any;
@@ -93,7 +94,6 @@ export default class DispatcherMonitorSystem {
                         });
                     }
                 })
-
             });
         });
     }
@@ -123,15 +123,36 @@ export default class DispatcherMonitorSystem {
     }
 
     entityAddedAsync(entity) {
-        this.io.emit("entityAdded", { entity });
+        const type = "entityAdded";
+
+        this._addTransactionAsync(type, { entity }).then((transaction) => {
+            this.io.emit(type, { transaction });
+            this.io.emit(ALL_TRANSACTIONS, { transaction });
+        }).catch(error => {
+            console.log(error);
+        });
     }
 
     entityUpdatedAsync(oldEntity, newEntity) {
-        this.io.emit("entityUpdated", { oldEntity, newEntity });
+        const type = "entityUpdated";
+
+        this._addTransactionAsync(type, { oldEntity, newEntity }).then((transaction) => {
+            this.io.emit(type, { transaction });
+            this.io.emit(ALL_TRANSACTIONS, { transaction });
+        }).catch(error => {
+            console.log(error);
+        });
     }
 
     entityRemovedAsync(entity) {
-        this.io.emit("entityRemoved", { entity });
+        const type = "entityRemoved";
+
+        this._addTransactionAsync(type, { entity }).then((transaction) => {
+            this.io.emit(type, { transaction });
+            this.io.emit(ALL_TRANSACTIONS, { transaction });
+        }).catch(error => {
+            console.log(error);
+        });
     }
 
     entityRetrievedAsync(entity) {
@@ -139,6 +160,7 @@ export default class DispatcherMonitorSystem {
 
         this._addTransactionAsync(type, { entity }).then((transaction) => {
             this.io.emit(type, { transaction });
+            this.io.emit(ALL_TRANSACTIONS, { transaction });
         }).catch(error => {
             console.log(error);
         });
@@ -149,23 +171,47 @@ export default class DispatcherMonitorSystem {
     }
 
     entityComponentAddedAsync(entity, component) {
-        this.io.emit("entityComponentAdded", { entity, component });
+        const type = "entityComponentAdded";
+
+        this._addTransactionAsync(type, { entity, component }).then((transaction) => {
+            this.io.emit(type, { transaction });
+            this.io.emit(ALL_TRANSACTIONS, { transaction });
+        }).catch(error => {
+            console.log(error);
+        });
     }
 
     entityComponentUpdatedAsync(entity, oldComponent, newComponent) {
-        this.io.emit("entityComponentUpdated", { entity, oldComponent, newComponent });
+        const type = "entityComponentUpdated";
+
+        this._addTransactionAsync(type, { entity, oldComponent, newComponent }).then((transaction) => {
+            this.io.emit(type, { transaction });
+            this.io.emit(ALL_TRANSACTIONS, { transaction });
+        }).catch(error => {
+            console.log(error);
+        });
     }
 
     entityComponentRemovedAsync(entity, component) {
-        this.io.emit("entityComponentRemoved", { entity, component });
+        const type = "entityComponentRemoved";
+
+        this._addTransactionAsync(type, { entity, component }).then((transaction) => {
+            this.io.emit(type, { transaction });
+            this.io.emit(ALL_TRANSACTIONS, { transaction });
+        }).catch(error => {
+            console.log(error);
+        });
     }
 
     entityComponentRetrievedAsync(entity, component) {
-        this.io.emit("entityComponentRetrieved", { entity, component });
-    }
+        const type = "entityComponentRetrieved";
 
-    serviceRemovedAsync(name, service) {
-        this.io.emit("serviceRemoved", { name, service });
+        this._addTransactionAsync(type, { entity, component }).then((transaction) => {
+            this.io.emit(type, { transaction });
+            this.io.emit(ALL_TRANSACTIONS, { transaction });
+        }).catch(error => {
+            console.log(error);
+        });
     }
 
     getGuid() {

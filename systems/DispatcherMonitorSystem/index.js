@@ -5,6 +5,7 @@ const mongodb = require("mongodb");
 const Router_1 = require("./app/Router");
 const TRANSACTIONS_COLLECTION = "transactions";
 const UPTIMES_COLLECTION = "uptimes";
+const ALL_TRANSACTIONS = "allTransactions";
 class DispatcherMonitorSystem {
     constructor() {
         this.clarityTransactionDispatcher;
@@ -103,18 +104,37 @@ class DispatcherMonitorSystem {
         this._createUptimeAsync();
     }
     entityAddedAsync(entity) {
-        this.io.emit("entityAdded", { entity });
+        const type = "entityAdded";
+        this._addTransactionAsync(type, { entity }).then((transaction) => {
+            this.io.emit(type, { transaction });
+            this.io.emit(ALL_TRANSACTIONS, { transaction });
+        }).catch(error => {
+            console.log(error);
+        });
     }
     entityUpdatedAsync(oldEntity, newEntity) {
-        this.io.emit("entityUpdated", { oldEntity, newEntity });
+        const type = "entityUpdated";
+        this._addTransactionAsync(type, { oldEntity, newEntity }).then((transaction) => {
+            this.io.emit(type, { transaction });
+            this.io.emit(ALL_TRANSACTIONS, { transaction });
+        }).catch(error => {
+            console.log(error);
+        });
     }
     entityRemovedAsync(entity) {
-        this.io.emit("entityRemoved", { entity });
+        const type = "entityRemoved";
+        this._addTransactionAsync(type, { entity }).then((transaction) => {
+            this.io.emit(type, { transaction });
+            this.io.emit(ALL_TRANSACTIONS, { transaction });
+        }).catch(error => {
+            console.log(error);
+        });
     }
     entityRetrievedAsync(entity) {
         const type = "entityRetrieved";
         this._addTransactionAsync(type, { entity }).then((transaction) => {
             this.io.emit(type, { transaction });
+            this.io.emit(ALL_TRANSACTIONS, { transaction });
         }).catch(error => {
             console.log(error);
         });
@@ -123,19 +143,40 @@ class DispatcherMonitorSystem {
         //TODO: Add Content Support
     }
     entityComponentAddedAsync(entity, component) {
-        this.io.emit("entityComponentAdded", { entity, component });
+        const type = "entityComponentAdded";
+        this._addTransactionAsync(type, { entity, component }).then((transaction) => {
+            this.io.emit(type, { transaction });
+            this.io.emit(ALL_TRANSACTIONS, { transaction });
+        }).catch(error => {
+            console.log(error);
+        });
     }
     entityComponentUpdatedAsync(entity, oldComponent, newComponent) {
-        this.io.emit("entityComponentUpdated", { entity, oldComponent, newComponent });
+        const type = "entityComponentUpdated";
+        this._addTransactionAsync(type, { entity, oldComponent, newComponent }).then((transaction) => {
+            this.io.emit(type, { transaction });
+            this.io.emit(ALL_TRANSACTIONS, { transaction });
+        }).catch(error => {
+            console.log(error);
+        });
     }
     entityComponentRemovedAsync(entity, component) {
-        this.io.emit("entityComponentRemoved", { entity, component });
+        const type = "entityComponentRemoved";
+        this._addTransactionAsync(type, { entity, component }).then((transaction) => {
+            this.io.emit(type, { transaction });
+            this.io.emit(ALL_TRANSACTIONS, { transaction });
+        }).catch(error => {
+            console.log(error);
+        });
     }
     entityComponentRetrievedAsync(entity, component) {
-        this.io.emit("entityComponentRetrieved", { entity, component });
-    }
-    serviceRemovedAsync(name, service) {
-        this.io.emit("serviceRemoved", { name, service });
+        const type = "entityComponentRetrieved";
+        this._addTransactionAsync(type, { entity, component }).then((transaction) => {
+            this.io.emit(type, { transaction });
+            this.io.emit(ALL_TRANSACTIONS, { transaction });
+        }).catch(error => {
+            console.log(error);
+        });
     }
     getGuid() {
         return this.guid;
