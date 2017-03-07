@@ -688,7 +688,7 @@ export default class ClarityTransactionDispatcher {
      * @returns {Promise<undefined>}
      */
     removeComponentAsync(component: IComponent) {
-        this.verifyComponentRemovalAsync(component).then(() => {
+        return this.verifyComponentRemovalAsync(component).then(() => {
             return this._removeItemfromCollection(component, COMPONENTS_COLLECTION).then(() => {
                 return this.getEntityByIdAsync(component.entity_id);
             });
@@ -773,7 +773,7 @@ export default class ClarityTransactionDispatcher {
         } else {
             var error = Error("Couldn't find service to be removed.");
             this.logError(error);
-            throw error;
+            return Promise.reject(error);
         }
     }
 

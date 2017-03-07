@@ -4,13 +4,17 @@ class MongoCursor {
         this._config = config;
     }
     toArray(callback) {
-        setTimeout(() => {
-            if (this._config.collectionMethodErrorToThrow != null) {
-                callback(this._config.collectionMethodErrorToThrow, null);
-            }
-            else {
-                callback(null, this._config.collectionMethodResult);
-            }
+        return new Promise((resolve, reject) => {
+            setTimeout(() => {
+                if (this._config.collectionMethodErrorToThrow != null) {
+                    callback(this._config.collectionMethodErrorToThrow, null);
+                    reject(this._config.collectionMethodErrorToThrow);
+                }
+                else {
+                    callback(null, this._config.collectionMethodResult);
+                    resolve(this._config.collectionMethodResult);
+                }
+            });
         });
     }
 }

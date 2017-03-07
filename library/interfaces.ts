@@ -22,7 +22,7 @@ export interface IMongoFactory {
 }
 
 export interface IMongoCursor {
-    toArray: (callback: (err, results: Array<any>) => void) => void;
+    toArray: (callback: (err, results: Array<any>) => void) => Promise<any>;
 }
 
 export interface IGridFs {

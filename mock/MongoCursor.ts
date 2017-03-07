@@ -14,12 +14,16 @@ export default class MongoCursor implements IMongoCursor {
     }
 
     toArray(callback: (err, results) => void) {
-        setTimeout(() => {
-            if (this._config.collectionMethodErrorToThrow != null) {
-                callback(this._config.collectionMethodErrorToThrow, null);
-            } else {
-                callback(null, this._config.collectionMethodResult);
-            }
+        return new Promise((resolve, reject) => {
+            setTimeout(() => {
+                if (this._config.collectionMethodErrorToThrow != null) {
+                    callback(this._config.collectionMethodErrorToThrow, null);
+                    reject(this._config.collectionMethodErrorToThrow);
+                } else {
+                    callback(null, this._config.collectionMethodResult);
+                    resolve(this._config.collectionMethodResult);
+                }
+            });
         });
     }
 }
