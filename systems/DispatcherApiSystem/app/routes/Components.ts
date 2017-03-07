@@ -40,13 +40,9 @@ componentRouter.post("/", (request, response) => {
 componentRouter.get("/", (request, response) => {
     const dispatcher = response.locals.clarityTransactionDispatcher;
     const componentId = request.query.id;
+    const count = request.query.count;
 
-    if (!componentId) {
-        // TODO: If enityId passed in then search and return components belonging to entity.
-        response.status(400).json({
-            message: "Please provide the id to look up the component with."
-        });
-    } else {
+    if (componentId) {
         dispatcher.getComponentByIdAsync(componentId).then((component) => {
             response.status(200).json({
                 message: "Component Found!",
@@ -57,6 +53,41 @@ componentRouter.get("/", (request, response) => {
                 message: "ERROR!",
                 error: error
             });;
+        });
+    } else if (count == "true") {
+        dispatcher._getDatabaseAsync().then((db: any) => {
+            db.collection("components", (err, collection) => {
+                if (err != null) {
+                    response.status(400).json({
+                        message: "ERROR!",
+                        error: err
+                    });;
+                } else {
+                    collection.count(function (error, total) {
+                        if (error != null) {
+                            response.status(400).json({
+                                message: "ERROR!",
+                                error: error
+                            });;
+                        } else {
+                            response.status(200).json({
+                                message: "Found total number of components!",
+                                count: total
+                            });
+                        }
+                    });
+                }
+            })
+        }).catch((error) => {
+            response.status(400).json({
+                message: "ERROR!",
+                error: error
+            });;
+        });
+    } else {
+        // TODO: If enityId passed in then search and return components belonging to entity.
+        response.status(400).json({
+            message: "Please provide the id to look up the component with."
         });
     }
 });
