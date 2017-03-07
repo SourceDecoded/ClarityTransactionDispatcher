@@ -6,7 +6,7 @@ import MongoDbIterator from "./MongoDbIterator";
 import NullableLogger from "./NullableLogger";
 
 const nullableLogger = new NullableLogger();
-const resolvedPromise = Promise.resolve();
+const resolvedPromise = Promise.resolve(null);
 
 const ENTITIES_COLLECTION = "entities";
 const COMPONENTS_COLLECTION = "components";
@@ -189,14 +189,6 @@ export default class ClarityTransactionDispatcher {
         });
     }
 
-    /**
-     * Get the logger.
-     * Replace with a system method call logError(error), Error can be 
-     * @private
-     */
-    private _getLogger() {
-        return <ILogger>this.services["logger"] || nullableLogger;
-    }
 
     /**
      * Initialize a system.
@@ -225,6 +217,9 @@ export default class ClarityTransactionDispatcher {
                     return this._updateItemInCollectionAsync(systemData, SYSTEM_DATA_COLLECTION);
                 });
             }
+        }).catch((error)=>{
+            this.logError(error);
+            throw error;
         });
     }
 
@@ -260,8 +255,8 @@ export default class ClarityTransactionDispatcher {
                 try {
                     return this._invokeMethodAsync(system, methodName, args);
                 } catch (error) {
-                    this._getLogger().error(error.message, error);
-                    return resolvedPromise;
+                    this.logError(error);
+                    throw error;
                 }
 
             });
@@ -286,8 +281,8 @@ export default class ClarityTransactionDispatcher {
                 try {
                     return this._invokeMethodAsync(system, methodName, args);
                 } catch (error) {
-                    this._getLogger().error(error.message, error);
-                    return resolvedPromise;
+                    this.logError(error);
+                    throw error;
                 }
 
             }).catch(() => {
@@ -307,7 +302,7 @@ export default class ClarityTransactionDispatcher {
 
                 gfs.remove({
                     _id: id
-                }, function (error) {
+                }, (error) => {
                     if (error != null) {
                         reject(error);
                     } else {
@@ -317,10 +312,8 @@ export default class ClarityTransactionDispatcher {
 
             });
         }).catch((error) => {
-            this._getLogger().error(error.message, error);
-
-            // It may not have been able to find the file.
-            return resolvedPromise;
+            this.logError(error);
+            throw error;
         });
     }
 
@@ -485,7 +478,7 @@ export default class ClarityTransactionDispatcher {
                 }
             }
 
-            return Promise.reject(error);
+            throw error;
         });
 
     }
@@ -547,7 +540,7 @@ export default class ClarityTransactionDispatcher {
             return this._initializingSystemAsync(system).then(() => {
                 return this._invokeMethodAsync(system, "activatedAsync", [this]);
             }).catch((error) => {
-                return Promise.reject(error);
+                throw error;
             });
         }
     }
@@ -742,15 +735,47 @@ export default class ClarityTransactionDispatcher {
     }
 
     /**
+     * Notifies the systems about an error.
+     * @param error {object} - The error to be sent to the systems.
+     * @returns {undefined}
+     */
+    logError(error: { type?: string; message?: string; }) {
+        this._notifySystemsAsync("logError", [error]);
+    }
+
+    /**
+     * Notifies the systems about an error.
+     * @param message {object} - The message to be sent to the systems.
+     * @returns {undefined}
+     */
+    logMessage(message: { type?: string; message?: string; }) {
+        this._notifySystemsAsync("logMessage", [message]);
+    }
+
+    /**
+     * Notifies the systems about a warning.
+     * @param warning {object} - The warning to be sent to the systems.
+     * @returns {undefined}
+     */
+    logWarning(warning: { type?: string; message?: string; }) {
+        this._notifySystemsAsync("logWarning", [warning]);
+    }
+
+    /**
      * Remove a component from an entity.
      * @param {object} component - The component to be removed.
      * @returns {Promise<undefined>}
      */
     removeComponentAsync(component: { _id: string, type: string, entity_id: string }) {
-        return this._removeItemfromCollection(component, COMPONENTS_COLLECTION).then(() => {
-            return this.getEntityByIdAsync(component.entity_id);
+        this.verifyComponentRemovalAsync(component).then(() => {
+            return this._removeItemfromCollection(component, COMPONENTS_COLLECTION).then(() => {
+                return this.getEntityByIdAsync(component.entity_id);
+            });
         }).then((entity) => {
             return this._notifySystemsWithRecoveryAsync("entityComponentRemovedAsync", [entity, component]);
+        }).catch((error) => {
+            this.logError(error);
+            throw error;
         });
     }
 
@@ -764,24 +789,31 @@ export default class ClarityTransactionDispatcher {
      * @returns {Promise<undefined>} 
      */
     removeEntityAsync(entity: { _id: string, content_id: string }) {
-        return this.getComponentsByEntityAsync(entity).then((components: Array<any>) => {
+        this.verifyEntityRemovalAsync(entity).then(() => {
+            return this.getComponentsByEntityAsync(entity).then((components: Array<any>) => {
 
-            return components.reduce((promise, component) => {
+                return components.reduce((promise, component) => {
 
-                return promise.then(() => {
-                    return this.removeComponentAsync(component);
-                }).catch((error) => {
-                    return resolvedPromise;
-                });
+                    return promise.then(() => {
+                        // We don't need to verify these to be removed because we already got approved to remove the entity.
+                        // And the components are just an extension of the entity.
+                        return this.removeComponentAsync(component);
+                    }).catch((error) => {
+                        return resolvedPromise;
+                    });
 
-            }, resolvedPromise);
+                }, resolvedPromise);
 
+            });
         }).then(() => {
             return this.removeEntityContentAsync(entity);
         }).then(() => {
             return this._removeItemfromCollection(entity, "entities");
         }).then(() => {
             return this._notifySystemsWithRecoveryAsync("entityRemovedAsync", [entity]);
+        }).catch((error) => {
+            this.logError(error);
+            throw error;
         });
     }
 
@@ -801,6 +833,9 @@ export default class ClarityTransactionDispatcher {
             return this.updateEntityAsync(entity);
         }).then(() => {
             return this._notifySystemsWithRecoveryAsync("entityContentUpdatedAsync", [null, contentId]);
+        }).catch((error) => {
+            this.logError(error);
+            throw error;
         });
     }
 
@@ -815,7 +850,9 @@ export default class ClarityTransactionDispatcher {
             delete this.services[name];
             return this._notifySystemsWithRecoveryAsync("serviceRemovedAsync", [name, this.services[name]]);
         } else {
-            return Promise.reject(new Error("Couldn't find service to be removed."));
+            var error = Error("Couldn't find service to be removed.");
+            this.logError(error);
+            throw error;
         }
     }
 
@@ -843,6 +880,8 @@ export default class ClarityTransactionDispatcher {
             });
         }).then((oldEntity) => {
             return this._notifySystemsWithRecoveryAsync("entityUpdatedAsync", [oldEntity, entity]);
+        }).catch(() => {
+
         });
     }
 
@@ -876,13 +915,13 @@ export default class ClarityTransactionDispatcher {
             if (contentId != null) {
                 entity.content_id = oldContentId;
                 return this._updateItemInCollectionAsync(entity, ENTITIES_COLLECTION).then(() => {
-                    return Promise.reject(error);
+                    throw error;
                 }).catch(() => {
                     // Unable to update entity back to old content id.
                     // We probably aught to log this. To be determined.
                 });
             }
-            return Promise.reject(error);
+            throw error;
         });
     }
 
@@ -936,6 +975,22 @@ export default class ClarityTransactionDispatcher {
      */
     validateEntityContentAsync(entity: { _id: string }, newContentId: string) {
         return this._notifySystemsAsync("validateEntityContentAsync", [entity, newContentId]);
+    }
+
+    /**
+     * Verifies whether an entity can be removed. Systems can deny the ability to remove entities.
+     * @param entity {object} - The entity to be removed.
+     */
+    verifyEntityRemovalAsync(entity: { _id: string }) {
+        return this._notifySystemsAsync("verifyEntityRemovalAsync", [entity]);
+    }
+
+    /**
+     * Verifies whether a component can be removed. Systems can deny the ability to remove components.
+     * @param entity {object} - The entity to be removed.
+     */
+    verifyComponentRemovalAsync(component: { _id: string, entity_id: string, type: string; }) {
+        return this._notifySystemsAsync("verifyComponentRemovalAsync", [component]);
     }
 
     /**
