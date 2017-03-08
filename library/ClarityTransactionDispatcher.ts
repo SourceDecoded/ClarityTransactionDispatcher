@@ -56,7 +56,6 @@ export default class ClarityTransactionDispatcher {
 
     private _addItemToGridFs(stream: NodeJS.ReadableStream): any {
         var newContentId = uuid.v4();
-
         stream.pause();
 
         return this._getGridFsAsync().then((gfs: IGridFs) => {
@@ -260,9 +259,6 @@ export default class ClarityTransactionDispatcher {
                 });
 
             });
-        }).catch((error) => {
-            this.logError(error);
-            throw error;
         });
     }
 
@@ -317,6 +313,9 @@ export default class ClarityTransactionDispatcher {
             return this._addItemToCollectionAsync(component, COMPONENTS_COLLECTION);
         }).then(() => {
             return this._notifySystemsWithRecoveryAsync("entityComponentAddedAsync", [entity, component]);
+        }).catch((error) => {
+            this.logError(error);
+            throw error;
         });
     }
 
@@ -391,6 +390,8 @@ export default class ClarityTransactionDispatcher {
             // If we were able to save the entity then the removeEntityAsync will take care of removing the content.
             // Otherwise we need to remove the content manually.
 
+            this.logError(error);
+
             if (savedEntity != null) {
                 this.removeEntityAsync(savedEntity);
             } else {
@@ -450,6 +451,8 @@ export default class ClarityTransactionDispatcher {
      *  - validateEntityAsync(entity: {_id: string})
      *  - validateComponentAsync(component: {_id: string})
      *  - validateEntityContentAsync(entity: {_id: string}, oldContentId: string, newContentId: string)
+     *  - verifyComponentRemovalAsync(component:{_id: string; entity_id: string})
+     *  - verifyEntityRemovalAsync(entity:{_id: string})
      * @param {ISystem} system - The system to add.
      * @return {Promise} - An undefined Promise.
      */
@@ -461,6 +464,7 @@ export default class ClarityTransactionDispatcher {
             return this._initializingSystemAsync(system).then(() => {
                 return this._invokeMethodAsync(system, "activatedAsync", [this]);
             }).catch((error) => {
+                this.logError(error);
                 throw error;
             });
         }
@@ -532,9 +536,9 @@ export default class ClarityTransactionDispatcher {
             return this._notifySystemsWithRecoveryAsync("entityComponentRetrievedAsync", [null, component]).then(() => {
                 return component;
             });
-        }).catch(error => {
-            //TODO: Log Error and call logger optional system method.
-            return error;
+        }).catch((error) => {
+            this.logError(error);
+            throw error;
         });
     }
 
@@ -556,9 +560,9 @@ export default class ClarityTransactionDispatcher {
             }, resolvedPromise);
         }).then(() => {
             return retrievedComponents;
-        }).catch(error => {
-            //TODO: Log Error and call logger optional system method.
-            return error;
+        }).catch((error) => {
+            this.logError(error);
+            throw error;
         });
     }
 
@@ -581,9 +585,9 @@ export default class ClarityTransactionDispatcher {
             }, resolvedPromise);
         }).then(() => {
             return retrievedComponents;
-        }).catch(error => {
-            //TODO: Log Error and call logger optional system method.
-            return error;
+        }).catch((error) => {
+            this.logError(error);
+            throw error;
         });
     }
 
@@ -601,9 +605,9 @@ export default class ClarityTransactionDispatcher {
             return this._notifySystemsWithRecoveryAsync("entityRetrievedAsync", [entity]).then(() => {
                 return entity;
             });
-        }).catch(error => {
-            //TODO: Log Error and call logger optional system method.
-            return error;
+        }).catch((error) => {
+            this.logError(error);
+            throw error;
         });
     }
 
@@ -802,8 +806,9 @@ export default class ClarityTransactionDispatcher {
             });
         }).then((oldEntity) => {
             return this._notifySystemsWithRecoveryAsync("entityUpdatedAsync", [oldEntity, entity]);
-        }).catch(() => {
-
+        }).catch((error) => {
+            this.logError(error);
+            throw error;
         });
     }
 
@@ -836,11 +841,8 @@ export default class ClarityTransactionDispatcher {
         }).catch((error) => {
             if (contentId != null) {
                 entity.content_id = oldContentId;
-                return this._updateItemInCollectionAsync(entity, ENTITIES_COLLECTION).then(() => {
-                    throw error;
-                }).catch(() => {
-                    // Unable to update entity back to old content id.
-                    // We probably aught to log this. To be determined.
+                return this._updateItemInCollectionAsync(entity, ENTITIES_COLLECTION).catch(() => {
+                    this.logError(error);
                 });
             }
             throw error;
@@ -870,6 +872,9 @@ export default class ClarityTransactionDispatcher {
             });
         }).then((oldComponent) => {
             return this._notifySystemsWithRecoveryAsync("componentUpdatedAsync", [oldComponent, component]);
+        }).catch((error) => {
+            this.logError(error);
+            throw error;
         });
     }
 
