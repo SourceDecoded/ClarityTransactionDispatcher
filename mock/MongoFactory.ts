@@ -11,7 +11,7 @@ export default class MongoFactory implements IMongoFactory {
         mongodbConfig: { responses: Array<any>; };
     }) {
         this.gridFs = new GridFs(config.gridFsConfig);
-        this.mongodb = new Mongo(config.mongodbConfig);
+        this.mongodb = <any> new Mongo(config.mongodbConfig);
     }
 
     createMongodb() {

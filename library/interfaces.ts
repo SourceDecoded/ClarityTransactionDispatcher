@@ -1,13 +1,28 @@
 import ClarityTransactionDispatcher from "./ClarityTransactionDispatcher";
 import * as stream from "stream";
 
+export interface IEntity {
+    _id?: any;
+    content_id?: any;
+    updatedDate?: Date;
+    createdDate?: Date;
+}
+
+export interface IComponent {
+    _id?: any;
+    type: string;
+    entity_id: any;
+    updatedDate?: Date;
+    createdDate?: Date;
+}
+
 export interface IMongoFactory {
     createGridFs: (db: IMongoDb, mongo: IMongo) => IGridFs;
     createMongodb: () => IMongo;
 }
 
 export interface IMongoCursor {
-    toArray: (callback: (err, results: Array<any>) => void) => void;
+    toArray: (callback: (err, results: Array<any>) => void) => Promise<any>;
 }
 
 export interface IGridFs {
@@ -37,19 +52,19 @@ export interface IObjectID {
 }
 
 export interface IMongoCollection {
-    insertOne: (document: any, callback: (error, result: any) => void) => void;
-    deleteOne: (filter: any, callback: (error, result: any) => void) => void;
-    update: (filter: any, callback: (error, result: any) => void) => void;
-    find: (filter: any, callback: (error, result: any) => void) => void;
-    findOne: (filter: any, callback: (error, result: any) => void) => void;
+    insertOne: (document: any, callback: (error, result: any) => void) => Promise<any>;
+    deleteOne: (filter: any, callback: (error, result: any) => void) => Promise<any>;
+    update: (filter: any, callback: (error, result: any) => void) => Promise<any>;
+    find: (filter: any, callback: (error, result: any) => void) => Promise<any>;
+    findOne: (filter: any, callback: (error, result: any) => void) => Promise<any>;
 }
 
 export interface IMongoDb {
-    collection: (name: string, callback: (error, MongoCollection: IMongoCollection) => void) => void;
+    collection: (name: string, callback?: (error, MongoCollection: IMongoCollection) => void) => Promise<IMongoCollection>;
 }
 
 export interface IMongoClient {
-    connect: (connectionString: string, callback: (err, db: IMongoDb) => void) => void;
+    connect: (connectionString: string, callback?: (err, db: IMongoDb) => void) => Promise<IMongoDb>;
 }
 
 

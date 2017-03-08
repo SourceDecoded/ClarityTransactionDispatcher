@@ -8,28 +8,32 @@ class MongoCollection {
     }
     _mockAsyncResponse(callback) {
         var self = this;
-        setTimeout(() => {
-            if (self._collectionMethodErrorToThrow != null) {
-                callback(self._collectionMethodErrorToThrow, null);
-                return;
-            }
-            callback(null, self._collectionMethodResult);
-        }, 0);
+        return new Promise((resolve, reject) => {
+            setTimeout(() => {
+                if (self._collectionMethodErrorToThrow != null) {
+                    callback(self._collectionMethodErrorToThrow, null);
+                    reject(self._collectionMethodErrorToThrow);
+                    return;
+                }
+                callback(null, self._collectionMethodResult);
+                resolve(self._collectionMethodResult);
+            }, 0);
+        });
     }
     insertOne(document, callback) {
-        this._mockAsyncResponse(callback);
+        return this._mockAsyncResponse(callback);
     }
     deleteOne(filter, callback) {
-        this._mockAsyncResponse(callback);
+        return this._mockAsyncResponse(callback);
     }
     update(filter, callback) {
-        this._mockAsyncResponse(callback);
+        return this._mockAsyncResponse(callback);
     }
     find(filter, callback) {
         return new MongoCursor_1.default(this._config);
     }
     findOne(filter, callback) {
-        this._mockAsyncResponse(callback);
+        return this._mockAsyncResponse(callback);
     }
 }
 Object.defineProperty(exports, "__esModule", { value: true });

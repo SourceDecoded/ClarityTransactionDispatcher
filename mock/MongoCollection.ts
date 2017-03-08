@@ -11,35 +11,39 @@ export default class MongoCollection {
         this._collectionMethodResult = config.collectionMethodResult || null;
     }
 
-    _mockAsyncResponse (callback: (error, result: any) => void) {
+    _mockAsyncResponse(callback: (error, result: any) => void) {
         var self = this;
-        setTimeout(() => {
-            if (self._collectionMethodErrorToThrow != null) {
-                callback(self._collectionMethodErrorToThrow, null);
-                return;
-            }
+        return new Promise((resolve, reject) => {
+            setTimeout(() => {
+                if (self._collectionMethodErrorToThrow != null) {
+                    callback(self._collectionMethodErrorToThrow, null);
+                    reject(self._collectionMethodErrorToThrow);
+                    return;
+                }
 
-            callback(null, self._collectionMethodResult);
-        }, 0);
+                callback(null, self._collectionMethodResult);
+                resolve(self._collectionMethodResult);
+            }, 0);
+        });
     }
 
     insertOne(document: any, callback: (error, result: any) => void) {
-        this._mockAsyncResponse(callback);
+        return this._mockAsyncResponse(callback);
     }
 
     deleteOne(filter: any, callback: (error, result: any) => void) {
-        this._mockAsyncResponse(callback);
+        return this._mockAsyncResponse(callback);
     }
 
-    update(filter: any, callback: (error, result: any) => void) { 
-        this._mockAsyncResponse(callback);
+    update(filter: any, callback: (error, result: any) => void) {
+        return this._mockAsyncResponse(callback);
     }
 
     find(filter: any, callback: (error, result: any) => void) {
         return new MongoCursor(this._config);
-     }
+    }
 
     findOne(filter: any, callback: (error, result: any) => void) {
-        this._mockAsyncResponse(callback);
-     }
+        return this._mockAsyncResponse(callback);
+    }
 }

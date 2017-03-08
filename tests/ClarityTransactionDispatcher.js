@@ -1056,7 +1056,7 @@ exports["ClarityTransactionDispatcher: Successfully invoking getComponentAsync."
         databaseUrl: ""
     });
 
-    dispatcher.getComponentAsync(component._id).then((result) => {
+    dispatcher.getComponentByIdAsync(component._id).then((result) => {
         invokeAssert(() => {
             assert.deepEqual(component, result);
         });
@@ -1085,7 +1085,7 @@ exports["ClarityTransactionDispatcher: Error out with promise when invoking getC
         databaseUrl: ""
     });
 
-    dispatcher.getComponentAsync(component._id).then(() => {
+    dispatcher.getComponentByIdAsync(component._id).then(() => {
         invokeAssert(() => {
             assert.ok(false);
         });

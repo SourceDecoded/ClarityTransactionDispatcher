@@ -12,19 +12,23 @@ export default class MongoDB {
     }
 
     collection(name: string, callback: (error, MongoCollection) => void) {
-        setTimeout(() => {
-            if (this._collectionErrorToThrow != null) {
-                callback(this._collectionErrorToThrow, null);
-                return;
-            }
+        return new Promise((resolve, reject) => {
+            setTimeout(() => {
+                if (this._collectionErrorToThrow != null) {
+                    callback(this._collectionErrorToThrow, null);
+                    reject(this._collectionErrorToThrow);
+                    return;
+                }
 
-            var collection = this._collections[name];
+                var collection = this._collections[name];
 
-            if (collection == null) {
-                collection = this._collections[name] = new MongoCollection(this._config);
-            }
+                if (collection == null) {
+                    collection = this._collections[name] = new MongoCollection(this._config);
+                }
 
-            callback(null, collection);
-        }, 0);
+                callback(null, collection);
+                resolve(collection);
+            }, 0);
+        });
     }
 }
