@@ -58,7 +58,6 @@ entityRouter.get("/", (request, response) => {
                         message: "ERROR!",
                         error: err
                     });
-                    ;
                 }
                 else {
                     collection.count(function (error, total) {

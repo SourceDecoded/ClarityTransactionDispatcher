@@ -1,4 +1,5 @@
 import uptimesRoute from "./routes/Uptimes";
+import transactionsRoute from "./routes/Transactions";
 
 export default class Router {
     app: any;
@@ -19,5 +20,6 @@ export default class Router {
         });
 
         this.app.use("/api/uptimes", uptimesRoute);
+        this.app.use("/api/transactions", transactionsRoute);
     }
 }
