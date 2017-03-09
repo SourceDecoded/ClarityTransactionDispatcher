@@ -19,7 +19,7 @@ export default class DispatcherMonitorSystem {
         this.app;
         this.io;
         this.guid = "3A07CA2A-1A79-4A79-98FE-B3FA747A9CB2";
-        this.name = "DispatcherMonitorSystem";
+        this.name = "Dispatcher Monitor System";
     }
 
     private _addTransactionAsync(type: string, data: any) {

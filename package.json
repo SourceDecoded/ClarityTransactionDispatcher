@@ -1,8 +1,8 @@
 {
-  "name": "clarity-data-dispatcher",
+  "name": "clarity-transaction-dispatcher",
   "version": "0.0.1",
   "description": "Integrate your data.",
-  "main": "./dist/main.js",
+  "main": "./library/main.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -10,6 +10,10 @@
     "IoT",
     "Data Integration"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SourceDecoded/ClarityTransactionDispatcher.git"
+  },
   "author": "Jared J Barnes",
   "devDependencies": {
     "gulp": "^3.9.1",
