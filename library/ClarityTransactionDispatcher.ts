@@ -11,6 +11,7 @@ const resolvedPromise = Promise.resolve(null);
 const ENTITIES_COLLECTION = "entities";
 const COMPONENTS_COLLECTION = "components";
 const SYSTEM_DATA_COLLECTION = "systemData";
+const NOTICE = "notice";
 
 /**
  * Class that organizes systems to respond to data transactions.
@@ -451,8 +452,8 @@ export default class ClarityTransactionDispatcher {
      *  - validateEntityAsync(entity: {_id: string})
      *  - validateComponentAsync(component: {_id: string})
      *  - validateEntityContentAsync(entity: {_id: string}, oldContentId: string, newContentId: string)
-     *  - verifyComponentRemovalAsync(component:{_id: string; entity_id: string})
-     *  - verifyEntityRemovalAsync(entity:{_id: string})
+     *  - approveComponentRemovalAsync(component:{_id: string; entity_id: string})
+     *  - approveEntityRemovalAsync(entity:{_id: string})
      * @param {ISystem} system - The system to add.
      * @return {Promise} - An undefined Promise.
      */
@@ -462,12 +463,38 @@ export default class ClarityTransactionDispatcher {
         } else {
             this.systems.push(system);
             return this._initializingSystemAsync(system).then(() => {
+                this.logMessage({
+                    type: NOTICE,
+                    message: `System "${system.getName()}" was initialized.`
+                });
+
                 return this._invokeMethodAsync(system, "activatedAsync", [this]);
+            }).then(() => {
+                this.logMessage({
+                    type: NOTICE,
+                    message: `System "${system.getName()}" was activated.`
+                });
             }).catch((error) => {
                 this.logError(error);
                 throw error;
             });
         }
+    }
+
+    /**
+   * Approves whether an entity can be removed. Systems can deny the ability to remove entities.
+   * @param entity {object} - The entity to be removed.
+   */
+    approveEntityRemovalAsync(entity: IEntity) {
+        return this._notifySystemsAsync("approveEntityRemovalAsync", [entity]);
+    }
+
+    /**
+     * Approves whether a component can be removed. Systems can deny the ability to remove components.
+     * @param entity {object} - The entity to be removed.
+     */
+    approveComponentRemovalAsync(component: IComponent) {
+        return this._notifySystemsAsync("approveComponentRemovalAsync", [component]);
     }
 
     /**
@@ -487,9 +514,14 @@ export default class ClarityTransactionDispatcher {
             this.systems.splice(index, 1);
 
             try {
-                return deactivatedPromise = this._invokeMethodAsync(system, "deactivatedAsync", []).catch(() => {
+                return deactivatedPromise = this._invokeMethodAsync(system, "deactivatedAsync", []).then(() => {
+                    this.logMessage({
+                        type: NOTICE,
+                        message: `System "${system.getName()}" was deactivated.`
+                    });
+                }).catch(() => {
                     return resolvedPromise;
-                })
+                });
             } catch (e) {
                 return resolvedPromise;
             }
@@ -513,7 +545,12 @@ export default class ClarityTransactionDispatcher {
             this.systems.splice(index, 1);
 
             try {
-                return disposedPromise = this._invokeMethodAsync(system, "disposeAsync", []).catch(() => {
+                return disposedPromise = this._invokeMethodAsync(system, "disposeAsync", []).then(() => {
+                    this.logMessage({
+                        type: NOTICE,
+                        message: `System "${system.getName()}" was disposed.`
+                    });
+                }).catch(() => {
                     return resolvedPromise;
                 });
             } catch (e) {
@@ -692,7 +729,7 @@ export default class ClarityTransactionDispatcher {
      * @returns {Promise<undefined>}
      */
     removeComponentAsync(component: IComponent) {
-        return this.verifyComponentRemovalAsync(component).then(() => {
+        return this.approveComponentRemovalAsync(component).then(() => {
             return this._removeItemfromCollection(component, COMPONENTS_COLLECTION).then(() => {
                 return this.getEntityByIdAsync(component.entity_id);
             });
@@ -714,13 +751,13 @@ export default class ClarityTransactionDispatcher {
      * @returns {Promise<undefined>} 
      */
     removeEntityAsync(entity: IEntity) {
-        this.verifyEntityRemovalAsync(entity).then(() => {
+        this.approveEntityRemovalAsync(entity).then(() => {
             return this.getComponentsByEntityAsync(entity).then((components: Array<any>) => {
 
                 return components.reduce((promise, component) => {
 
                     return promise.then(() => {
-                        // We don't need to verify these to be removed because we already got approved to remove the entity.
+                        // We don't need to approve these to be removed because we already got approved to remove the entity.
                         // And the components are just an extension of the entity.
                         return this.removeComponentAsync(component);
                     }).catch((error) => {
@@ -902,22 +939,6 @@ export default class ClarityTransactionDispatcher {
      */
     validateEntityContentAsync(entity: IEntity, newContentId: string) {
         return this._notifySystemsAsync("validateEntityContentAsync", [entity, newContentId]);
-    }
-
-    /**
-     * Verifies whether an entity can be removed. Systems can deny the ability to remove entities.
-     * @param entity {object} - The entity to be removed.
-     */
-    verifyEntityRemovalAsync(entity: IEntity) {
-        return this._notifySystemsAsync("verifyEntityRemovalAsync", [entity]);
-    }
-
-    /**
-     * Verifies whether a component can be removed. Systems can deny the ability to remove components.
-     * @param entity {object} - The entity to be removed.
-     */
-    verifyComponentRemovalAsync(component: IComponent) {
-        return this._notifySystemsAsync("verifyComponentRemovalAsync", [component]);
     }
 
     /**
