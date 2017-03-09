@@ -7,14 +7,14 @@ class DispatcherApiSystem {
         this.guid = "13CE560D-9B85-4C85-8BA4-72EA1686EBAA";
         this.name = "DispatcherApiSystem";
     }
-    _runAPI() {
+    _startAPI() {
         const router = new Router_1.default(this.app, this.clarityTransactionDispatcher);
         router.init();
     }
     activatedAsync(clarityTransactionDispatcher) {
         this.clarityTransactionDispatcher = clarityTransactionDispatcher;
         this.app = this.clarityTransactionDispatcher.getService("express");
-        this._runAPI();
+        this._startAPI();
     }
     getGuid() {
         return this.guid;
