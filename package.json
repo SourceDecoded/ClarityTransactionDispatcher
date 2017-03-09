@@ -1,5 +1,5 @@
 {
-  "name": "clarity-data-dispatcher",
+  "name": "clarity-transaction-dispatcher",
   "version": "0.0.1",
   "description": "Integrate your data.",
   "main": "./library/main.js",
