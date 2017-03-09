@@ -10,6 +10,10 @@
     "IoT",
     "Data Integration"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SourceDecoded/ClarityTransactionDispatcher.git"
+  },
   "author": "Jared J Barnes",
   "devDependencies": {
     "gulp": "^3.9.1",
