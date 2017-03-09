@@ -1,23 +1,40 @@
 import MongoDB from "./MongoDB";
 
-export default class MongoClient  {
+export default class MongoClient {
     private _config;
-    private _connectErrorToThrow;
+    private _responses;
 
     constructor(config) {
         this._config = <any>config || {};
-        this._connectErrorToThrow = config.connectErrorToThrow || null;
+        this._responses = this._config.responses;
     }
 
-    connect(databaseUrl: string, callback: (error, db: MongoDB) => void) {
-        setTimeout(() => {
-            if (this._connectErrorToThrow != null) {
-                callback(this._connectErrorToThrow, null);
-                return;
+    connect(databaseUrl: string, callback: (error, db: MongoDB) => void){
+        return new Promise((resolve, reject) => {
+            var response = this._responses.shift();
+
+            if (response == null) {
+                throw new Error("Expected a response.");
             }
 
-            callback(null, new MongoDB(this._config));
-        }, 0);
+            var connectErrorToThrow = response.connectErrorToThrow;
+
+            setTimeout(() => {
+
+                if (typeof callback === "function") {
+                    if (connectErrorToThrow != null) {
+                        callback(connectErrorToThrow, null);
+                        reject(connectErrorToThrow);
+                        return;
+                    }
+
+                    var mongo = new MongoDB(response);
+                    callback(null, mongo);
+                    resolve();
+                }
+
+            }, 0);
+        });
     }
 
 }

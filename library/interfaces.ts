@@ -1,4 +1,77 @@
 import ClarityTransactionDispatcher from "./ClarityTransactionDispatcher";
+import * as stream from "stream";
+
+export interface IEntity {
+    _id?: any;
+    content_id?: any;
+    updatedDate?: Date;
+    createdDate?: Date;
+}
+
+export interface IComponent {
+    _id?: any;
+    type: string;
+    entity_id: any;
+    updatedDate?: Date;
+    createdDate?: Date;
+}
+
+export interface IMongoFactory {
+    createGridFs: (db: IMongoDb, mongo: IMongo) => IGridFs;
+    createMongodb: () => IMongo;
+}
+
+export interface IMongoCursor {
+    toArray: (callback: (err, results: Array<any>) => void) => Promise<any>;
+}
+
+export interface IGridFs {
+    createReadStream: (filter: {
+        _id?: any;
+        filename?: any;
+    }) => stream.Readable;
+
+    createWriteStream: (filter: {
+        _id?: any;
+        filename?: any;
+    }) => stream.Writable;
+    remove: (filter: { _id: string; }, callback: (err) => void) => void;
+}
+
+export interface IObjectIDInstance {
+    equals: (id: IObjectIDInstance) => boolean;
+    toHexString: () => string;
+    getTimestamp: () => Date;
+}
+
+export interface IObjectID {
+    (id?: string): IObjectIDInstance;
+    createFromTime: (time: number) => IObjectIDInstance;
+    createFromHexString: (hexString: string) => IObjectIDInstance;
+    isValid: () => boolean;
+}
+
+export interface IMongoCollection {
+    insertOne: (document: any, callback: (error, result: any) => void) => Promise<any>;
+    deleteOne: (filter: any, callback: (error, result: any) => void) => Promise<any>;
+    update: (filter: any, callback: (error, result: any) => void) => Promise<any>;
+    find: (filter: any, callback: (error, result: any) => void) => Promise<any>;
+    findOne: (filter: any, callback: (error, result: any) => void) => Promise<any>;
+}
+
+export interface IMongoDb {
+    collection: (name: string, callback?: (error, MongoCollection: IMongoCollection) => void) => Promise<IMongoCollection>;
+}
+
+export interface IMongoClient {
+    connect: (connectionString: string, callback?: (err, db: IMongoDb) => void) => Promise<IMongoDb>;
+}
+
+
+export interface IMongo {
+    ObjectID: IObjectID;
+    MongoClient: IMongoClient;
+}
 
 /**
  * Describes the possible and require life-cycle hooks available
@@ -22,21 +95,29 @@ export interface ISystem {
     getName();
 
     // Optional interfaces.
-    activatedAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher);
-    deactivatedAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher);
-    disposeAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher);
-    entityAddedAsync(entity: { _id: string });
-    entityUpdatedAsync(oldEntity: any, newEntity: any);
-    entityRemovedAsync(entity: { _id: string });
-    entityContentUpdatedAsync(oldContentId: string, newContentId: string);
-    entityComponentAddedAsync(entity: { _id: string }, component: any);
-    entityComponentUpdatedAsync(entity: { _id: string }, oldComponent: any, newComponent: any);
-    entityComponentRemovedAsync(entity: { _id: string }, component: any);
-    initializeAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher);
-    serviceRemovedAsync(name: string, service: any);
-    validateEntityAsync(entity: { _id: string });
-    validateComponentAsync(component: { _id: string });
-    validateEntityContentAsync(entity: { _id: string }, oldContentId: string, newContentId: string);
+    activatedAsync?(clarityTransactionDispatcher: ClarityTransactionDispatcher);
+    deactivatedAsync?(clarityTransactionDispatcher: ClarityTransactionDispatcher);
+    disposeAsync?(clarityTransactionDispatcher: ClarityTransactionDispatcher);
+    entityAddedAsync?(entity: { _id: string });
+    entityUpdatedAsync?(oldEntity: any, newEntity: any);
+    entityRemovedAsync?(entity: { _id: string });
+    entityRetrievedAsync?(entity: { _id: string });
+    entityContentUpdatedAsync?(oldContentId: string, newContentId: string);
+    entityComponentAddedAsync?(entity: { _id: string }, component: any);
+    entityComponentUpdatedAsync?(entity: { _id: string }, oldComponent: any, newComponent: any);
+    entityComponentRemovedAsync?(entity: { _id: string }, component: any);
+    entityComponentRetrievedAsync?(entity: { _id: string }, component: any);
+    initializeAsync?(clarityTransactionDispatcher: ClarityTransactionDispatcher);
+    serviceRemovedAsync?(name: string, service: any);
+    validateEntityAsync?(entity: { _id: string });
+    validateComponentAsync?(component: { _id: string });
+    validateEntityContentAsync?(entity: { _id: string }, oldContentId: string, newContentId: string);
+}
+
+export interface ISystemData {
+    _id: string;
+    systemGuid: string;
+    isInitialized: boolean;
 }
 
 export interface ILogger {

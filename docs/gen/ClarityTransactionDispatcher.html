@@ -354,7 +354,7 @@ fulfill their responsibilities efficiently.</p></div>
             
 <hr>
 <dt>
-    <h4 class="name" id="addEntityAsync"><span class="type-signature"></span>addEntityAsync(entity)</h4>
+    <h4 class="name" id="addEntityAsync"><span class="type-signature"></span>addEntityAsync(entity, stream, components)</h4>
     
     
 </dt>
@@ -365,9 +365,12 @@ fulfill their responsibilities efficiently.</p></div>
         <p>Add an Entity to the datastore. The steps the dispatcher takes when saving an
 entity are.</p>
 <ul>
+<li>Saves the content of the entity to a datastore.</li>
 <li>Validate the entity with all systems. All systems have to validate to pass.</li>
 <li>Save the entity to the datastore.</li>
-<li>Notify the systems that an entity has been saved to the datastore.</li>
+<li>Validate and save the components.</li>
+<li>Notify the systems that an entity with its components and content have been saved.</li>
+<li>If any of the steps above fail, it will retract the whole transaction and notify the systems of doing so.</li>
 </ul>
     </div>
     
@@ -409,7 +412,7 @@ entity are.</p>
             <td class="type">
             
                 
-<span class="param-type">object</span>
+<span class="param-type">IEntity</span>
 
 
 
@@ -421,6 +424,54 @@ entity are.</p>
             
 
             <td class="description last"><p>The entity you want to add.</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>stream</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">NodeJS.ReadableStream</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>The content of the entity.</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>components</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Array.&lt;component></span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>An array of components belonging to the entity.</p></td>
         </tr>
 
     
@@ -711,15 +762,19 @@ component of image</p>
 <li>entityAddedAsync(entity: {_id: string})</li>
 <li>entityUpdatedAsync(oldEntity: any, newEntity: any)</li>
 <li>entityRemovedAsync(entity: {_id: string})</li>
+<li>entityRetrievedAsync?(entity: { _id: string });</li>
 <li>entityContentUpdatedAsync(oldContentId: string, newContentId: string)</li>
 <li>entityComponentAddedAsync(entity: {_id: string}, component: any)</li>
 <li>entityComponentUpdatedAsync(entity: {_id: string}, oldComponent: any, newComponent: any)</li>
 <li>entityComponentRemovedAsync(entity: {_id: string}, component: any)</li>
+<li>entityComponentRetrievedAsync?(entity: { _id: string }, component: any);</li>
 <li>initializeAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher)</li>
 <li>serviceRemovedAsync(name: string, service: any);</li>
 <li>validateEntityAsync(entity: {_id: string})</li>
 <li>validateComponentAsync(component: {_id: string})</li>
 <li>validateEntityContentAsync(entity: {_id: string}, oldContentId: string, newContentId: string)</li>
+<li>approveComponentRemovalAsync(component:{_id: string; entity_id: string})</li>
+<li>approveEntityRemovalAsync(entity:{_id: string})</li>
 </ul>
     </div>
     
@@ -858,6 +913,262 @@ component of image</p>
 
 
         
+
+    
+</dd>
+
+        
+            
+<hr>
+<dt>
+    <h4 class="name" id="approveComponentRemovalAsync"><span class="type-signature"></span>approveComponentRemovalAsync(entity)</h4>
+    
+    
+</dt>
+<dd>
+
+    
+    <div class="description">
+        <p>Approves whether a component can be removed. Systems can deny the ability to remove components.</p>
+    </div>
+    
+
+    
+
+    
+
+    
+    
+        <h5>Parameters:</h5>
+        
+
+<table class="params table table-striped">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>entity</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">object</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>The entity to be removed.</p></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+    
+
+    
+<dl class="details">
+    
+
+	
+
+	
+
+	
+
+    
+
+    
+
+    
+
+    
+
+	
+
+	
+
+	
+
+	
+
+	
+
+
+
+	
+
+	
+
+	
+
+	
+</dl>
+
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dd>
+
+        
+            
+<hr>
+<dt>
+    <h4 class="name" id="approveEntityRemovalAsync"><span class="type-signature"></span>approveEntityRemovalAsync(entity)</h4>
+    
+    
+</dt>
+<dd>
+
+    
+    <div class="description">
+        <p>Approves whether an entity can be removed. Systems can deny the ability to remove entities.</p>
+    </div>
+    
+
+    
+
+    
+
+    
+    
+        <h5>Parameters:</h5>
+        
+
+<table class="params table table-striped">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>entity</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">object</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>The entity to be removed.</p></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+    
+
+    
+<dl class="details">
+    
+
+	
+
+	
+
+	
+
+    
+
+    
+
+    
+
+    
+
+	
+
+	
+
+	
+
+	
+
+	
+
+
+
+	
+
+	
+
+	
+
+	
+</dl>
+
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
 
     
 </dd>
@@ -1029,7 +1340,7 @@ Think of this like a pause. The dispatcher calls deactivatedAsync on the system 
 
     
     <div class="description">
-        <p>Disposes a system and removes it from the systems being notified. Use then when removing systems for
+        <p>Disposes a system and removes it from the systems being notified. Use when removing systems for
 good. This allows the system to clean up after itself if needed. The dispatcher calls disposeAsync on the system being removed.</p>
     </div>
     
@@ -1176,7 +1487,7 @@ good. This allows the system to clean up after itself if needed. The dispatcher 
             
 <hr>
 <dt>
-    <h4 class="name" id="getComponentAsync"><span class="type-signature"></span>getComponentAsync(componentId)</h4>
+    <h4 class="name" id="getComponentByIdAsync"><span class="type-signature"></span>getComponentByIdAsync(componentId)</h4>
     
     
 </dt>
@@ -1373,7 +1684,7 @@ good. This allows the system to clean up after itself if needed. The dispatcher 
             <td class="type">
             
                 
-<span class="param-type">object</span>
+<span class="param-type">IEntity</span>
 
 
 
@@ -1525,7 +1836,7 @@ good. This allows the system to clean up after itself if needed. The dispatcher 
             <td class="type">
             
                 
-<span class="param-type">object</span>
+<span class="param-type">IEntity</span>
 
 
 
@@ -2079,7 +2390,7 @@ good. This allows the system to clean up after itself if needed. The dispatcher 
             <td class="type">
             
                 
-<span class="param-type">object</span>
+<span class="param-type">IEntity</span>
 
 
 
@@ -2338,6 +2649,450 @@ good. This allows the system to clean up after itself if needed. The dispatcher 
             
 <hr>
 <dt>
+    <h4 class="name" id="logError"><span class="type-signature"></span>logError(error)</h4>
+    
+    
+</dt>
+<dd>
+
+    
+    <div class="description">
+        <p>Notifies the systems about an error.</p>
+    </div>
+    
+
+    
+
+    
+
+    
+    
+        <h5>Parameters:</h5>
+        
+
+<table class="params table table-striped">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>error</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">object</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>The error to be sent to the systems.</p></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+    
+
+    
+<dl class="details">
+    
+
+	
+
+	
+
+	
+
+    
+
+    
+
+    
+
+    
+
+	
+
+	
+
+	
+
+	
+
+	
+
+
+
+	
+
+	
+
+	
+
+	
+</dl>
+
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <h5>Returns:</h5>
+    
+            
+
+
+<dl>
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">undefined</span>
+
+
+
+    </dd>
+</dl>
+
+
+        
+
+    
+</dd>
+
+        
+            
+<hr>
+<dt>
+    <h4 class="name" id="logMessage"><span class="type-signature"></span>logMessage(message)</h4>
+    
+    
+</dt>
+<dd>
+
+    
+    <div class="description">
+        <p>Notifies the systems about an error.</p>
+    </div>
+    
+
+    
+
+    
+
+    
+    
+        <h5>Parameters:</h5>
+        
+
+<table class="params table table-striped">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>message</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">object</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>The message to be sent to the systems.</p></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+    
+
+    
+<dl class="details">
+    
+
+	
+
+	
+
+	
+
+    
+
+    
+
+    
+
+    
+
+	
+
+	
+
+	
+
+	
+
+	
+
+
+
+	
+
+	
+
+	
+
+	
+</dl>
+
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <h5>Returns:</h5>
+    
+            
+
+
+<dl>
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">undefined</span>
+
+
+
+    </dd>
+</dl>
+
+
+        
+
+    
+</dd>
+
+        
+            
+<hr>
+<dt>
+    <h4 class="name" id="logWarning"><span class="type-signature"></span>logWarning(warning)</h4>
+    
+    
+</dt>
+<dd>
+
+    
+    <div class="description">
+        <p>Notifies the systems about a warning.</p>
+    </div>
+    
+
+    
+
+    
+
+    
+    
+        <h5>Parameters:</h5>
+        
+
+<table class="params table table-striped">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>warning</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">object</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>The warning to be sent to the systems.</p></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+    
+
+    
+<dl class="details">
+    
+
+	
+
+	
+
+	
+
+    
+
+    
+
+    
+
+    
+
+	
+
+	
+
+	
+
+	
+
+	
+
+
+
+	
+
+	
+
+	
+
+	
+</dl>
+
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <h5>Returns:</h5>
+    
+            
+
+
+<dl>
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">undefined</span>
+
+
+
+    </dd>
+</dl>
+
+
+        
+
+    
+</dd>
+
+        
+            
+<hr>
+<dt>
     <h4 class="name" id="removeComponentAsync"><span class="type-signature"></span>removeComponentAsync(component)</h4>
     
     
@@ -2540,7 +3295,7 @@ good. This allows the system to clean up after itself if needed. The dispatcher 
             <td class="type">
             
                 
-<span class="param-type">object</span>
+<span class="param-type">IEntity</span>
 
 
 
@@ -2639,7 +3394,7 @@ good. This allows the system to clean up after itself if needed. The dispatcher 
             
 <hr>
 <dt>
-    <h4 class="name" id="removeEntityContentAsync"><span class="type-signature"></span>removeEntityContentAsync()</h4>
+    <h4 class="name" id="removeEntityContentAsync"><span class="type-signature"></span>removeEntityContentAsync(entity)</h4>
     
     
 </dt>
@@ -2656,6 +3411,56 @@ good. This allows the system to clean up after itself if needed. The dispatcher 
     
 
     
+    
+        <h5>Parameters:</h5>
+        
+
+<table class="params table table-striped">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>entity</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">IEntity</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>The entity of the content to be removed.</p></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
     
 
     
@@ -3337,6 +4142,445 @@ updated the content of an entity.</p>
     
 </dd>
 
+        
+            
+<hr>
+<dt>
+    <h4 class="name" id="validateComponentAsync"><span class="type-signature"></span>validateComponentAsync()</h4>
+    
+    
+</dt>
+<dd>
+
+    
+    <div class="description">
+        <p>This allows systems to validate the component being saved.</p>
+    </div>
+    
+
+    
+
+    
+
+    
+    
+
+    
+<dl class="details">
+    
+
+	
+
+	
+
+	
+
+    
+
+    
+
+    
+
+    
+
+	
+
+	
+
+	
+
+	
+
+	
+
+
+
+	
+
+	
+
+	
+
+	
+</dl>
+
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dd>
+
+        
+            
+<hr>
+<dt>
+    <h4 class="name" id="validateEntityAsync"><span class="type-signature"></span>validateEntityAsync()</h4>
+    
+    
+</dt>
+<dd>
+
+    
+    <div class="description">
+        <p>This allows systems to validate the entity being saved.</p>
+    </div>
+    
+
+    
+
+    
+
+    
+    
+
+    
+<dl class="details">
+    
+
+	
+
+	
+
+	
+
+    
+
+    
+
+    
+
+    
+
+	
+
+	
+
+	
+
+	
+
+	
+
+
+
+	
+
+	
+
+	
+
+	
+</dl>
+
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dd>
+
+        
+            
+<hr>
+<dt>
+    <h4 class="name" id="validateEntityContentAsync"><span class="type-signature"></span>validateEntityContentAsync(entity, newContentId)</h4>
+    
+    
+</dt>
+<dd>
+
+    
+    <div class="description">
+        <p>This allows the systems to validate content before its accepted.
+The dispatcher saves it to a temporary location so systems can validate it
+independently. The content could be an extremely large file so we don't want
+to hold it in memory.</p>
+    </div>
+    
+
+    
+
+    
+
+    
+    
+        <h5>Parameters:</h5>
+        
+
+<table class="params table table-striped">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>entity</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">IEntity</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>The entity the content belongs to.</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>newContentId</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">string</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>The id of the new content.</p></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+    
+
+    
+<dl class="details">
+    
+
+	
+
+	
+
+	
+
+    
+
+    
+
+    
+
+    
+
+	
+
+	
+
+	
+
+	
+
+	
+
+
+
+	
+
+	
+
+	
+
+	
+</dl>
+
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dd>
+
+        
+            
+<hr>
+<dt>
+    <h4 class="name" id="validateSystem"><span class="type-signature"></span>validateSystem(system)</h4>
+    
+    
+</dt>
+<dd>
+
+    
+    <div class="description">
+        <p>Ensures the system has the required methods.</p>
+    </div>
+    
+
+    
+
+    
+
+    
+    
+        <h5>Parameters:</h5>
+        
+
+<table class="params table table-striped">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>system</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">ISystem</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>The System to be validated.</p></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+    
+
+    
+<dl class="details">
+    
+
+	
+
+	
+
+	
+
+    
+
+    
+
+    
+
+    
+
+	
+
+	
+
+	
+
+	
+
+	
+
+
+
+	
+
+	
+
+	
+
+	
+</dl>
+
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dd>
+
         </dl>
     
 
@@ -3387,7 +4631,7 @@ updated the content of an entity.</p>
 <span class="jsdoc-message">
 	Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.3</a>
 	
-		on February 21st 2017, 3:26:55 pm
+		on March 9th 2017, 2:06:36 pm
 	
 	using the <a href="https://github.com/docstrap/docstrap">DocStrap template</a>.
 </span>
