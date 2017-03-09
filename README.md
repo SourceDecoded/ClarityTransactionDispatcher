@@ -1,7 +1,7 @@
 Getting Started with Clarity Transaction Dispatcher
 ===
 
-[Documentation](https://sourcedecoded.github.io/ClarityTransactionDispatcher/)
+[Documentation](https://sourcedecoded.github.io/ClarityTransactionDispatcher/gen/index.html)
 
 Install Clarity Transaction Dispatcher with npm.
 ```bash
