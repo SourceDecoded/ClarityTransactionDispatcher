@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>ClarityTransactionDispatcher.js - Documentation</title>
+
+    <script src="scripts/prettify/prettify.js"></script>
+    <script src="scripts/prettify/lang-css.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc.css">
+</head>
+<body>
+
+<input type="checkbox" id="nav-trigger" class="nav-trigger" />
+<label for="nav-trigger" class="navicon-button x">
+  <div class="navicon"></div>
+</label>
+
+<label for="nav-trigger" class="overlay"></label>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="ClarityTransactionDispatcher.html">ClarityTransactionDispatcher</a><ul class='methods'><li data-type='method'><a href="ClarityTransactionDispatcher.html#addComponentAsync">addComponentAsync</a></li><li data-type='method'><a href="ClarityTransactionDispatcher.html#addEntityAsync">addEntityAsync</a></li><li data-type='method'><a href="ClarityTransactionDispatcher.html#addServiceAsync">addServiceAsync</a></li><li data-type='method'><a href="ClarityTransactionDispatcher.html#addSystemAsync">addSystemAsync</a></li><li data-type='method'><a href="ClarityTransactionDispatcher.html#approveComponentRemovalAsync">approveComponentRemovalAsync</a></li><li data-type='method'><a href="ClarityTransactionDispatcher.html#approveEntityRemovalAsync">approveEntityRemovalAsync</a></li><li data-type='method'><a href="ClarityTransactionDispatcher.html#deactivateSystemAsync">deactivateSystemAsync</a></li><li data-type='method'><a href="ClarityTransactionDispatcher.html#disposeSystemAsync">disposeSystemAsync</a></li><li data-type='method'><a href="ClarityTransactionDispatcher.html#getComponentByIdAsync">getComponentByIdAsync</a></li><li data-type='method'><a href="ClarityTransactionDispatcher.html#getComponentsByEntityAndTypeAsync">getComponentsByEntityAndTypeAsync</a></li><li data-type='method'><a href="ClarityTransactionDispatcher.html#getComponentsByEntityAsync">getComponentsByEntityAsync</a></li><li data-type='method'><a href="ClarityTransactionDispatcher.html#getEntitiesIterator">getEntitiesIterator</a></li><li data-type='method'><a href="ClarityTransactionDispatcher.html#getEntityByIdAsync">getEntityByIdAsync</a></li><li data-type='method'><a href="ClarityTransactionDispatcher.html#getEntityContentStreamByContentIdAsync">getEntityContentStreamByContentIdAsync</a></li><li data-type='method'><a href="ClarityTransactionDispatcher.html#getEntityContentStreamByEntityAsync">getEntityContentStreamByEntityAsync</a></li><li data-type='method'><a href="ClarityTransactionDispatcher.html#getService">getService</a></li><li data-type='method'><a href="ClarityTransactionDispatcher.html#logError">logError</a></li><li data-type='method'><a href="ClarityTransactionDispatcher.html#logMessage">logMessage</a></li><li data-type='method'><a href="ClarityTransactionDispatcher.html#logWarning">logWarning</a></li><li data-type='method'><a href="ClarityTransactionDispatcher.html#removeComponentAsync">removeComponentAsync</a></li><li data-type='method'><a href="ClarityTransactionDispatcher.html#removeEntityAsync">removeEntityAsync</a></li><li data-type='method'><a href="ClarityTransactionDispatcher.html#removeEntityContentAsync">removeEntityContentAsync</a></li><li data-type='method'><a href="ClarityTransactionDispatcher.html#removeServiceAsync">removeServiceAsync</a></li><li data-type='method'><a href="ClarityTransactionDispatcher.html#updateComponentAsync">updateComponentAsync</a></li><li data-type='method'><a href="ClarityTransactionDispatcher.html#updateEntityAsync">updateEntityAsync</a></li><li data-type='method'><a href="ClarityTransactionDispatcher.html#updateEntityContentByStreamAsync">updateEntityContentByStreamAsync</a></li><li data-type='method'><a href="ClarityTransactionDispatcher.html#validateComponentAsync">validateComponentAsync</a></li><li data-type='method'><a href="ClarityTransactionDispatcher.html#validateEntityAsync">validateEntityAsync</a></li><li data-type='method'><a href="ClarityTransactionDispatcher.html#validateEntityContentAsync">validateEntityContentAsync</a></li><li data-type='method'><a href="ClarityTransactionDispatcher.html#validateSystem">validateSystem</a></li></ul></li></ul>
+</nav>
+
+<div id="main">
+    
+    <h1 class="page-title">ClarityTransactionDispatcher.js</h1>
+    
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>"use strict";
+const uuid = require("node-uuid");
+const MongoDbIterator_1 = require("./MongoDbIterator");
+const NullableLogger_1 = require("./NullableLogger");
+const nullableLogger = new NullableLogger_1.default();
+const resolvedPromise = Promise.resolve(null);
+const ENTITIES_COLLECTION = "entities";
+const COMPONENTS_COLLECTION = "components";
+const SYSTEM_DATA_COLLECTION = "systemData";
+const NOTICE = "notice";
+/**
+ * Class that organizes systems to respond to data transactions.
+ * The dispatcher manages the life-cycle of data entities. They can be
+ * added, updated, and removed. The dispatcher is not responsible
+ * for anything beyond this. It will notify the systems when any entity
+ * has been added, updated, and removed. This allows the dispatcher
+ * to remain unopinionated about tasks to run when a certain entity is
+ * added, updated, or removed.
+ *
+ * The idea behind the dispatcher is to handle the complexity of the IoT.
+ * There are many systems, devices, and other technologies that need to
+ * communicate for a company to run smoothly. We believe that the answer to
+ * these needs is a data dispatcher which lets all independent systems know
+ * about data changes.
+ *
+ * The dispatcher will also notify the system when components on the entity
+ * have been added updated or removed. This is critical for the systems to
+ * fulfill their responsibilities efficiently.
+ */
+class ClarityTransactionDispatcher {
+    /**
+     * Create a Dispatcher.
+     * @constructor
+     */
+    constructor(config) {
+        this.mongoFactory = config.mongoFactory;
+        this.mongodb = this.mongoFactory.createMongodb();
+        this.MongoClient = this.mongodb.MongoClient;
+        this.ObjectID = this.mongodb.ObjectID;
+        this.databaseUrl = config.databaseUrl;
+        this.systems = [];
+        this.services = {};
+    }
+    _addItemToGridFs(stream) {
+        var newContentId = uuid.v4();
+        stream.pause();
+        return this._getGridFsAsync().then((gfs) => {
+            return new Promise((resolve, reject) => {
+                var writeStream = gfs.createWriteStream({
+                    _id: this.ObjectID(newContentId)
+                });
+                stream.on("end", () => {
+                    resolve(newContentId);
+                });
+                stream.on("error", (error) => {
+                    reject(error);
+                });
+                stream.pipe(writeStream);
+                stream.resume();
+            });
+        });
+    }
+    /**
+     * Add an item to a collection.
+     * @private
+     */
+    _addItemToCollectionAsync(item, collectionName) {
+        return this._getDatabaseAsync().then((db) => {
+            return db.collection(collectionName);
+        }).then((collection) => {
+            return collection.insertOne(item);
+        }).then((result) => {
+            item._id = result.insertedId;
+            return item;
+        });
+    }
+    /**
+     * Find one in a collection.
+     * @private
+     */
+    _findOneAsync(collectionName, filter) {
+        return this._getDatabaseAsync().then((db) => {
+            return db.collection(collectionName);
+        }).then((collection) => {
+            return collection.findOne(filter);
+        });
+    }
+    /**
+    * Find many in a collection.
+    * @private
+    */
+    _findAsync(collectionName, filter) {
+        return this._getDatabaseAsync().then((db) => {
+            return db.collection(collectionName);
+        }).then((collection) => {
+            return collection.find(filter).toArray();
+        });
+    }
+    /**
+     * Get a mongodb.
+     * @private
+     * @returns {Promise&lt;mongodb>}
+     */
+    _getDatabaseAsync() {
+        return this.MongoClient.connect(this.databaseUrl);
+    }
+    /**
+     * Get a gridFs.
+     * @private
+     * @returns {Promise&lt;gridfs>}
+     */
+    _getGridFsAsync() {
+        return this._getDatabaseAsync().then((db) => {
+            return this.mongoFactory.createGridFs(db, this.mongodb);
+        });
+    }
+    /**
+     * Initialize a system.
+     * @private
+     */
+    _initializingSystemAsync(system) {
+        var filter = {
+            systemGuid: system.getGuid()
+        };
+        return this._findOneAsync(SYSTEM_DATA_COLLECTION, filter).then((systemData) => {
+            if (systemData == null) {
+                var newSystemData = {
+                    systemGuid: system.getGuid(),
+                    isInitialized: false
+                };
+                return this._addItemToCollectionAsync(newSystemData, SYSTEM_DATA_COLLECTION);
+            }
+            else {
+                return systemData;
+            }
+        }).then((systemData) => {
+            if (!systemData.isInitialized) {
+                return this._invokeMethodAsync(system, "initializeAsync", [this]).then(() => {
+                    systemData.isInitialized = true;
+                    return this._updateItemInCollectionAsync(systemData, SYSTEM_DATA_COLLECTION);
+                });
+            }
+        }).catch((error) => {
+            this.logError(error);
+            throw error;
+        });
+    }
+    /**
+     * Invoke a method on any object and make sure a promise is the returned value.
+     * @private
+     */
+    _invokeMethodAsync(obj, methodName, args) {
+        var returnValue;
+        if (typeof obj[methodName] === "function") {
+            returnValue = obj[methodName].apply(obj, args);
+            if (!(returnValue instanceof Promise)) {
+                returnValue = Promise.resolve(returnValue);
+            }
+        }
+        else {
+            returnValue = resolvedPromise;
+        }
+        return returnValue;
+    }
+    /**
+     * Notify the systems of a life cycle by its method name.
+     * @private
+     * @returns {Promise&lt;undefined>}
+     */
+    _notifySystemsAsync(methodName, args) {
+        return this.systems.reduce((promise, system) => {
+            return promise.then(() => {
+                try {
+                    return this._invokeMethodAsync(system, methodName, args);
+                }
+                catch (error) {
+                    this.logError(error);
+                    throw error;
+                }
+            });
+        }, resolvedPromise);
+    }
+    /**
+       * Notify the systems of a life cycle by its method name and recover if
+       * any of the systems reject the promise.
+       *
+       * This will be used for most life-cycle calls. The other systems need to respond
+       * regardless of other systems failing.
+       * @private
+       * @returns {Promise&lt;undefined>}
+       */
+    _notifySystemsWithRecoveryAsync(methodName, args) {
+        return this.systems.reduce((promise, system) => {
+            return promise.then(() => {
+                try {
+                    return this._invokeMethodAsync(system, methodName, args);
+                }
+                catch (error) {
+                    this.logError(error);
+                    throw error;
+                }
+            }).catch(() => {
+                return resolvedPromise;
+            });
+        }, resolvedPromise);
+    }
+    /**
+     * Remove the content of an entity.
+     * @private
+     */
+    _removeItemFromGridFsAsync(id) {
+        return this._getGridFsAsync().then((gfs) => {
+            return new Promise((resolve, reject) => {
+                gfs.remove({
+                    _id: id
+                }, (error) => {
+                    if (error != null) {
+                        reject(error);
+                    }
+                    else {
+                        resolve();
+                    }
+                });
+            });
+        });
+    }
+    /**
+     * Remove and item from a collection
+     * @private
+     * @returns {Promise&lt;undefined>}
+     */
+    _removeItemfromCollection(item, collectionName) {
+        return this._getDatabaseAsync().then((db) => {
+            return db.collection(collectionName);
+        }).then((collection) => {
+            return collection.deleteOne({
+                _id: this.ObjectID(item._id)
+            });
+        });
+    }
+    /**
+     * Update an item in a collection.
+     * @private
+     * @returns {Promise&lt;undefined>}
+     */
+    _updateItemInCollectionAsync(item, collectionName) {
+        return this._getDatabaseAsync().then((db) => {
+            return db.collection(collectionName);
+        }).then((collection) => {
+            return collection.update({
+                _id: this.ObjectID(item._id)
+            }, item, null);
+        });
+    }
+    /**
+     * Adds a component to an entity.
+     *
+     * The dispatcher does the following when adding a component.
+     *
+     * - Validate the component with all systems. All systems have to validate to pass.
+     * - Saves the component to the datastore.
+     * - Notifies the systems that a component has been added.
+     * @param {object} entity - The entity of the component being added.
+     * @param {object} component - The component being added.
+     */
+    addComponentAsync(entity, component) {
+        component.entity_id = this.ObjectID(entity._id);
+        return this.validateComponentAsync(entity, component).then(() => {
+            component.updatedDate = new Date();
+            component.createdDate = new Date();
+            return this._addItemToCollectionAsync(component, COMPONENTS_COLLECTION);
+        }).then(() => {
+            return this._notifySystemsWithRecoveryAsync("entityComponentAddedAsync", [entity, component]);
+        }).catch((error) => {
+            this.logError(error);
+            throw error;
+        });
+    }
+    /**
+     * Add an Entity to the datastore. The steps the dispatcher takes when saving an
+     * entity are.
+     *
+     * - Saves the content of the entity to a datastore.
+     * - Validate the entity with all systems. All systems have to validate to pass.
+     * - Save the entity to the datastore.
+     * - Validate and save the components.
+     * - Notify the systems that an entity with its components and content have been saved.
+     * - If any of the steps above fail, it will retract the whole transaction and notify the systems of doing so.
+     * @param {IEntity} entity - The entity you want to add.
+     * @param {NodeJS.ReadableStream} stream - The content of the entity.
+     * @param {Array&lt;component>} components - An array of components belonging to the entity.
+     * @return {Promise}
+     */
+    addEntityAsync(entity, contentStream, components) {
+        var contentPromise;
+        var contentId;
+        var savedComponents = [];
+        var savedEntity;
+        if (contentStream == null) {
+            contentPromise = Promise.resolve(null);
+        }
+        else {
+            contentPromise = this._addItemToGridFs(contentStream);
+        }
+        return contentPromise.then((id) => {
+            // Validate the entity.
+            return this.validateEntityAsync(entity).then(() => {
+                return id;
+            });
+        }).then((id) => {
+            // Save the entity.
+            contentId = id;
+            entity.content_id = contentId;
+            entity.updatedDate = new Date();
+            entity.createdDate = new Date();
+            return this._addItemToCollectionAsync(entity, ENTITIES_COLLECTION);
+        }).then((entity) => {
+            // Validate and save all the components. 
+            savedEntity = entity;
+            return components.reduce((promise, component) => {
+                component.entity_id = savedEntity._id;
+                return this.validateComponentAsync(savedEntity, component).then(() => {
+                    return this._addItemToCollectionAsync(component, COMPONENTS_COLLECTION);
+                }).then((savedComponent) => {
+                    savedComponents.push(savedComponent);
+                });
+            }, resolvedPromise);
+        }).then(() => {
+            // Notify the systems of all that has taken place.
+            return this._notifySystemsWithRecoveryAsync("entityAddedAsync", [savedEntity]).then(() => {
+                return this._notifySystemsWithRecoveryAsync("entityContentUpdatedAsync", [null, contentId]);
+            }).then(() => {
+                return savedComponents.reduce((promise, component) => {
+                    return this._notifySystemsWithRecoveryAsync("entityComponentAddedAsync", [savedEntity, component]);
+                }, resolvedPromise);
+            });
+        }).catch((error) => {
+            // Since we save the content first we may have the content saved and not the entity.
+            // If we were able to save the entity then the removeEntityAsync will take care of removing the content.
+            // Otherwise we need to remove the content manually.
+            this.logError(error);
+            if (savedEntity != null) {
+                this.removeEntityAsync(savedEntity);
+            }
+            else {
+                if (contentId != null) {
+                    this._removeItemFromGridFsAsync(contentId);
+                }
+            }
+            throw error;
+        });
+    }
+    /**
+     * Add a service for systems to use. Services could be HTTP services,
+     * or governance that needs to be shared acrossed systems.
+     * @param {string} name - The name by which the systems will request the service.
+     * @param {object} service - The service.
+     * @return {Promise&lt;undefined>}
+     */
+    addServiceAsync(name, service) {
+        this.services[name] = service;
+        return resolvedPromise;
+    }
+    /**
+     * Add a system to the dispatcher. The systems are really where the work
+     * is done. They listen to the life-cycle of the entity and react based
+     * on the composition of components.
+     * The dispatcher does the following when adding a system.
+     *
+     * - Adds the system.
+     * - Invokes initializeAsync if the systems hasn't been used before, and invokes
+     * activatedAsync after initializeAsync is finished.
+     *
+     * For example an Image Thumbnail System will look to see if the entity has the
+     * component of image
+     * #### Required System Methods
+     * - getGuid()
+     * - getName()
+     *
+     * #### Optional System Methods
+     *  - activatedAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher)
+     *  - deactivatedAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher)
+     *  - disposeAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher)
+     *  - entityAddedAsync(entity: {_id: string})
+     *  - entityUpdatedAsync(oldEntity: any, newEntity: any)
+     *  - entityRemovedAsync(entity: {_id: string})
+     *  - entityRetrievedAsync?(entity: { _id: string });
+     *  - entityContentUpdatedAsync(oldContentId: string, newContentId: string)
+     *  - entityComponentAddedAsync(entity: {_id: string}, component: any)
+     *  - entityComponentUpdatedAsync(entity: {_id: string}, oldComponent: any, newComponent: any)
+     *  - entityComponentRemovedAsync(entity: {_id: string}, component: any)
+     *  - entityComponentRetrievedAsync?(entity: { _id: string }, component: any);
+     *  - initializeAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher)
+     *  - serviceRemovedAsync(name: string, service: any);
+     *  - validateEntityAsync(entity: {_id: string})
+     *  - validateComponentAsync(component: {_id: string})
+     *  - validateEntityContentAsync(entity: {_id: string}, oldContentId: string, newContentId: string)
+     *  - approveComponentRemovalAsync(component:{_id: string; entity_id: string})
+     *  - approveEntityRemovalAsync(entity:{_id: string})
+     * @param {ISystem} system - The system to add.
+     * @return {Promise} - An undefined Promise.
+     */
+    addSystemAsync(system) {
+        if (!this.validateSystem(system)) {
+            return Promise.reject(new Error("Invalid system: Systems need to have a getName and a getGuid method on them."));
+        }
+        else {
+            this.systems.push(system);
+            return this._initializingSystemAsync(system).then(() => {
+                this.logMessage({
+                    type: NOTICE,
+                    message: `System "${system.getName()}" was initialized.`
+                });
+                return this._invokeMethodAsync(system, "activatedAsync", [this]);
+            }).then(() => {
+                this.logMessage({
+                    type: NOTICE,
+                    message: `System "${system.getName()}" was activated.`
+                });
+            }).catch((error) => {
+                this.logError(error);
+                throw error;
+            });
+        }
+    }
+    /**
+   * Approves whether an entity can be removed. Systems can deny the ability to remove entities.
+   * @param entity {object} - The entity to be removed.
+   */
+    approveEntityRemovalAsync(entity) {
+        return this._notifySystemsAsync("approveEntityRemovalAsync", [entity]);
+    }
+    /**
+     * Approves whether a component can be removed. Systems can deny the ability to remove components.
+     * @param entity {object} - The entity to be removed.
+     */
+    approveComponentRemovalAsync(component) {
+        return this._notifySystemsAsync("approveComponentRemovalAsync", [component]);
+    }
+    /**
+     * Deactivates a system and removes it from the systems being notified. To activate again use addSystemAsync.
+     * Think of this like a pause. The dispatcher calls deactivatedAsync on the system being removed.
+     * @param {ISystem} system - The system to be deactivate.
+     * @returns {Promise&lt;undefined>} - Resolves when the system is deactivated.
+     */
+    deactivateSystemAsync(system) {
+        var deactivatedPromise;
+        var index = this.systems.indexOf(system);
+        if (index === -1) {
+            return Promise.reject(new Error("Couldn't find system to be deactivated."));
+        }
+        else {
+            this.systems.splice(index, 1);
+            try {
+                return deactivatedPromise = this._invokeMethodAsync(system, "deactivatedAsync", []).then(() => {
+                    this.logMessage({
+                        type: NOTICE,
+                        message: `System "${system.getName()}" was deactivated.`
+                    });
+                }).catch(() => {
+                    return resolvedPromise;
+                });
+            }
+            catch (e) {
+                return resolvedPromise;
+            }
+        }
+    }
+    /**
+     * Disposes a system and removes it from the systems being notified. Use when removing systems for
+     * good. This allows the system to clean up after itself if needed. The dispatcher calls disposeAsync on the system being removed.
+     * @param {ISystem} system - The system to be disposed.
+     * @returns {Promise&lt;undefined>} - Resolves when the system is disposed.
+     */
+    disposeSystemAsync(system) {
+        var disposedPromise;
+        var index = this.systems.indexOf(system);
+        if (index === -1) {
+            return Promise.reject(new Error("Couldn't find system to be disposed."));
+        }
+        else {
+            this.systems.splice(index, 1);
+            try {
+                return disposedPromise = this._invokeMethodAsync(system, "disposeAsync", []).then(() => {
+                    this.logMessage({
+                        type: NOTICE,
+                        message: `System "${system.getName()}" was disposed.`
+                    });
+                }).catch(() => {
+                    return resolvedPromise;
+                });
+            }
+            catch (e) {
+                return resolvedPromise;
+            }
+        }
+    }
+    /**
+     * Gets the component by the id provided.
+     * @param {string} componentId - The id of the component.
+     * @return {Promise&lt;Array>}
+     */
+    getComponentByIdAsync(componentId) {
+        var filter = {
+            _id: this.ObjectID(componentId)
+        };
+        return this._findOneAsync(COMPONENTS_COLLECTION, filter).then(component => {
+            return this._notifySystemsWithRecoveryAsync("entityComponentRetrievedAsync", [null, component]).then(() => {
+                return component;
+            });
+        }).catch((error) => {
+            this.logError(error);
+            throw error;
+        });
+    }
+    /**
+     * Get the components of an entity by the entity.
+     * @param {IEntity} entity - The entity of the components.
+     * @return {Promise&lt;Array>}
+     */
+    getComponentsByEntityAsync(entity) {
+        var retrievedComponents;
+        var filter = {
+            entity_id: this.ObjectID(entity._id)
+        };
+        return this._findAsync(COMPONENTS_COLLECTION, filter).then((components) => {
+            retrievedComponents = components;
+            return retrievedComponents.reduce((promise, component) => {
+                return this._notifySystemsWithRecoveryAsync("entityComponentRetrievedAsync", [entity, component]);
+            }, resolvedPromise);
+        }).then(() => {
+            return retrievedComponents;
+        }).catch((error) => {
+            this.logError(error);
+            throw error;
+        });
+    }
+    /**
+     * Get the Components on the entity provided matching the type provided.
+     * @param {IEntity} entity - The entity of the needed components.
+     * @param {string} type - The type of the component needed.
+     */
+    getComponentsByEntityAndTypeAsync(entity, type) {
+        var retrievedComponents;
+        var filter = {
+            entity_id: this.ObjectID(entity._id),
+            type: type
+        };
+        return this._findAsync(COMPONENTS_COLLECTION, filter).then((components) => {
+            retrievedComponents = components;
+            return retrievedComponents.reduce((promise, component) => {
+                return this._notifySystemsWithRecoveryAsync("entityComponentRetrievedAsync", [entity, component]);
+            }, resolvedPromise);
+        }).then(() => {
+            return retrievedComponents;
+        }).catch((error) => {
+            this.logError(error);
+            throw error;
+        });
+    }
+    /**
+     * Get an entity by its id.
+     * @param {string} entityId - The id of the desired entity.
+     * @return {Promise&lt;Entity>} - A Promise resolved with the entity or null.
+     */
+    getEntityByIdAsync(entityId) {
+        var filter = {
+            _id: this.ObjectID(entityId)
+        };
+        return this._findOneAsync(ENTITIES_COLLECTION, filter).then(entity => {
+            return this._notifySystemsWithRecoveryAsync("entityRetrievedAsync", [entity]).then(() => {
+                return entity;
+            });
+        }).catch((error) => {
+            this.logError(error);
+            throw error;
+        });
+    }
+    /**
+     * Get a stream of the content of the entity.
+     * @param {IEntity} entity - The entity of the content needed.
+     * @returns {Promise&lt;stream>} - Node read stream.
+     */
+    getEntityContentStreamByEntityAsync(entity) {
+        return this._getGridFsAsync().then((gfs) => {
+            var id = this.ObjectID(entity.content_id);
+            return gfs.createReadStream({
+                _id: id
+            });
+        });
+    }
+    /**
+     * Get a stream of the content of the entity by its id.
+     * @param {string} contentId - The id of the content needed..
+     * @returns {NodeJS.ReadableStream} - Node read stream.
+     */
+    getEntityContentStreamByContentIdAsync(contentId) {
+        return this._getGridFsAsync().then((gfs) => {
+            return gfs.createReadStream({
+                _id: this.ObjectID(contentId)
+            });
+        });
+    }
+    /**
+     * Get an Iterator of the all entities.
+     * @return {MongoDbIterator}
+     */
+    getEntitiesIterator() {
+        return new MongoDbIterator_1.default({
+            databaseUrl: this.databaseUrl,
+            collectionName: ENTITIES_COLLECTION,
+            MongoClient: this.MongoClient
+        });
+    }
+    /**
+     * Get a service by the name given.
+     * @param {string} name - The name of the desired service.
+     * @returns {object} - Null or the desired service.
+     */
+    getService(name) {
+        return this.services[name] || null;
+    }
+    /**
+     * Notifies the systems about an error.
+     * @param error {object} - The error to be sent to the systems.
+     * @returns {undefined}
+     */
+    logError(error) {
+        this._notifySystemsAsync("logError", [error]);
+    }
+    /**
+     * Notifies the systems about an error.
+     * @param message {object} - The message to be sent to the systems.
+     * @returns {undefined}
+     */
+    logMessage(message) {
+        this._notifySystemsAsync("logMessage", [message]);
+    }
+    /**
+     * Notifies the systems about a warning.
+     * @param warning {object} - The warning to be sent to the systems.
+     * @returns {undefined}
+     */
+    logWarning(warning) {
+        this._notifySystemsAsync("logWarning", [warning]);
+    }
+    /**
+     * Remove a component from an entity.
+     * @param {object} component - The component to be removed.
+     * @returns {Promise&lt;undefined>}
+     */
+    removeComponentAsync(component) {
+        return this.approveComponentRemovalAsync(component).then(() => {
+            return this._removeItemfromCollection(component, COMPONENTS_COLLECTION).then(() => {
+                return this.getEntityByIdAsync(component.entity_id);
+            });
+        }).then((entity) => {
+            return this._notifySystemsWithRecoveryAsync("entityComponentRemovedAsync", [entity, component]);
+        }).catch((error) => {
+            this.logError(error);
+            throw error;
+        });
+    }
+    /**
+     * Removes an entity, and its associated content. The dispatcher does the following to remove an entity.
+     *
+     * - Removes all of the components on the entity notifying the systems that the components have been removed.
+     * - Removes the content and notifies the systems.
+     * - Removes the entity to be removed and notifies the systems the entity has been removed.
+     * @param {IEntity} entity - The entity to be removed.
+     * @returns {Promise&lt;undefined>}
+     */
+    removeEntityAsync(entity) {
+        this.approveEntityRemovalAsync(entity).then(() => {
+            return this.getComponentsByEntityAsync(entity).then((components) => {
+                return components.reduce((promise, component) => {
+                    return promise.then(() => {
+                        // We don't need to approve these to be removed because we already got approved to remove the entity.
+                        // And the components are just an extension of the entity.
+                        return this.removeComponentAsync(component);
+                    }).catch((error) => {
+                        return resolvedPromise;
+                    });
+                }, resolvedPromise);
+            });
+        }).then(() => {
+            return this.removeEntityContentAsync(entity);
+        }).then(() => {
+            return this._removeItemfromCollection(entity, "entities");
+        }).then(() => {
+            return this._notifySystemsWithRecoveryAsync("entityRemovedAsync", [entity]);
+        }).catch((error) => {
+            this.logError(error);
+            throw error;
+        });
+    }
+    /**
+     * Removes the content of an entity.
+     * @param {IEntity} entity - The entity of the content to be removed.
+     */
+    removeEntityContentAsync(entity) {
+        var contentId = entity.content_id;
+        if (contentId == null) {
+            return resolvedPromise;
+        }
+        return this._removeItemFromGridFsAsync(contentId).then(() => {
+            entity.content_id = null;
+            return this.updateEntityAsync(entity);
+        }).then(() => {
+            return this._notifySystemsWithRecoveryAsync("entityContentUpdatedAsync", [null, contentId]);
+        }).catch((error) => {
+            this.logError(error);
+            throw error;
+        });
+    }
+    /**
+     * Removes a service by its name. The dispatcher will notify the systems that this service is being
+     * removed.
+     * @param {string} name - The name of the service to be removed.
+     * @returns {undefined}
+     */
+    removeServiceAsync(name) {
+        if (this.services[name]) {
+            delete this.services[name];
+            return this._notifySystemsWithRecoveryAsync("serviceRemovedAsync", [name, this.services[name]]);
+        }
+        else {
+            var error = Error("Couldn't find service to be removed.");
+            this.logError(error);
+            return Promise.reject(error);
+        }
+    }
+    /**
+     * Updated an entity. The dispatcher will perform the following actions when updating.
+     * This really shouldn't be used much. The entity is really just a container for the
+     * content_id and the components.
+     *
+     * - Validate the entity. All interested systems need to validate to pass.
+     * - Entity's updates are saved.
+     * - The systems are notified about the update.
+     * @param {object} entity - The updated entity.
+     * @returns {Promise&lt;undefined>} - Resolves when the entity is saved.
+     */
+    updateEntityAsync(entity) {
+        return this.validateEntityAsync(entity).then(() => {
+            return this._findOneAsync(ENTITIES_COLLECTION, {
+                _id: this.ObjectID(entity._id)
+            });
+        }).then((oldEntity) => {
+            entity._id = oldEntity._id;
+            entity.updatedDate = new Date();
+            return this._updateItemInCollectionAsync(entity, ENTITIES_COLLECTION).then(() => {
+                return oldEntity;
+            });
+        }).then((oldEntity) => {
+            return this._notifySystemsWithRecoveryAsync("entityUpdatedAsync", [oldEntity, entity]);
+        }).catch((error) => {
+            this.logError(error);
+            throw error;
+        });
+    }
+    /**
+     * Update an entity's content. The dispatcher will perform the following actions when
+     * updated the content of an entity.
+     *
+     * - Save the new content to the datastore.
+     * - Validate the new content. All interested systems need to validate to pass.
+     * - The entity.content_id is updated and saved.
+     * - Notify the systems of the updated content.
+     * - The old content is now removed from the datastore.
+     *
+     * @param {object} entity - The entity whos content is to be update.
+     * @param {NodeJS.WritableStream}  - The stream to save to the content of the entity.
+     * @return {Promise&lt;undefined>}
+     */
+    updateEntityContentByStreamAsync(entity, stream) {
+        var contentId = null;
+        var oldContentId = entity.content_id;
+        return this._addItemToGridFs(stream).then((id) => {
+            contentId = id;
+            return this.validateEntityContentAsync(entity, id);
+        }).then((id) => {
+            entity.content_id = this.ObjectID(contentId);
+            return this._updateItemInCollectionAsync(entity, ENTITIES_COLLECTION);
+        }).then(() => {
+            return this._removeItemFromGridFsAsync(oldContentId);
+        }).catch((error) => {
+            if (contentId != null) {
+                entity.content_id = oldContentId;
+                return this._updateItemInCollectionAsync(entity, ENTITIES_COLLECTION).catch(() => {
+                    this.logError(error);
+                });
+            }
+            throw error;
+        });
+    }
+    /**
+     * Update a component. The dispatcher will perform the following actions when
+     * updating the component of an entity.
+     *
+     * - Validate the component. All interested systesm need to validate to pass.
+     * - Save the component to the datastore.
+     * - Notify the systems that the component was updated.
+     *
+     * @param {object} component - The component to be updated.
+     */
+    updateComponentAsync(entity, component) {
+        return this.validateComponentAsync(entity, component).then(() => {
+            return this._findOneAsync(COMPONENTS_COLLECTION, {
+                _id: this.ObjectID(component._id)
+            });
+        }).then((oldComponent) => {
+            component._id = oldComponent._id;
+            return this._updateItemInCollectionAsync(component, COMPONENTS_COLLECTION).then(() => {
+                return oldComponent;
+            });
+        }).then((oldComponent) => {
+            return this._notifySystemsWithRecoveryAsync("componentUpdatedAsync", [oldComponent, component]);
+        }).catch((error) => {
+            this.logError(error);
+            throw error;
+        });
+    }
+    /**
+     * This allows systems to validate the component being saved.
+     */
+    validateComponentAsync(entity, component) {
+        return this._notifySystemsAsync("validateComponentAsync", [entity, component]);
+    }
+    /**
+     * This allows systems to validate the entity being saved.
+     */
+    validateEntityAsync(entity) {
+        return this._notifySystemsAsync("validateEntityAsync", [entity]);
+    }
+    /**
+     * This allows the systems to validate content before its accepted.
+     * The dispatcher saves it to a temporary location so systems can validate it
+     * independently. The content could be an extremely large file so we don't want
+     * to hold it in memory.
+     * @param {IEntity} entity - The entity the content belongs to.
+     * @param {string} newContentId - The id of the new content.
+     */
+    validateEntityContentAsync(entity, newContentId) {
+        return this._notifySystemsAsync("validateEntityContentAsync", [entity, newContentId]);
+    }
+    /**
+     * Ensures the system has the required methods.
+     * @param {ISystem} system - The System to be validated.
+     */
+    validateSystem(system) {
+        if (typeof system.getGuid !== "function" ||
+            typeof system.getName !== "function") {
+            return false;
+        }
+        return true;
+    }
+}
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = ClarityTransactionDispatcher;
+//# sourceMappingURL=ClarityTransactionDispatcher.js.map</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.3</a> on Thu Mar 09 2017 15:05:46 GMT-0700 (Mountain Standard Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+</footer>
+
+<script>prettyPrint();</script>
+<script src="scripts/linenumber.js"></script>
+</body>
+</html>
