@@ -843,6 +843,8 @@ export default class ClarityTransactionDispatcher {
             });
         }).then((oldEntity) => {
             return this._notifySystemsWithRecoveryAsync("entityUpdatedAsync", [oldEntity, entity]);
+        }).then(() => {
+            return entity;
         }).catch((error) => {
             this.logError(error);
             throw error;
