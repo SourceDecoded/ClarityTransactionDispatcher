@@ -118,6 +118,18 @@ export default class ClarityTransactionDispatcher {
         });
     }
 
+    /** 
+     * Get count in a collection.
+     * @private
+     */
+    private _getCountAsync(collectionName: string) {
+        return this._getDatabaseAsync().then((db: any) => {
+            return db.collection(collectionName);
+        }).then((collection) => {
+            return collection.count();
+        });
+    }
+
     /**
      * Get a mongodb.
      * @private
@@ -335,11 +347,14 @@ export default class ClarityTransactionDispatcher {
      * @param {Array<component>} components - An array of components belonging to the entity.
      * @return {Promise}
      */
-    addEntityAsync(entity: IEntity, contentStream?: NodeJS.ReadableStream, components?: Array<{ type: string }>) {
+    addEntityAsync(contentStream?: NodeJS.ReadableStream, components?: Array<{ type: string }>, entityId?: string) {
         var contentPromise;
         var contentId;
         var savedComponents = [];
         var savedEntity;
+        var entity: IEntity = {
+            _id: entityId ? this.ObjectID(entityId) : null
+        };
 
         if (contentStream == null) {
             contentPromise = Promise.resolve(null);
@@ -386,6 +401,13 @@ export default class ClarityTransactionDispatcher {
                     return this._notifySystemsWithRecoveryAsync("entityComponentAddedAsync", [savedEntity, component]);
                 }, resolvedPromise);
             });
+        }).then(() => {
+            const savedData = {
+                entity: savedEntity,
+                components: savedComponents
+            };
+
+            return savedData;
         }).catch((error) => {
             // Since we save the content first we may have the content saved and not the entity.
             // If we were able to save the entity then the removeEntityAsync will take care of removing the content.
@@ -539,6 +561,13 @@ export default class ClarityTransactionDispatcher {
     }
 
     /**
+     * Get count for all components in collection.
+     */
+    getComponentCountAsync() {
+        return this._getCountAsync(COMPONENTS_COLLECTION);
+    }
+
+    /**
      * Get the components of an entity by the entity.
      * @param {IEntity} entity - The entity of the components.
      * @return {Promise<Array>}
@@ -632,6 +661,13 @@ export default class ClarityTransactionDispatcher {
                 _id: this.ObjectID(contentId)
             });
         });
+    }
+
+    /**
+     * Get count for all entities in collection.
+     */
+    getEntityCountAsync() {
+        return this._getCountAsync(ENTITIES_COLLECTION);
     }
 
     /**
@@ -802,6 +838,8 @@ export default class ClarityTransactionDispatcher {
             });
         }).then((oldEntity) => {
             return this._notifySystemsWithRecoveryAsync("entityUpdatedAsync", [oldEntity, entity]);
+        }).then(() => {
+            return entity;
         }).catch(() => {
 
         });
