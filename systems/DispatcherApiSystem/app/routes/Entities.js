@@ -3,24 +3,17 @@ const express = require("express");
 const Busboy = require("busboy");
 // TODO: Handle streaming content
 const entityRouter = express.Router();
-// Body: entity, components
 entityRouter.post("/", (request, response) => {
     const busboy = new Busboy({ headers: request.headers });
     const dispatcher = response.locals.clarityTransactionDispatcher;
     let entityForm = {};
     const addEntity = () => {
-        const entity = JSON.parse(entityForm.entity);
-        const components = JSON.parse(entityForm.components);
-        dispatcher.addEntityAsync(entity, null, components).then(() => {
-            response.status(200).json({
-                message: "Entity Added Successfully!"
-            });
+        const components = entityForm.components ? JSON.parse(entityForm.components) : [];
+        const id = entityForm.id || null;
+        dispatcher.addEntityAsync(null, components, id).then(result => {
+            response.status(200).send(result);
         }).catch((error) => {
-            response.status(400).json({
-                message: "ERROR!",
-                error: error
-            });
-            ;
+            response.status(400).send(error);
         });
     };
     busboy.on("field", (fieldName, value, fieldNameTruncated, valueTruncated, encoding, mimeType) => {
@@ -31,84 +24,38 @@ entityRouter.post("/", (request, response) => {
     });
     request.pipe(busboy);
 });
-// Parameters: id, count
 entityRouter.get("/", (request, response) => {
     const dispatcher = response.locals.clarityTransactionDispatcher;
     const entityId = request.query.id;
-    const count = request.query.count;
+    const getCount = request.query.count;
     if (entityId) {
-        dispatcher.getEntityByIdAsync(entityId).then((entity) => {
-            response.status(200).json({
-                message: "Entity Found!",
-                entity: entity
-            });
-        }).catch((error) => {
-            response.status(400).json({
-                message: "ERROR!",
-                error: error
-            });
-            ;
+        dispatcher.getEntityByIdAsync(entityId).then(entity => {
+            response.status(200).send(entity);
+        }).catch(error => {
+            response.status(400).send(error);
         });
     }
-    else if (count == "true") {
-        dispatcher._getDatabaseAsync().then((db) => {
-            db.collection("entities", (err, collection) => {
-                if (err != null) {
-                    response.status(400).json({
-                        message: "ERROR!",
-                        error: err
-                    });
-                }
-                else {
-                    collection.count(function (error, total) {
-                        if (error != null) {
-                            response.status(400).json({
-                                message: "ERROR!",
-                                error: error
-                            });
-                            ;
-                        }
-                        else {
-                            response.status(200).json({
-                                message: "Found total number of entities!",
-                                count: total
-                            });
-                        }
-                    });
-                }
-            });
-        }).catch((error) => {
-            response.status(400).json({
-                message: "ERROR!",
-                error: error
-            });
-            ;
+    else if (getCount == "true") {
+        dispatcher.getEntityCountAsync().then(count => {
+            response.status(200).send(count);
+        }).catch(error => {
+            response.status(400).send(error);
         });
     }
     else {
-        // TODO: Get entityIterator and return entities.
-        response.status(400).json({
-            message: "Please provide the id to look up the entity with."
-        });
+        response.status(400).send(new Error("Please provide an id or count parameter."));
     }
 });
-//Body: entity
 entityRouter.patch("/", (request, response) => {
     const busboy = new Busboy({ headers: request.headers });
     const dispatcher = response.locals.clarityTransactionDispatcher;
     let entityForm = {};
     const updateEntity = () => {
         const entity = JSON.parse(entityForm.entity);
-        dispatcher.updateEntityAsync(entity).then(() => {
-            response.status(200).json({
-                message: "Entity Updated Successfully!"
-            });
-        }).catch((error) => {
-            response.status(400).json({
-                message: "ERROR!",
-                error: error
-            });
-            ;
+        dispatcher.updateEntityAsync(entity).then(entity => {
+            response.status(200).send(entity);
+        }).catch(error => {
+            response.status(400).send(error);
         });
     };
     busboy.on("field", (fieldName, value, fieldNameTruncated, valueTruncated, encoding, mimeType) => {
@@ -119,30 +66,20 @@ entityRouter.patch("/", (request, response) => {
     });
     request.pipe(busboy);
 });
-// Parameters: id
 entityRouter.delete("/", (request, response) => {
     const dispatcher = response.locals.clarityTransactionDispatcher;
     const entityId = request.query.id;
-    if (!entityId) {
-        // TODO: Get entityIterator and return entities.
-        response.status(400).json({
-            message: "Please provide the id of the entity to be deleted."
+    if (entityId) {
+        dispatcher.getEntityByIdAsync(entityId).then(entity => {
+            return dispatcher.removeEntityAsync(entity).then(() => {
+                response.status(200).send(entity);
+            });
+        }).catch(error => {
+            response.status(400).send(error);
         });
     }
     else {
-        dispatcher.getEntityByIdAsync(entityId).then((entity) => {
-            return dispatcher.removeEntityAsync(entity).then(() => {
-                response.status(200).json({
-                    message: "Entity Deleted Successfully!"
-                });
-            });
-        }).catch((error) => {
-            response.status(400).json({
-                message: "ERROR!",
-                error: error
-            });
-            ;
-        });
+        response.status(400).send(new Error("Please provide the id of the entity to be deleted."));
     }
 });
 Object.defineProperty(exports, "__esModule", { value: true });
