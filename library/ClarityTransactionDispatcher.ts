@@ -954,14 +954,16 @@ export default class ClarityTransactionDispatcher {
      * Update a component. The dispatcher will perform the following actions when 
      * updating the component of an entity.
      * 
-     * - Validate the component. All interested systesm need to validate to pass.
+     * - Validate the component. All interested systems need to validate to pass.
      * - Save the component to the datastore.
      * - Notify the systems that the component was updated.
      * 
      * @param {object} component - The component to be updated.
      */
-    updateComponentAsync(entity: IEntity, component: IComponent) {
-        return this.validateComponentAsync(entity, component).then(() => {
+    updateComponentAsync(component: IComponent) {
+        return this.getEntityByIdAsync(component.entity_id).then((entity) => {
+            return this.validateComponentAsync(entity, component);
+        }).then(() => {
             return this._findOneAsync(COMPONENTS_COLLECTION, {
                 _id: this.ObjectID(component._id)
             });
