@@ -628,6 +628,32 @@ export default class ClarityTransactionDispatcher {
         });
     }
 
+
+    /**
+     * Page through entities using the lastId from a previous query. Use null or undefined to begin at the beginning.
+     * @param config {} - The configuration of the query. It takes a lastId, and a pageSize. 
+     */
+    getEntitiesAsync(config) {
+        var lastId = config.lastId;
+        var pageSize = config.pageSize < 50 ? config.pageSize : 50;
+
+        return this._getDatabaseAsync().then((db: any) => {
+            var query;
+
+            if (lastId == null) {
+                query = db.collection(ENTITIES_COLLECTION).find().limit(pageSize);
+            } else {
+                query = db.collection(ENTITIES_COLLECTION).find({
+                    _id: {
+                        $gt: this.ObjectID(lastId)
+                    }
+                }).limit(pageSize);
+            }
+
+            return query.sort([["_id", 1]]).toArray();
+        });
+    }
+
     /**
      * Get an entity by its id.
      * @param {string} entityId - The id of the desired entity.
@@ -672,18 +698,6 @@ export default class ClarityTransactionDispatcher {
             return gfs.createReadStream({
                 _id: this.ObjectID(contentId)
             });
-        });
-    }
-
-    /**
-     * Get an Iterator of the all entities.
-     * @return {MongoDbIterator}
-     */
-    getEntitiesIterator() {
-        return new MongoDbIterator({
-            databaseUrl: this.databaseUrl,
-            collectionName: ENTITIES_COLLECTION,
-            MongoClient: this.MongoClient
         });
     }
 
