@@ -664,21 +664,34 @@ export default class ClarityTransactionDispatcher {
     getEntitiesAsync(config) {
         var lastId = config.lastId;
         var pageSize = config.pageSize < 50 ? config.pageSize : 50;
+        var lastUpdatedId = config.lastUpdatedId;
+        var lastCreatedId = config.lastCreatedId;
+
+        var sort = [["_id", 1]];
+        var filter = <any>{};
+
+        if (lastId != null) {
+            filter._id = {
+                $gt: this.ObjectID(lastId)
+            };
+        }
+
+        if (lastCreatedId != null) {
+            filter.createdDate = {
+                $gt: lastCreatedId
+            };
+            sort.push(["createdDate", 1]);
+        }
+
+        if (lastUpdatedId != null) {
+            filter.updatedDate = {
+                $gt: lastUpdatedId
+            };
+            sort.push(["updatedDate", 1]);
+        }
 
         return this._getDatabaseAsync().then((db: any) => {
-            var query;
-
-            if (lastId == null) {
-                query = db.collection(ENTITIES_COLLECTION).find().limit(pageSize);
-            } else {
-                query = db.collection(ENTITIES_COLLECTION).find({
-                    _id: {
-                        $gt: this.ObjectID(lastId)
-                    }
-                }).limit(pageSize);
-            }
-
-            return query.sort([["_id", 1]]).toArray();
+            return db.collection(ENTITIES_COLLECTION).find(filter).limit(pageSize).sort(sort).toArray();
         });
     }
 
