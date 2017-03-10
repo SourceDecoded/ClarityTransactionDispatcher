@@ -92,7 +92,7 @@ entityRouter.delete("/", (request, response) => {
             response.status(400).send(error);
         });
     } else {
-        response.status(400).send(new Error("Please provide the id of the entity to be deleted."))
+        response.status(400).send(new Error("Please provide the id of the entity to be deleted."));
     }
 });
 
