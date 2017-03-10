@@ -672,6 +672,45 @@ export default class ClarityTransactionDispatcher {
         });
     }
 
+
+    /**
+     * Page through entities using the lastId from a previous query. Use null or undefined to begin at the beginning.
+     * @param config {} - The configuration of the query. It takes a lastId, and a pageSize. 
+     */
+    getEntitiesAsync(config) {
+        var lastId = config.lastId;
+        var pageSize = config.pageSize < 50 ? config.pageSize : 50;
+        var lastUpdatedId = config.lastUpdatedId;
+        var lastCreatedId = config.lastCreatedId;
+
+        var sort = [["_id", 1]];
+        var filter = <any>{};
+
+        if (lastId != null) {
+            filter._id = {
+                $gt: this.ObjectID(lastId)
+            };
+        }
+
+        if (lastCreatedId != null) {
+            filter.createdDate = {
+                $gt: lastCreatedId
+            };
+            sort.push(["createdDate", 1]);
+        }
+
+        if (lastUpdatedId != null) {
+            filter.updatedDate = {
+                $gt: lastUpdatedId
+            };
+            sort.push(["updatedDate", 1]);
+        }
+
+        return this._getDatabaseAsync().then((db: any) => {
+            return db.collection(ENTITIES_COLLECTION).find(filter).limit(pageSize).sort(sort).toArray();
+        });
+    }
+
     /**
      * Get an entity by its id.
      * @param {string} entityId - The id of the desired entity.
@@ -722,18 +761,6 @@ export default class ClarityTransactionDispatcher {
      */
     getEntityCountAsync() {
         return this._getCountAsync(ENTITIES_COLLECTION);
-    }
-
-    /**
-     * Get an Iterator of the all entities.
-     * @return {MongoDbIterator}
-     */
-    getEntitiesIterator() {
-        return new MongoDbIterator({
-            databaseUrl: this.databaseUrl,
-            collectionName: ENTITIES_COLLECTION,
-            MongoClient: this.MongoClient
-        });
     }
 
     /**
@@ -941,14 +968,16 @@ export default class ClarityTransactionDispatcher {
      * Update a component. The dispatcher will perform the following actions when 
      * updating the component of an entity.
      * 
-     * - Validate the component. All interested systesm need to validate to pass.
+     * - Validate the component. All interested systems need to validate to pass.
      * - Save the component to the datastore.
      * - Notify the systems that the component was updated.
      * 
      * @param {object} component - The component to be updated.
      */
-    updateComponentAsync(entity: IEntity, component: IComponent) {
-        return this.validateComponentAsync(entity, component).then(() => {
+    updateComponentAsync(component: IComponent) {
+        return this.getEntityByIdAsync(component.entity_id).then((entity) => {
+            return this.validateComponentAsync(entity, component);
+        }).then(() => {
             return this._findOneAsync(COMPONENTS_COLLECTION, {
                 _id: this.ObjectID(component._id)
             });
