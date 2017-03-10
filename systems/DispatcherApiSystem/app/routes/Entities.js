@@ -1,19 +1,26 @@
 "use strict";
 const express = require("express");
 const Busboy = require("busboy");
-// TODO: Handle streaming content
 const entityRouter = express.Router();
 entityRouter.post("/", (request, response) => {
     const busboy = new Busboy({ headers: request.headers });
     const dispatcher = response.locals.clarityTransactionDispatcher;
     let entityForm = {};
     const addEntity = () => {
-        const components = entityForm.components ? JSON.parse(entityForm.components) : [];
+        let components = [];
+        if (entityForm.components) {
+            try {
+                components = JSON.parse(entityForm.components);
+            }
+            catch (error) {
+                return response.status(400).send({ message: error.message });
+            }
+        }
         const id = entityForm.id || null;
         dispatcher.addEntityAsync(null, components, id).then(result => {
-            response.status(200).send(result);
-        }).catch((error) => {
-            response.status(400).send(error);
+            response.status(200).send({ data: result });
+        }).catch(error => {
+            response.status(400).send({ message: error.message });
         });
     };
     busboy.on("field", (fieldName, value, fieldNameTruncated, valueTruncated, encoding, mimeType) => {
@@ -30,20 +37,20 @@ entityRouter.get("/", (request, response) => {
     const getCount = request.query.count;
     if (entityId) {
         dispatcher.getEntityByIdAsync(entityId).then(entity => {
-            response.status(200).send(entity);
+            response.status(200).send({ data: { entity } });
         }).catch(error => {
-            response.status(400).send(error);
+            response.status(400).send({ message: error.message });
         });
     }
     else if (getCount == "true") {
         dispatcher.getEntityCountAsync().then(count => {
-            response.status(200).send(count);
+            response.status(200).send({ data: { count } });
         }).catch(error => {
-            response.status(400).send(error);
+            response.status(400).send({ message: error.message });
         });
     }
     else {
-        response.status(400).send(new Error("Please provide an id or count parameter."));
+        response.status(400).send({ message: "An id or count parameter was not provided." });
     }
 });
 entityRouter.patch("/", (request, response) => {
@@ -51,12 +58,23 @@ entityRouter.patch("/", (request, response) => {
     const dispatcher = response.locals.clarityTransactionDispatcher;
     let entityForm = {};
     const updateEntity = () => {
-        const entity = JSON.parse(entityForm.entity);
-        dispatcher.updateEntityAsync(entity).then(entity => {
-            response.status(200).send(entity);
-        }).catch(error => {
-            response.status(400).send(error);
-        });
+        if (entityForm.entity) {
+            let entity;
+            try {
+                entity = JSON.parse(entityForm.entity);
+            }
+            catch (error) {
+                return response.status(400).send({ message: error.message });
+            }
+            dispatcher.updateEntityAsync(entity).then(entity => {
+                response.status(200).send({ data: { entity } });
+            }).catch(error => {
+                response.status(400).send({ message: error.message });
+            });
+        }
+        else {
+            response.status(400).send({ message: "An entity was not provided in the body." });
+        }
     };
     busboy.on("field", (fieldName, value, fieldNameTruncated, valueTruncated, encoding, mimeType) => {
         entityForm[fieldName] = value;
@@ -72,14 +90,14 @@ entityRouter.delete("/", (request, response) => {
     if (entityId) {
         dispatcher.getEntityByIdAsync(entityId).then(entity => {
             return dispatcher.removeEntityAsync(entity).then(() => {
-                response.status(200).send(entity);
+                response.status(200).send({ data: { entity } });
             });
         }).catch(error => {
-            response.status(400).send(error);
+            response.status(400).send({ message: error.message });
         });
     }
     else {
-        response.status(400).send(new Error("Please provide the id of the entity to be deleted."));
+        response.status(400).send({ message: "The id of the entity to be deleted was not provided as a parameter." });
     }
 });
 Object.defineProperty(exports, "__esModule", { value: true });

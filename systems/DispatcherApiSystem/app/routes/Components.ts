@@ -3,26 +3,31 @@ import * as Busboy from "busboy";
 
 const componentRouter = express.Router();
 
-// Body: entity, component
 componentRouter.post("/", (request, response) => {
     const busboy = new Busboy({ headers: request.headers });
     const dispatcher = response.locals.clarityTransactionDispatcher;
     let componentForm = <any>{};
 
     const addComponent = () => {
-        const entity = JSON.parse(componentForm.entity);
-        const component = JSON.parse(componentForm.component);
+        if (componentForm.entity && componentForm.component) {
+            let entity;
+            let component;
 
-        dispatcher.addComponentAsync(entity, component).then(() => {
-            response.status(200).json({
-                message: "Component Added Successfully!"
+            try {
+                entity = JSON.parse(componentForm.entity);
+                component = JSON.parse(componentForm.component);
+            } catch (error) {
+                return response.status(400).send({ message: error.message });
+            }
+
+            dispatcher.addComponentAsync(entity, component).then(component => {
+                response.status(200).send({ data: { component } });
+            }).catch(error => {
+                response.status(400).send({ message: error.message });
             });
-        }).catch((error) => {
-            response.status(400).json({
-                message: "ERROR!",
-                error: error
-            });;
-        });
+        } else {
+            response.status(400).send({ message: "An entity and/or component was not provided in the body." });
+        }
     };
 
     busboy.on("field", (fieldName, value, fieldNameTruncated, valueTruncated, encoding, mimeType) => {
@@ -36,82 +41,53 @@ componentRouter.post("/", (request, response) => {
     request.pipe(busboy);
 });
 
-// Parameters: id
 componentRouter.get("/", (request, response) => {
     const dispatcher = response.locals.clarityTransactionDispatcher;
     const componentId = request.query.id;
-    const count = request.query.count;
+    const getCount = request.query.count;
 
     if (componentId) {
-        dispatcher.getComponentByIdAsync(componentId).then((component) => {
-            response.status(200).json({
-                message: "Component Found!",
-                component: component
-            });
-        }).catch((error) => {
-            response.status(400).json({
-                message: "ERROR!",
-                error: error
-            });;
+        dispatcher.getComponentByIdAsync(componentId).then(component => {
+            response.status(200).send({ data: { component } });
+        }).catch(error => {
+            response.status(400).send({ message: error.message });
         });
-    } else if (count == "true") {
-        dispatcher._getDatabaseAsync().then((db: any) => {
-            db.collection("components", (err, collection) => {
-                if (err != null) {
-                    response.status(400).json({
-                        message: "ERROR!",
-                        error: err
-                    });;
-                } else {
-                    collection.count(function (error, total) {
-                        if (error != null) {
-                            response.status(400).json({
-                                message: "ERROR!",
-                                error: error
-                            });;
-                        } else {
-                            response.status(200).json({
-                                message: "Found total number of components!",
-                                count: total
-                            });
-                        }
-                    });
-                }
-            })
-        }).catch((error) => {
-            response.status(400).json({
-                message: "ERROR!",
-                error: error
-            });;
+    } else if (getCount == "true") {
+        dispatcher.getComponentCountAsync().then(count => {
+            response.status(200).send({ data: { count } });
+        }).catch(error => {
+            response.status(400).send({ message: error.message });
         });
     } else {
-        // TODO: If enityId passed in then search and return components belonging to entity.
-        response.status(400).json({
-            message: "Please provide the id to look up the component with."
-        });
+        response.status(400).send({ message: "An id or count parameter was not provided." });
     }
 });
 
-// Body: entity, component
 componentRouter.patch("/", (request, response) => {
     const busboy = new Busboy({ headers: request.headers });
     const dispatcher = response.locals.clarityTransactionDispatcher;
     let componentForm = <any>{};
 
     const updateComponent = () => {
-        const entity = JSON.parse(componentForm.entity);
-        const component = JSON.parse(componentForm.component);
+        if (componentForm.entity && componentForm.component) {
+            let entity;
+            let component;
 
-        dispatcher.updateComponentAsync(entity, component).then(() => {
-            response.status(200).json({
-                message: "Component Updated Successfully!"
+            try {
+                entity = JSON.parse(componentForm.entity);
+                component = JSON.parse(componentForm.component);
+            } catch (error) {
+                return response.status(400).send({ message: error.message });
+            }
+
+            dispatcher.updateComponentAsync(entity, component).then(component => {
+                response.status(200).send({ data: { component } });
+            }).catch(error => {
+                response.status(400).send({ message: error.message });
             });
-        }).catch((error) => {
-            response.status(400).json({
-                message: "ERROR!",
-                error: error
-            });;
-        });
+        } else {
+            response.status(400).send({ message: "An entity and/or component was not provided in the body." })
+        }
     };
 
     busboy.on("field", (fieldName, value, fieldNameTruncated, valueTruncated, encoding, mimeType) => {
