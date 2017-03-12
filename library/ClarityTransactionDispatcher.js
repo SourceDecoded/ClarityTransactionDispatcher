@@ -1,6 +1,5 @@
 "use strict";
 const uuid = require("node-uuid");
-const MongoDbIterator_1 = require("./MongoDbIterator");
 const NullableLogger_1 = require("./NullableLogger");
 const nullableLogger = new NullableLogger_1.default();
 const resolvedPromise = Promise.resolve(null);
@@ -277,8 +276,6 @@ class ClarityTransactionDispatcher {
             return collection.update({
                 _id: this.ObjectID(item._id)
             }, item, null);
-        }).then(result => {
-            console.log(result);
         });
     }
     /**
@@ -295,7 +292,9 @@ class ClarityTransactionDispatcher {
     addComponentAsync(entity, component) {
         var savedComponent;
         return this._createObjectIdAsync(entity._id).then((entityId) => {
-            component.entity_id = entityId;
+            return this.getEntityByIdAsync(entityId);
+        }).then(entity => {
+            component.entity_id = entity._id;
             return this.validateComponentAsync(entity, component);
         }).then(() => {
             component.updatedDate = new Date();
@@ -352,6 +351,8 @@ class ClarityTransactionDispatcher {
             // Validate and save all the components. 
             return components.reduce((promise, component) => {
                 component.entity_id = entity._id;
+                component.updatedDate = new Date();
+                component.createdDate = new Date();
                 return this.validateComponentAsync(entity, component).then(() => {
                     return this._addItemToCollectionAsync(component, COMPONENTS_COLLECTION);
                 }).then((savedComponent) => {
@@ -540,12 +541,12 @@ class ClarityTransactionDispatcher {
      * @return {Promise<Array>}
      */
     getComponentByIdAsync(componentId) {
-        var filter = {
-            _id: this.ObjectID(componentId)
-        };
-        return this._findOneAsync(COMPONENTS_COLLECTION, filter).then(component => {
-            return this._notifySystemsWithRecoveryAsync("entityComponentRetrievedAsync", [null, component]).then(() => {
-                return component;
+        return this._createObjectIdAsync(componentId).then(objectId => {
+            const filter = { _id: objectId };
+            return this._findOneAsync(COMPONENTS_COLLECTION, filter).then(component => {
+                return this._notifySystemsWithRecoveryAsync("entityComponentRetrievedAsync", [null, component]).then(() => {
+                    return component;
+                });
             });
         }).catch((error) => {
             this.logError(error);
@@ -604,6 +605,38 @@ class ClarityTransactionDispatcher {
         });
     }
     /**
+     * Page through entities using the lastId from a previous query. Use null or undefined to begin at the beginning.
+     * @param config {} - The configuration of the query. It takes a lastId, and a pageSize.
+     */
+    getEntitiesAsync(config) {
+        var lastId = config.lastId;
+        var pageSize = config.pageSize < 50 ? config.pageSize : 50;
+        var lastUpdatedId = config.lastUpdatedId;
+        var lastCreatedId = config.lastCreatedId;
+        var sort = [["_id", 1]];
+        var filter = {};
+        if (lastId != null) {
+            filter._id = {
+                $gt: this.ObjectID(lastId)
+            };
+        }
+        if (lastCreatedId != null) {
+            filter.createdDate = {
+                $gt: lastCreatedId
+            };
+            sort.push(["createdDate", 1]);
+        }
+        if (lastUpdatedId != null) {
+            filter.updatedDate = {
+                $gt: lastUpdatedId
+            };
+            sort.push(["updatedDate", 1]);
+        }
+        return this._getDatabaseAsync().then((db) => {
+            return db.collection(ENTITIES_COLLECTION).find(filter).limit(pageSize).sort(sort).toArray();
+        });
+    }
+    /**
      * Get an entity by its id.
      * @param {string} entityId - The id of the desired entity.
      * @return {Promise<Entity>} - A Promise resolved with the entity or null.
@@ -650,17 +683,6 @@ class ClarityTransactionDispatcher {
      */
     getEntityCountAsync() {
         return this._getCountAsync(ENTITIES_COLLECTION);
-    }
-    /**
-     * Get an Iterator of the all entities.
-     * @return {MongoDbIterator}
-     */
-    getEntitiesIterator() {
-        return new MongoDbIterator_1.default({
-            databaseUrl: this.databaseUrl,
-            collectionName: ENTITIES_COLLECTION,
-            MongoClient: this.MongoClient
-        });
     }
     /**
      * Get a service by the name given.
@@ -850,24 +872,35 @@ class ClarityTransactionDispatcher {
      * Update a component. The dispatcher will perform the following actions when
      * updating the component of an entity.
      *
-     * - Validate the component. All interested systesm need to validate to pass.
+     * - Validate the component. All interested systems need to validate to pass.
      * - Save the component to the datastore.
      * - Notify the systems that the component was updated.
      *
      * @param {object} component - The component to be updated.
      */
-    updateComponentAsync(entity, component) {
-        return this.validateComponentAsync(entity, component).then(() => {
+    updateComponentAsync(component) {
+        let oldEntity;
+        return this._createObjectIdAsync(component.entity_id).then(entityId => {
+            return this.getEntityByIdAsync(entityId);
+        }).then((entity) => {
+            oldEntity = entity;
+            return this.validateComponentAsync(entity, component);
+        }).then(() => {
             return this._findOneAsync(COMPONENTS_COLLECTION, {
                 _id: this.ObjectID(component._id)
             });
         }).then((oldComponent) => {
             component._id = oldComponent._id;
+            component.updatedDate = new Date();
             return this._updateItemInCollectionAsync(component, COMPONENTS_COLLECTION).then(() => {
                 return oldComponent;
             });
         }).then((oldComponent) => {
             return this._notifySystemsWithRecoveryAsync("componentUpdatedAsync", [oldComponent, component]);
+        }).then(() => {
+            return this.updateEntityAsync(oldEntity);
+        }).then(() => {
+            return component;
         }).catch((error) => {
             this.logError(error);
             throw error;

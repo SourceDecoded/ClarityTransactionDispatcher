@@ -69,24 +69,22 @@ componentRouter.patch("/", (request, response) => {
     let componentForm = <any>{};
 
     const updateComponent = () => {
-        if (componentForm.entity && componentForm.component) {
-            let entity;
+        if (componentForm.component) {
             let component;
 
             try {
-                entity = JSON.parse(componentForm.entity);
                 component = JSON.parse(componentForm.component);
             } catch (error) {
                 return response.status(400).send({ message: error.message });
             }
 
-            dispatcher.updateComponentAsync(entity, component).then(component => {
+            dispatcher.updateComponentAsync(component).then(component => {
                 response.status(200).send({ data: { component } });
             }).catch(error => {
                 response.status(400).send({ message: error.message });
             });
         } else {
-            response.status(400).send({ message: "An entity and/or component was not provided in the body." })
+            response.status(400).send({ message: "A component was not provided in the body." })
         }
     };
 
@@ -101,28 +99,20 @@ componentRouter.patch("/", (request, response) => {
     request.pipe(busboy);
 });
 
-// Parameters: id
 componentRouter.delete("/", (request, response) => {
     const dispatcher = response.locals.clarityTransactionDispatcher;
     const componentId = request.query.id;
 
-    if (!componentId) {
-        response.status(400).json({
-            message: "Please provide the id of the component to be deleted."
+    if (componentId) {
+        dispatcher.getComponentByIdAsync(componentId).then(component => {
+            return dispatcher.removeComponentAsync(component).then(() => {
+                response.status(200).send({ data: { component } });
+            });
+        }).catch(error => {
+            response.status(400).send({ message: error.message });
         });
     } else {
-        dispatcher.getComponentByIdAsync(componentId).then((component) => {
-            return dispatcher.removeComponentAsync(component).then(() => {
-                response.status(200).json({
-                    message: "Component Deleted Successfully!"
-                });
-            })
-        }).catch((error) => {
-            response.status(400).json({
-                message: "ERROR!",
-                error: error
-            });;
-        });
+        response.status(400).send({ message: "The id of the component to be deleted was not provided as a parameter." });
     }
 });
 
