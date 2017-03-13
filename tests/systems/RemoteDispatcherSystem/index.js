@@ -80,4 +80,4 @@ class RemoteDispatcherSystem {
 }
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = RemoteDispatcherSystem;
-//# sourceMappingURL=RemoteDispatcherSystem.js.map
+//# sourceMappingURL=index.js.map

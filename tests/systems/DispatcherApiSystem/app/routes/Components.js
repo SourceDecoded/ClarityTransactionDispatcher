@@ -77,7 +77,7 @@ componentRouter.patch("/", (request, response) => {
             });
         }
         else {
-            response.status(400).send({ message: "An entity and/or component was not provided in the body." });
+            response.status(400).send({ message: "A component was not provided in the body." });
         }
     };
     busboy.on("field", (fieldName, value, fieldNameTruncated, valueTruncated, encoding, mimeType) => {

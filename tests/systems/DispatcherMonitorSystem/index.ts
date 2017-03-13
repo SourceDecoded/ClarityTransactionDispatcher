@@ -22,6 +22,17 @@ export default class DispatcherMonitorSystem {
         this.name = "Dispatcher Monitor System";
     }
 
+    private _addItemToCollectionAsync(item: any, collectionName: string) {
+        return this._getDatabaseAsync().then((db: any) => {
+            return db.collection(collectionName);
+        }).then((collection) => {
+            return collection.insertOne(item);
+        }).then((result) => {
+            item._id = result.insertedId;
+            return item;
+        });
+    }
+
     private _addTransactionAsync(type: string, data: any) {
         return this._getDatabaseAsync().then((db: any) => {
 
@@ -52,11 +63,11 @@ export default class DispatcherMonitorSystem {
         });
     }
 
-    private _buildApi() {
+    private _startAPI() {
         const router = new Router(this.app, this);
         router.init();
 
-        this.app.listen(3007, () => console.log("Monitor Server is running locally on port 3007..."));
+        this.app.listen(3006, () => console.log("Monitor Server is running locally on port 3006..."));
     }
 
     private _connectSocketIO() {
@@ -67,7 +78,7 @@ export default class DispatcherMonitorSystem {
             console.log("Monitor Client connected on port 3006...")
         });
 
-        server.listen(3006, () => console.log("Socket Monitor Server is running locally on port 3006..."));
+        server.listen(3007, () => console.log("Socket Monitor Server is running locally on port 3007..."));
     }
 
     private _createUptimeAsync() {
@@ -117,7 +128,7 @@ export default class DispatcherMonitorSystem {
         this.clarityTransactionDispatcher = clarityTransactionDispatcher;
         this.app = this.clarityTransactionDispatcher.getService("express");
 
-        this._buildApi();
+        this._startAPI();
         this._connectSocketIO();
         this._createUptimeAsync();
     }

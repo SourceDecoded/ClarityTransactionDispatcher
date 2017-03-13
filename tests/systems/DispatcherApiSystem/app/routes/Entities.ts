@@ -21,8 +21,9 @@ entityRouter.post("/", (request, response) => {
         }
 
         const id = entityForm.id || null;
+        let content = entityForm.content || null;
 
-        dispatcher.addEntityAsync(null, components, id).then(result => {
+        dispatcher.addEntityAsync(content, components, id).then(result => {
             response.status(200).send({ data: result });
         }).catch(error => {
             response.status(400).send({ message: error.message });
@@ -33,8 +34,14 @@ entityRouter.post("/", (request, response) => {
         entityForm[fieldName] = value;
     });
 
-    busboy.on("finish", () => {
-        addEntity();
+    busboy.on("file", (fieldName, file, fileName, encoding, mimeType) => {
+        if (entityForm.components) {
+            file.pause();
+            entityForm[fieldName] = file;
+            addEntity();
+        } else {
+            response.status(400).send({message: "Components field needs to be sent before file stream in form data."})
+        }
     });
 
     request.pipe(busboy);

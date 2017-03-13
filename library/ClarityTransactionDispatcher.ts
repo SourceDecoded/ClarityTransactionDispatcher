@@ -56,13 +56,13 @@ export default class ClarityTransactionDispatcher {
     }
 
     private _addItemToGridFs(stream: NodeJS.ReadableStream): any {
-        var newContentId = uuid.v4();
+        var newContentId = this.ObjectID();
         stream.pause();
 
         return this._getGridFsAsync().then((gfs: IGridFs) => {
             return new Promise((resolve, reject) => {
                 var writeStream = gfs.createWriteStream({
-                    _id: this.ObjectID(newContentId)
+                    _id: newContentId
                 });
 
                 stream.on("end", () => {

@@ -14,6 +14,16 @@ class DispatcherMonitorSystem {
         this.guid = "3A07CA2A-1A79-4A79-98FE-B3FA747A9CB2";
         this.name = "Dispatcher Monitor System";
     }
+    _addItemToCollectionAsync(item, collectionName) {
+        return this._getDatabaseAsync().then((db) => {
+            return db.collection(collectionName);
+        }).then((collection) => {
+            return collection.insertOne(item);
+        }).then((result) => {
+            item._id = result.insertedId;
+            return item;
+        });
+    }
     _addTransactionAsync(type, data) {
         return this._getDatabaseAsync().then((db) => {
             return new Promise((resolve, reject) => {
@@ -42,10 +52,10 @@ class DispatcherMonitorSystem {
             });
         });
     }
-    _buildApi() {
+    _startAPI() {
         const router = new Router_1.default(this.app, this);
         router.init();
-        this.app.listen(3007, () => console.log("Monitor Server is running locally on port 3007..."));
+        this.app.listen(3006, () => console.log("Monitor Server is running locally on port 3006..."));
     }
     _connectSocketIO() {
         const server = http.createServer(this.app);
@@ -53,7 +63,7 @@ class DispatcherMonitorSystem {
         this.io.on("connection", (client) => {
             console.log("Monitor Client connected on port 3006...");
         });
-        server.listen(3006, () => console.log("Socket Monitor Server is running locally on port 3006..."));
+        server.listen(3007, () => console.log("Socket Monitor Server is running locally on port 3007..."));
     }
     _createUptimeAsync() {
         return this._getDatabaseAsync().then((db) => {
@@ -99,7 +109,7 @@ class DispatcherMonitorSystem {
     activatedAsync(clarityTransactionDispatcher) {
         this.clarityTransactionDispatcher = clarityTransactionDispatcher;
         this.app = this.clarityTransactionDispatcher.getService("express");
-        this._buildApi();
+        this._startAPI();
         this._connectSocketIO();
         this._createUptimeAsync();
     }

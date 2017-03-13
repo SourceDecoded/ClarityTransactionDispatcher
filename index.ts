@@ -1,8 +1,8 @@
 import * as express from "express";
 import ClarityTransactionDispatcher from "./library/ClarityTransactionDispatcher";
 import MongoFactory from "./library/MongoFactory";
-import DispatcherApiSystem from "./systems/DispatcherApiSystem";
-import DispatcherMonitorSystem from "./systems/DispatcherMonitorSystem";
+import DispatcherApiSystem from "./tests/systems/DispatcherApiSystem";
+import DispatcherMonitorSystem from "./tests/systems/DispatcherMonitorSystem";
 
 const mongoFactory = new MongoFactory();
 let server;

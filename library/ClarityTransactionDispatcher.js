@@ -1,5 +1,4 @@
 "use strict";
-const uuid = require("node-uuid");
 const NullableLogger_1 = require("./NullableLogger");
 const nullableLogger = new NullableLogger_1.default();
 const resolvedPromise = Promise.resolve(null);
@@ -41,12 +40,12 @@ class ClarityTransactionDispatcher {
         this.services = {};
     }
     _addItemToGridFs(stream) {
-        var newContentId = uuid.v4();
+        var newContentId = this.ObjectID();
         stream.pause();
         return this._getGridFsAsync().then((gfs) => {
             return new Promise((resolve, reject) => {
                 var writeStream = gfs.createWriteStream({
-                    _id: this.ObjectID(newContentId)
+                    _id: newContentId
                 });
                 stream.on("end", () => {
                     resolve(newContentId);
