@@ -29,12 +29,16 @@ entityRouter.post("/", (request, response) => {
     });
     busboy.on("file", (fieldName, file, fileName, encoding, mimeType) => {
         if (entityForm.components) {
-            file.pause();
             entityForm[fieldName] = file;
             addEntity();
         }
         else {
             response.status(400).send({ message: "Components field needs to be sent before file stream in form data." });
+        }
+    });
+    busboy.on("finish", () => {
+        if (!entityForm.content) {
+            addEntity();
         }
     });
     request.pipe(busboy);
@@ -43,6 +47,10 @@ entityRouter.get("/", (request, response) => {
     const dispatcher = response.locals.clarityTransactionDispatcher;
     const entityId = request.query.id;
     const getCount = request.query.count;
+    const lastId = request.query.lastId;
+    const pageSize = request.query.pageSize;
+    const lastUpdatedDate = request.query.lastUpdatedDate;
+    const lastCreatedDate = request.query.lastCreatedDate;
     if (entityId) {
         dispatcher.getEntityByIdAsync(entityId).then(entity => {
             response.status(200).send({ data: { entity } });
@@ -58,7 +66,17 @@ entityRouter.get("/", (request, response) => {
         });
     }
     else {
-        response.status(400).send({ message: "An id or count parameter was not provided." });
+        const config = {
+            lastId,
+            lastUpdatedDate,
+            lastCreatedDate,
+            pageSize
+        };
+        dispatcher.getEntitiesAsync(config).then(entities => {
+            response.status(200).send({ data: { entities } });
+        }).catch(error => {
+            response.status(400).send({ message: error.message });
+        });
     }
 });
 entityRouter.patch("/", (request, response) => {

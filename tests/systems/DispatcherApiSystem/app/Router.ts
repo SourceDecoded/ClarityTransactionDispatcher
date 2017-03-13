@@ -1,5 +1,6 @@
 import entitiesRoute from "./routes/Entities";
 import componentsRoute from "./routes/Components";
+import contentRoute from "./routes/Content";
 
 export default class Router {
     app: any;
@@ -21,5 +22,6 @@ export default class Router {
 
         this.app.use("/api/entities", entitiesRoute);
         this.app.use("/api/components", componentsRoute);
+        this.app.use("/api/content", contentRoute);
     }
 }

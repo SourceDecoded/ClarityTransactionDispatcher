@@ -1,6 +1,7 @@
 "use strict";
 const Entities_1 = require("./routes/Entities");
 const Components_1 = require("./routes/Components");
+const Content_1 = require("./routes/Content");
 class Router {
     constructor(app, clarityTransactionDispatcher) {
         this.app = app;
@@ -16,6 +17,7 @@ class Router {
         });
         this.app.use("/api/entities", Entities_1.default);
         this.app.use("/api/components", Components_1.default);
+        this.app.use("/api/content", Content_1.default);
     }
 }
 Object.defineProperty(exports, "__esModule", { value: true });

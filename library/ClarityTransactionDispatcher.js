@@ -63,6 +63,8 @@ class ClarityTransactionDispatcher {
      * @private
      */
     _addItemToCollectionAsync(item, collectionName) {
+        item.updatedDate = new Date();
+        item.createdDate = new Date();
         return this._getDatabaseAsync().then((db) => {
             return db.collection(collectionName);
         }).then((collection) => {
@@ -296,8 +298,6 @@ class ClarityTransactionDispatcher {
             component.entity_id = entity._id;
             return this.validateComponentAsync(entity, component);
         }).then(() => {
-            component.updatedDate = new Date();
-            component.createdDate = new Date();
             return this._addItemToCollectionAsync(component, COMPONENTS_COLLECTION);
         }).then(newComponent => {
             savedComponent = newComponent;
@@ -343,15 +343,11 @@ class ClarityTransactionDispatcher {
         }).then(() => {
             // Save the entity.
             entity.content_id = contentId;
-            entity.updatedDate = new Date();
-            entity.createdDate = new Date();
             return this._addItemToCollectionAsync(entity, ENTITIES_COLLECTION);
         }).then(() => {
             // Validate and save all the components. 
             return components.reduce((promise, component) => {
                 component.entity_id = entity._id;
-                component.updatedDate = new Date();
-                component.createdDate = new Date();
                 return this.validateComponentAsync(entity, component).then(() => {
                     return this._addItemToCollectionAsync(component, COMPONENTS_COLLECTION);
                 }).then((savedComponent) => {
@@ -610,8 +606,8 @@ class ClarityTransactionDispatcher {
     getEntitiesAsync(config) {
         var lastId = config.lastId;
         var pageSize = config.pageSize < 50 ? config.pageSize : 50;
-        var lastUpdatedId = config.lastUpdatedId;
-        var lastCreatedId = config.lastCreatedId;
+        var lastUpdatedDate = config.lastUpdatedDate;
+        var lastCreatedDate = config.lastCreatedDate;
         var sort = [["_id", 1]];
         var filter = {};
         if (lastId != null) {
@@ -619,20 +615,20 @@ class ClarityTransactionDispatcher {
                 $gt: this.ObjectID(lastId)
             };
         }
-        if (lastCreatedId != null) {
+        if (lastCreatedDate != null) {
             filter.createdDate = {
-                $gt: lastCreatedId
+                $gt: lastCreatedDate
             };
             sort.push(["createdDate", 1]);
         }
-        if (lastUpdatedId != null) {
+        if (lastUpdatedDate != null) {
             filter.updatedDate = {
-                $gt: lastUpdatedId
+                $gt: lastUpdatedDate
             };
             sort.push(["updatedDate", 1]);
         }
         return this._getDatabaseAsync().then((db) => {
-            return db.collection(ENTITIES_COLLECTION).find(filter).limit(pageSize).sort(sort).toArray();
+            return db.collection(ENTITIES_COLLECTION).find(filter).limit(parseInt(pageSize, 10)).sort(sort).toArray();
         });
     }
     /**
@@ -659,9 +655,8 @@ class ClarityTransactionDispatcher {
      */
     getEntityContentStreamByEntityAsync(entity) {
         return this._getGridFsAsync().then((gfs) => {
-            var id = this.ObjectID(entity.content_id);
             return gfs.createReadStream({
-                _id: id
+                _id: this.ObjectID(entity.content_id)
             });
         });
     }
@@ -779,6 +774,8 @@ class ClarityTransactionDispatcher {
             return this.updateEntityAsync(entity);
         }).then(() => {
             return this._notifySystemsWithRecoveryAsync("entityContentUpdatedAsync", [null, contentId]);
+        }).then(() => {
+            return this.getEntityByIdAsync(entity._id);
         }).catch((error) => {
             this.logError(error);
             throw error;
@@ -848,15 +845,19 @@ class ClarityTransactionDispatcher {
      */
     updateEntityContentByStreamAsync(entity, stream) {
         var contentId = null;
+        var updatedEntity = null;
         var oldContentId = entity.content_id;
         return this._addItemToGridFs(stream).then((id) => {
             contentId = id;
             return this.validateEntityContentAsync(entity, id);
-        }).then((id) => {
-            entity.content_id = this.ObjectID(contentId);
-            return this._updateItemInCollectionAsync(entity, ENTITIES_COLLECTION);
         }).then(() => {
+            entity.content_id = this.ObjectID(contentId);
+            return this.updateEntityAsync(entity);
+        }).then((entity) => {
+            updatedEntity = entity;
             return this._removeItemFromGridFsAsync(oldContentId);
+        }).then(() => {
+            return updatedEntity;
         }).catch((error) => {
             if (contentId != null) {
                 entity.content_id = oldContentId;
