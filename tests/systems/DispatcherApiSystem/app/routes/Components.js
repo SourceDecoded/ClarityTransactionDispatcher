@@ -38,6 +38,8 @@ componentRouter.post("/", (request, response) => {
 componentRouter.get("/", (request, response) => {
     const dispatcher = response.locals.clarityTransactionDispatcher;
     const componentId = request.query.id;
+    const entityId = request.query.entityId;
+    const type = request.query.type;
     const getCount = request.query.count;
     if (componentId) {
         dispatcher.getComponentByIdAsync(componentId).then(component => {
@@ -54,7 +56,23 @@ componentRouter.get("/", (request, response) => {
         });
     }
     else {
-        response.status(400).send({ message: "An id or count parameter was not provided." });
+        if (entityId && !type) {
+            dispatcher.getComponentsByEntityAsync({ _id: entityId }).then(components => {
+                response.status(200).send({ data: { components } });
+            }).catch(error => {
+                response.status(400).send({ message: error.message });
+            });
+        }
+        else if (entityId && type) {
+            dispatcher.getComponentsByEntityAsync({ _id: entityId }, type).then(components => {
+                response.status(200).send({ data: { components } });
+            }).catch(error => {
+                response.status(400).send({ message: error.message });
+            });
+        }
+        else {
+            response.status(400).send({ message: "An id, entityId, entityId and type, or count parameter were not provided." });
+        }
     }
 });
 componentRouter.patch("/", (request, response) => {
