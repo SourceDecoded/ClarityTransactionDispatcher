@@ -56,13 +56,13 @@ export default class ClarityTransactionDispatcher {
     }
 
     private _addItemToGridFs(stream: NodeJS.ReadableStream): any {
-        var newContentId = uuid.v4();
+        var newContentId = this.ObjectID();
         stream.pause();
 
         return this._getGridFsAsync().then((gfs: IGridFs) => {
             return new Promise((resolve, reject) => {
                 var writeStream = gfs.createWriteStream({
-                    _id: this.ObjectID(newContentId)
+                    _id: newContentId
                 });
 
                 stream.on("end", () => {
@@ -84,6 +84,8 @@ export default class ClarityTransactionDispatcher {
      * @private
      */
     private _addItemToCollectionAsync(item: any, collectionName: string) {
+        item.updatedDate = new Date();
+        item.createdDate = new Date();
         return this._getDatabaseAsync().then((db: any) => {
             return db.collection(collectionName);
         }).then((collection) => {
@@ -92,6 +94,23 @@ export default class ClarityTransactionDispatcher {
             item._id = result.insertedId;
             return item;
         });
+    }
+
+    private _createEntityByIdAsync(id?) {
+        return this._createObjectIdAsync(id).then((objectId) => {
+            return {
+                _id: objectId
+            };
+        });
+    }
+
+    private _createObjectIdAsync(id) {
+        try {
+            id = id != null ? this.ObjectID(id) : null
+            return Promise.resolve(id);
+        } catch (error) {
+            return Promise.reject(error);
+        }
     }
 
     /** 
@@ -317,15 +336,20 @@ export default class ClarityTransactionDispatcher {
      * @param {object} component - The component being added.
      */
     addComponentAsync(entity: IEntity, component: IComponent) {
-        component.entity_id = this.ObjectID(entity._id);
+        var savedComponent;
 
-        return this.validateComponentAsync(entity, component).then(() => {
-            (<any>component).updatedDate = new Date();
-            (<any>component).createdDate = new Date();
-
-            return this._addItemToCollectionAsync(component, COMPONENTS_COLLECTION);
+        return this._createObjectIdAsync(entity._id).then((entityId) => {
+            return this.getEntityByIdAsync(entityId);
+        }).then(entity => {
+            component.entity_id = entity._id;
+            return this.validateComponentAsync(entity, component);
         }).then(() => {
-            return this._notifySystemsWithRecoveryAsync("entityComponentAddedAsync", [entity, component]);
+            return this._addItemToCollectionAsync(component, COMPONENTS_COLLECTION);
+        }).then(newComponent => {
+            savedComponent = newComponent;
+            return this._notifySystemsWithRecoveryAsync("entityComponentAddedAsync", [entity, savedComponent]);
+        }).then(() => {
+            return savedComponent;
         }).catch((error) => {
             this.logError(error);
             throw error;
@@ -342,49 +366,40 @@ export default class ClarityTransactionDispatcher {
      * - Validate and save the components.
      * - Notify the systems that an entity with its components and content have been saved.
      * - If any of the steps above fail, it will retract the whole transaction and notify the systems of doing so.
-     * @param {IEntity} entity - The entity you want to add.
      * @param {NodeJS.ReadableStream} stream - The content of the entity.
      * @param {Array<component>} components - An array of components belonging to the entity.
+     * @param {string} entityId - The id that you want to assign to the entity.
      * @return {Promise}
      */
     addEntityAsync(contentStream?: NodeJS.ReadableStream, components?: Array<{ type: string }>, entityId?: string) {
-        var contentPromise;
         var contentId;
         var savedComponents = [];
-        var savedEntity;
-        var entity: IEntity = {
-            _id: entityId ? this.ObjectID(entityId) : null
-        };
+        var entity: IEntity;
 
-        if (contentStream == null) {
-            contentPromise = Promise.resolve(null);
-        } else {
-            contentPromise = this._addItemToGridFs(contentStream);
-        }
+        return this._createEntityByIdAsync(entityId).then((newEntity) => {
+            entity = newEntity
 
-        return contentPromise.then((id) => {
-            // Validate the entity.
+            if (contentStream == null) {
+                return Promise.resolve(null);
+            } else {
+                return this._addItemToGridFs(contentStream);
+            }
 
-            return this.validateEntityAsync(entity).then(() => {
-                return id;
-            });
-        }).then((id) => {
+        }).then((newContentId) => {
+            // Validate the entity, and save the contentId.
+            contentId = newContentId;
+            return this.validateEntityAsync(entity);
+        }).then(() => {
             // Save the entity.
-
-            contentId = id;
             entity.content_id = contentId;
-            entity.updatedDate = new Date();
-            entity.createdDate = new Date();
 
             return this._addItemToCollectionAsync(entity, ENTITIES_COLLECTION);
-        }).then((entity) => {
+        }).then(() => {
             // Validate and save all the components. 
-            savedEntity = entity;
-
             return components.reduce((promise: Promise<any>, component: any) => {
-                component.entity_id = savedEntity._id;
+                component.entity_id = entity._id;
 
-                return this.validateComponentAsync(savedEntity, component).then(() => {
+                return this.validateComponentAsync(entity, component).then(() => {
                     return this._addItemToCollectionAsync(component, COMPONENTS_COLLECTION);
                 }).then((savedComponent) => {
                     savedComponents.push(savedComponent);
@@ -394,16 +409,16 @@ export default class ClarityTransactionDispatcher {
         }).then(() => {
             // Notify the systems of all that has taken place.
 
-            return this._notifySystemsWithRecoveryAsync("entityAddedAsync", [savedEntity]).then(() => {
+            return this._notifySystemsWithRecoveryAsync("entityAddedAsync", [entity]).then(() => {
                 return this._notifySystemsWithRecoveryAsync("entityContentUpdatedAsync", [null, contentId]);
             }).then(() => {
                 return savedComponents.reduce((promise: Promise<any>, component) => {
-                    return this._notifySystemsWithRecoveryAsync("entityComponentAddedAsync", [savedEntity, component]);
+                    return this._notifySystemsWithRecoveryAsync("entityComponentAddedAsync", [entity, component]);
                 }, resolvedPromise);
             });
         }).then(() => {
             const savedData = {
-                entity: savedEntity,
+                entity: entity,
                 components: savedComponents
             };
 
@@ -415,8 +430,8 @@ export default class ClarityTransactionDispatcher {
 
             this.logError(error);
 
-            if (savedEntity != null) {
-                this.removeEntityAsync(savedEntity);
+            if (entity != null) {
+                this.removeEntityAsync(entity);
             } else {
                 if (contentId != null) {
                     this._removeItemFromGridFsAsync(contentId);
@@ -586,14 +601,13 @@ export default class ClarityTransactionDispatcher {
      * @return {Promise<Array>}
      */
     getComponentByIdAsync(componentId: string) {
-        var filter = {
-            _id: this.ObjectID(componentId)
-        };
-
-        return this._findOneAsync(COMPONENTS_COLLECTION, filter).then(component => {
-            return this._notifySystemsWithRecoveryAsync("entityComponentRetrievedAsync", [null, component]).then(() => {
-                return component;
-            });
+        return this._createObjectIdAsync(componentId).then(objectId => {
+            const filter = { _id: objectId };
+            return this._findOneAsync(COMPONENTS_COLLECTION, filter).then(component => {
+                return this._notifySystemsWithRecoveryAsync("entityComponentRetrievedAsync", [null, component]).then(() => {
+                    return component;
+                });
+            })
         }).catch((error) => {
             this.logError(error);
             throw error;
@@ -664,8 +678,8 @@ export default class ClarityTransactionDispatcher {
     getEntitiesAsync(config) {
         var lastId = config.lastId;
         var pageSize = config.pageSize < 50 ? config.pageSize : 50;
-        var lastUpdatedId = config.lastUpdatedId;
-        var lastCreatedId = config.lastCreatedId;
+        var lastUpdatedDate = config.lastUpdatedDate;
+        var lastCreatedDate = config.lastCreatedDate;
 
         var sort = [["_id", 1]];
         var filter = <any>{};
@@ -676,22 +690,22 @@ export default class ClarityTransactionDispatcher {
             };
         }
 
-        if (lastCreatedId != null) {
+        if (lastCreatedDate != null) {
             filter.createdDate = {
-                $gt: lastCreatedId
+                $gt: lastCreatedDate
             };
             sort.push(["createdDate", 1]);
         }
 
-        if (lastUpdatedId != null) {
+        if (lastUpdatedDate != null) {
             filter.updatedDate = {
-                $gt: lastUpdatedId
+                $gt: lastUpdatedDate
             };
             sort.push(["updatedDate", 1]);
         }
 
         return this._getDatabaseAsync().then((db: any) => {
-            return db.collection(ENTITIES_COLLECTION).find(filter).limit(pageSize).sort(sort).toArray();
+            return db.collection(ENTITIES_COLLECTION).find(filter).limit(parseInt(pageSize, 10)).sort(sort).toArray();
         });
     }
 
@@ -701,11 +715,9 @@ export default class ClarityTransactionDispatcher {
      * @return {Promise<Entity>} - A Promise resolved with the entity or null.
      */
     getEntityByIdAsync(entityId: string) {
-        var filter = {
-            _id: this.ObjectID(entityId)
-        };
-
-        return this._findOneAsync(ENTITIES_COLLECTION, filter).then(entity => {
+        return this._createEntityByIdAsync(entityId).then(filter => {
+            return this._findOneAsync(ENTITIES_COLLECTION, filter);
+        }).then(entity => {
             return this._notifySystemsWithRecoveryAsync("entityRetrievedAsync", [entity]).then(() => {
                 return entity;
             });
@@ -722,9 +734,8 @@ export default class ClarityTransactionDispatcher {
      */
     getEntityContentStreamByEntityAsync(entity: IEntity) {
         return this._getGridFsAsync().then((gfs: any) => {
-            var id = this.ObjectID(entity.content_id);
             return gfs.createReadStream({
-                _id: id
+                _id: this.ObjectID(entity.content_id)
             });
         });
     }
@@ -856,7 +867,9 @@ export default class ClarityTransactionDispatcher {
             entity.content_id = null;
             return this.updateEntityAsync(entity);
         }).then(() => {
-            return this._notifySystemsWithRecoveryAsync("entityContentUpdatedAsync", [null, contentId]);
+            return this._notifySystemsWithRecoveryAsync("entityContentRemovedAsync", [null, contentId]);
+        }).then(() => {
+            return this.getEntityByIdAsync(entity._id);
         }).catch((error) => {
             this.logError(error);
             throw error;
@@ -929,16 +942,20 @@ export default class ClarityTransactionDispatcher {
      */
     updateEntityContentByStreamAsync(entity: IEntity, stream: NodeJS.ReadableStream) {
         var contentId = null;
+        var updatedEntity = null;
         var oldContentId = entity.content_id;
 
         return this._addItemToGridFs(stream).then((id: string) => {
             contentId = id;
             return this.validateEntityContentAsync(entity, id);
-        }).then((id: string) => {
-            entity.content_id = this.ObjectID(contentId);
-            return this._updateItemInCollectionAsync(entity, ENTITIES_COLLECTION);
         }).then(() => {
+            entity.content_id = this.ObjectID(contentId);
+            return this.updateEntityAsync(entity);
+        }).then((entity) => {
+            updatedEntity = entity;
             return this._removeItemFromGridFsAsync(oldContentId);
+        }).then(() => {
+            return updatedEntity;
         }).catch((error) => {
             if (contentId != null) {
                 entity.content_id = oldContentId;
@@ -961,7 +978,12 @@ export default class ClarityTransactionDispatcher {
      * @param {object} component - The component to be updated.
      */
     updateComponentAsync(component: IComponent) {
-        return this.getEntityByIdAsync(component.entity_id).then((entity) => {
+        let oldEntity;
+
+        return this._createObjectIdAsync(component.entity_id).then(entityId => {
+            return this.getEntityByIdAsync(entityId);
+        }).then((entity) => {
+            oldEntity = entity;
             return this.validateComponentAsync(entity, component);
         }).then(() => {
             return this._findOneAsync(COMPONENTS_COLLECTION, {
@@ -969,12 +991,17 @@ export default class ClarityTransactionDispatcher {
             });
         }).then((oldComponent: any) => {
             component._id = oldComponent._id;
+            (<any>component).updatedDate = new Date();
 
             return this._updateItemInCollectionAsync(component, COMPONENTS_COLLECTION).then(() => {
                 return oldComponent;
             });
         }).then((oldComponent) => {
             return this._notifySystemsWithRecoveryAsync("componentUpdatedAsync", [oldComponent, component]);
+        }).then(() => {
+            return this.updateEntityAsync(oldEntity);
+        }).then(() => {
+            return component;
         }).catch((error) => {
             this.logError(error);
             throw error;

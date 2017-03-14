@@ -2,8 +2,8 @@
 const express = require("express");
 const ClarityTransactionDispatcher_1 = require("./library/ClarityTransactionDispatcher");
 const MongoFactory_1 = require("./library/MongoFactory");
-const DispatcherApiSystem_1 = require("./systems/DispatcherApiSystem");
-const DispatcherMonitorSystem_1 = require("./systems/DispatcherMonitorSystem");
+const DispatcherApiSystem_1 = require("./tests/systems/DispatcherApiSystem");
+const DispatcherMonitorSystem_1 = require("./tests/systems/DispatcherMonitorSystem");
 const mongoFactory = new MongoFactory_1.default();
 let server;
 let app = express();

@@ -1,15 +1,12 @@
-import entitiesRoute from "./routes/Entities";
-import componentsRoute from "./routes/Components";
-
-export default class Router {
-    app: any;
-    clarityTransactionDispatcher: any;
-
+"use strict";
+const Entities_1 = require("./routes/Entities");
+const Components_1 = require("./routes/Components");
+const Content_1 = require("./routes/Content");
+class Router {
     constructor(app, clarityTransactionDispatcher) {
         this.app = app;
         this.clarityTransactionDispatcher = clarityTransactionDispatcher;
     }
-
     init() {
         this.app.use((request, response, next) => {
             response.header("Access-Control-Allow-Origin", "*");
@@ -18,8 +15,11 @@ export default class Router {
             response.locals.clarityTransactionDispatcher = this.clarityTransactionDispatcher;
             next();
         });
-
-        this.app.use("/api/entities", entitiesRoute);
-        this.app.use("/api/components", componentsRoute);
+        this.app.use("/api/entities", Entities_1.default);
+        this.app.use("/api/components", Components_1.default);
+        this.app.use("/api/content", Content_1.default);
     }
 }
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = Router;
+//# sourceMappingURL=Router.js.map
