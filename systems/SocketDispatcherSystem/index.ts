@@ -1,4 +1,4 @@
-import ClarityTransactionDispatcher from "./../library/ClarityTransactionDispatcher";
+import ClarityTransactionDispatcher from "./../../library/ClarityTransactionDispatcher";
 
 export default class SocketDispatcherSystem {
     private _socketStream;
