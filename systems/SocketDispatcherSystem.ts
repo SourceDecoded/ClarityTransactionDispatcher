@@ -1,6 +1,6 @@
 import ClarityTransactionDispatcher from "./../library/ClarityTransactionDispatcher";
 
-export default class RemoteDispatcherSystem {
+export default class SocketDispatcherSystem {
     private _socketStream;
     private _socketStreamInstance;
     private _socket;
@@ -29,7 +29,31 @@ export default class RemoteDispatcherSystem {
         this._socketStreamInstance = this._socketStream(this._socket);
     }
 
+    private _buildMethodAsync(methodName: string) {
+        this._socket.on(methodName, (data) => {
+            if (data.id != null && Array.isArray(data.arguments)) {
+                this._clarityTransactionDispatcher[methodName].apply(this._clarityTransactionDispatcher, arguments).then((response) => {
+                    this._respond(data.id, response);
+                }).catch((error) => {
+                    this._respondByError(data.id, error);
+                });
+            }
+        });
+    }
+
     private _buildMethod(methodName: string) {
+        this._socket.on(methodName, (data) => {
+            if (data.id != null && Array.isArray(data.arguments)) {
+                try {
+                    this._respond(data.id, this._clarityTransactionDispatcher[methodName].apply(this._clarityTransactionDispatcher, arguments));
+                } catch (error) {
+                    this._respondByError(data.id, error);
+                }
+            }
+        });
+    }
+
+    private _buildReturnStreamMethodAsync(methodName: string) {
         this._socket.on(methodName, (data) => {
             if (data.id != null && Array.isArray(data.arguments)) {
                 this._clarityTransactionDispatcher[methodName].apply(this._clarityTransactionDispatcher, arguments).then((response) => {
@@ -42,19 +66,33 @@ export default class RemoteDispatcherSystem {
     }
 
     private _buildSocketInterface() {
-        this._buildMethod("addComponentAsync");
-        this._buildMethod("addEntityAsync");
-        this._buildMethod("approveComponentRemovalAsync");
-        this._buildMethod("approveEntityRemovalAsync");
-        this._buildMethod("getComponentByIdAsync");
-        this._buildMethod("getComponentsByEntityAndTypeAsync");
-        this._buildMethod("getComponentsByEntityAsync");
-        this._buildMethod("getEntityByIdAsync");
-
+        this._buildMethodAsync("addComponentAsync");
+        this._buildMethodAsync("addEntityAsync");
+        this._buildMethodAsync("approveComponentRemovalAsync");
+        this._buildMethodAsync("approveEntityRemovalAsync");
+        this._buildMethodAsync("getComponentByIdAsync");
+        this._buildMethodAsync("getComponentsByEntityAndTypeAsync");
+        this._buildMethodAsync("getComponentsByEntityAsync");
+        this._buildMethodAsync("getEntityByIdAsync");
+        this._buildMethodAsync("getEntities");
+        this._buildMethodAsync("getEntityByIdAsync");
+        this._buildMethodAsync("getEntityContentStreamByContentIdAsync");
+        this._buildMethodAsync("getEntityContentStreamByEntityAsync");
+        this._buildMethod("logError");
+        this._buildMethod("logMessage");
+        this._buildMethod("logWarning");
+        this._buildMethodAsync("removeComponentAsync");
+        this._buildMethodAsync("removeEntityAsync");
+        this._buildMethodAsync("removeEntityContentAsync");
+        this._buildMethodAsync("updateComponentAsync");
+        this._buildMethodAsync("updateEntityAsync");
+        this._buildMethodAsync("validateComponentAsync");
+        this._buildMethodAsync("validateEntityAsync");
+        this._buildMethodAsync("validateEntityContentAsync");
     }
 
     private _respond(id, response) {
-        this._socket("response", {
+        this._socket.emit("response", {
             id: id,
             response: response,
             error: null
@@ -62,7 +100,7 @@ export default class RemoteDispatcherSystem {
     }
 
     private _respondByError(id, error) {
-        this._socket("response", {
+        this._socket.emit("response", {
             id: id,
             response: null,
             error: {
