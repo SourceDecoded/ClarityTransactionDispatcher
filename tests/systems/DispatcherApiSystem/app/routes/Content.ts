@@ -120,7 +120,7 @@ contentRouter.delete("/", (request, response) => {
 
     if (entity) {
         try {
-            entity = JSON.parse(entity)
+            entity = JSON.parse(entity);
         } catch (error) {
             return response.status(400).send({ message: error.message });
         }

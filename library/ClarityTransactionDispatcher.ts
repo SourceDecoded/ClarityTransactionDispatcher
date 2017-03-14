@@ -869,7 +869,7 @@ export default class ClarityTransactionDispatcher {
         }).then(() => {
             return this._notifySystemsWithRecoveryAsync("entityContentRemovedAsync", [null, contentId]);
         }).then(() => {
-            //return this.getEntityByIdAsync(entity._id);
+            return this.getEntityByIdAsync(entity._id);
         }).catch((error) => {
             this.logError(error);
             throw error;
