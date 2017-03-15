@@ -354,7 +354,7 @@ fulfill their responsibilities efficiently.</p></div>
             
 <hr>
 <dt>
-    <h4 class="name" id="addEntityAsync"><span class="type-signature"></span>addEntityAsync(entity, stream, components)</h4>
+    <h4 class="name" id="addEntityAsync"><span class="type-signature"></span>addEntityAsync(stream, components, entityId)</h4>
     
     
 </dt>
@@ -406,30 +406,6 @@ entity are.</p>
 
         <tr>
             
-                <td class="name"><code>entity</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">IEntity</span>
-
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>The entity you want to add.</p></td>
-        </tr>
-
-    
-
-        <tr>
-            
                 <td class="name"><code>stream</code></td>
             
 
@@ -472,6 +448,30 @@ entity are.</p>
             
 
             <td class="description last"><p>An array of components belonging to the entity.</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>entityId</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">string</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>The id that you want to assign to the entity.</p></td>
         </tr>
 
     
@@ -1635,6 +1635,84 @@ good. This allows the system to clean up after itself if needed. The dispatcher 
             
 <hr>
 <dt>
+    <h4 class="name" id="getComponentCountAsync"><span class="type-signature"></span>getComponentCountAsync()</h4>
+    
+    
+</dt>
+<dd>
+
+    
+    <div class="description">
+        <p>Get count for all components in collection.</p>
+    </div>
+    
+
+    
+
+    
+
+    
+    
+
+    
+<dl class="details">
+    
+
+	
+
+	
+
+	
+
+    
+
+    
+
+    
+
+    
+
+	
+
+	
+
+	
+
+	
+
+	
+
+
+
+	
+
+	
+
+	
+
+	
+</dl>
+
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dd>
+
+        
+            
+<hr>
+<dt>
     <h4 class="name" id="getComponentsByEntityAndTypeAsync"><span class="type-signature"></span>getComponentsByEntityAndTypeAsync(entity, type)</h4>
     
     
@@ -1935,7 +2013,7 @@ good. This allows the system to clean up after itself if needed. The dispatcher 
             
 <hr>
 <dt>
-    <h4 class="name" id="getEntitiesIterator"><span class="type-signature"></span>getEntitiesIterator()</h4>
+    <h4 class="name" id="getEntitiesAsync"><span class="type-signature"></span>getEntitiesAsync(config)</h4>
     
     
 </dt>
@@ -1943,7 +2021,7 @@ good. This allows the system to clean up after itself if needed. The dispatcher 
 
     
     <div class="description">
-        <p>Get an Iterator of the all entities.</p>
+        <p>Page through entities using the lastId from a previous query. Use null or undefined to begin at the beginning.</p>
     </div>
     
 
@@ -1952,6 +2030,50 @@ good. This allows the system to clean up after itself if needed. The dispatcher 
     
 
     
+    
+        <h5>Parameters:</h5>
+        
+
+<table class="params table table-striped">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>config</code></td>
+            
+
+            <td class="type">
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>The configuration of the query. It takes a lastId, and a pageSize.</p></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
     
 
     
@@ -2005,26 +2127,6 @@ good. This allows the system to clean up after itself if needed. The dispatcher 
     
 
     
-    <h5>Returns:</h5>
-    
-            
-
-
-<dl>
-    <dt>
-        Type
-    </dt>
-    <dd>
-        
-<span class="param-type"><a href="MongoDbIterator.html">MongoDbIterator</a></span>
-
-
-
-    </dd>
-</dl>
-
-
-        
 
     
 </dd>
@@ -2487,6 +2589,84 @@ good. This allows the system to clean up after itself if needed. The dispatcher 
 
 
         
+
+    
+</dd>
+
+        
+            
+<hr>
+<dt>
+    <h4 class="name" id="getEntityCountAsync"><span class="type-signature"></span>getEntityCountAsync()</h4>
+    
+    
+</dt>
+<dd>
+
+    
+    <div class="description">
+        <p>Get count for all entities in collection.</p>
+    </div>
+    
+
+    
+
+    
+
+    
+    
+
+    
+<dl class="details">
+    
+
+	
+
+	
+
+	
+
+    
+
+    
+
+    
+
+    
+
+	
+
+	
+
+	
+
+	
+
+	
+
+
+
+	
+
+	
+
+	
+
+	
+</dl>
+
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
 
     
 </dd>
@@ -3682,7 +3862,7 @@ removed.</p>
         <p>Update a component. The dispatcher will perform the following actions when
 updating the component of an entity.</p>
 <ul>
-<li>Validate the component. All interested systesm need to validate to pass.</li>
+<li>Validate the component. All interested systems need to validate to pass.</li>
 <li>Save the component to the datastore.</li>
 <li>Notify the systems that the component was updated.</li>
 </ul>
@@ -4631,7 +4811,7 @@ to hold it in memory.</p>
 <span class="jsdoc-message">
 	Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.3</a>
 	
-		on March 9th 2017, 4:11:19 pm
+		on March 14th 2017, 10:07:25 am
 	
 	using the <a href="https://github.com/docstrap/docstrap">DocStrap template</a>.
 </span>

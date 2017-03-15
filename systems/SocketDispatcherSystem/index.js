@@ -1,5 +1,5 @@
 "use strict";
-class RemoteDispatcherSystem {
+class SocketDispatcherSystem {
     constructor(config) {
         this._name = "RemoteDispatcherSystem";
         this._guid = "b42ea3d4-1ef6-4f00-8630-298366160df8";
@@ -16,7 +16,30 @@ class RemoteDispatcherSystem {
         this._socket = config.socket;
         this._socketStreamInstance = this._socketStream(this._socket);
     }
+    _buildMethodAsync(methodName) {
+        this._socket.on(methodName, (data) => {
+            if (data.id != null && Array.isArray(data.arguments)) {
+                this._clarityTransactionDispatcher[methodName].apply(this._clarityTransactionDispatcher, arguments).then((response) => {
+                    this._respond(data.id, response);
+                }).catch((error) => {
+                    this._respondByError(data.id, error);
+                });
+            }
+        });
+    }
     _buildMethod(methodName) {
+        this._socket.on(methodName, (data) => {
+            if (data.id != null && Array.isArray(data.arguments)) {
+                try {
+                    this._respond(data.id, this._clarityTransactionDispatcher[methodName].apply(this._clarityTransactionDispatcher, arguments));
+                }
+                catch (error) {
+                    this._respondByError(data.id, error);
+                }
+            }
+        });
+    }
+    _buildReturnStreamMethodAsync(methodName) {
         this._socket.on(methodName, (data) => {
             if (data.id != null && Array.isArray(data.arguments)) {
                 this._clarityTransactionDispatcher[methodName].apply(this._clarityTransactionDispatcher, arguments).then((response) => {
@@ -28,24 +51,39 @@ class RemoteDispatcherSystem {
         });
     }
     _buildSocketInterface() {
-        this._buildMethod("addComponentAsync");
-        this._buildMethod("addEntityAsync");
-        this._buildMethod("approveComponentRemovalAsync");
-        this._buildMethod("approveEntityRemovalAsync");
-        this._buildMethod("getComponentByIdAsync");
-        this._buildMethod("getComponentsByEntityAndTypeAsync");
-        this._buildMethod("getComponentsByEntityAsync");
-        this._buildMethod("getEntityByIdAsync");
+        this._buildMethodAsync("addComponentAsync");
+        this._buildMethodAsync("addEntityAsync");
+        this._buildMethodAsync("approveComponentRemovalAsync");
+        this._buildMethodAsync("approveEntityRemovalAsync");
+        this._buildMethodAsync("getComponentByIdAsync");
+        this._buildMethodAsync("getComponentsByEntityAndTypeAsync");
+        this._buildMethodAsync("getComponentsByEntityAsync");
+        this._buildMethodAsync("getEntityByIdAsync");
+        this._buildMethodAsync("getEntities");
+        this._buildMethodAsync("getEntityByIdAsync");
+        this._buildMethodAsync("getEntityContentStreamByContentIdAsync");
+        this._buildMethodAsync("getEntityContentStreamByEntityAsync");
+        this._buildMethod("logError");
+        this._buildMethod("logMessage");
+        this._buildMethod("logWarning");
+        this._buildMethodAsync("removeComponentAsync");
+        this._buildMethodAsync("removeEntityAsync");
+        this._buildMethodAsync("removeEntityContentAsync");
+        this._buildMethodAsync("updateComponentAsync");
+        this._buildMethodAsync("updateEntityAsync");
+        this._buildMethodAsync("validateComponentAsync");
+        this._buildMethodAsync("validateEntityAsync");
+        this._buildMethodAsync("validateEntityContentAsync");
     }
     _respond(id, response) {
-        this._socket("response", {
+        this._socket.emit("response", {
             id: id,
             response: response,
             error: null
         });
     }
     _respondByError(id, error) {
-        this._socket("response", {
+        this._socket.emit("response", {
             id: id,
             response: null,
             error: {
@@ -79,5 +117,5 @@ class RemoteDispatcherSystem {
     validateEntityContentAsync(entity, oldContentId, newContentId) { }
 }
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.default = RemoteDispatcherSystem;
+exports.default = SocketDispatcherSystem;
 //# sourceMappingURL=index.js.map
