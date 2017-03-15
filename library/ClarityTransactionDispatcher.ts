@@ -986,9 +986,7 @@ export default class ClarityTransactionDispatcher {
             oldEntity = entity;
             return this.validateComponentAsync(entity, component);
         }).then(() => {
-            return this._findOneAsync(COMPONENTS_COLLECTION, {
-                _id: this.ObjectID(component._id)
-            });
+            return this.getComponentByIdAsync(component._id);
         }).then((oldComponent: any) => {
             component._id = oldComponent._id;
             (<any>component).updatedDate = new Date();
@@ -997,7 +995,7 @@ export default class ClarityTransactionDispatcher {
                 return oldComponent;
             });
         }).then((oldComponent) => {
-            return this._notifySystemsWithRecoveryAsync("componentUpdatedAsync", [oldComponent, component]);
+            return this._notifySystemsWithRecoveryAsync("entityComponentUpdatedAsync", [oldEntity, oldComponent, component]);
         }).then(() => {
             return this.updateEntityAsync(oldEntity);
         }).then(() => {
