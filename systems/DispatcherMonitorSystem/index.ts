@@ -64,6 +64,23 @@ export default class DispatcherMonitorSystem {
         server.listen(3007, () => console.log("Socket Monitor Server is running locally on port 3007..."));
     }
 
+    private _createTransactionByIdAsync(id?) {
+        return this._createObjectIdAsync(id).then((objectId) => {
+            return {
+                _id: objectId
+            };
+        });
+    }
+
+    private _createObjectIdAsync(id) {
+        try {
+            id = id != null ? this.ObjectID(id) : null
+            return Promise.resolve(id);
+        } catch (error) {
+            return Promise.reject(error);
+        }
+    }
+
     private _createUptimeAsync() {
         const uptime = {
             startDate: new Date(),
@@ -193,8 +210,9 @@ export default class DispatcherMonitorSystem {
 
     entityComponentRetrievedAsync(entity, component) {
         const type = "entityComponentRetrieved";
+        const entityId = entity ? this.ObjectID(entity._id) : null;
 
-        this._addTransactionAsync(type, { entityId: this.ObjectID(entity._id), componentId: this.ObjectID(component._id) }).then((transaction) => {
+        this._addTransactionAsync(type, { entityId, componentId: this.ObjectID(component._id) }).then((transaction) => {
             this._emitIOEvents(type, transaction);
         }).catch(error => {
             console.log(error);
@@ -213,6 +231,65 @@ export default class DispatcherMonitorSystem {
     getLatestUptimeAsync() {
         return this._getDatabaseAsync().then((db: any) => {
             return db.collection(UPTIMES_COLLECTION).findOne({}, { sort: { $natural: -1 } })
+        });
+    }
+
+    getTransactionByIdAsync(transactionId) {
+        return this._createTransactionByIdAsync(transactionId).then(filter => {
+            return this._findOneAsync(TRANSACTIONS_COLLECTION, filter);
+        }).then(transaction => {
+            return transaction;
+        }).catch((error) => {
+            console.log(error);
+        });
+    }
+
+    getTransactionsAsync(config: any) {
+        var lastId = config.lastId;
+        var pageSize = config.pageSize < 50 ? config.pageSize : 50;
+
+        var sort = [["_id", 1]];
+        var filter = <any>{};
+
+        if (lastId != null) {
+            filter._id = {
+                $gt: this.ObjectID(lastId)
+            };
+        }
+
+        return this._getDatabaseAsync().then((db: any) => {
+            return db.collection(TRANSACTIONS_COLLECTION).find(filter).limit(parseInt(pageSize, 10)).sort(sort).toArray();
+        });
+    }
+
+    convertToDates(obj) {
+        if (obj == null) {
+            return obj;
+        }
+
+        var result = Array.isArray(obj) ? [] : {};
+
+        Object.keys(obj).forEach((key) => {
+            if (obj[key] != null && obj[key].$date != null) {
+                result[key] = new Date(obj[key].$date);
+            } else if (obj[key] != null && typeof obj[key] === "object") {
+                result[key] = this.convertToDates(obj[key]);
+            } else {
+                result[key] = obj[key]
+            }
+        });
+
+        return result;
+    }
+
+    getTransactionCountAsync(filter) {
+        filter = filter ? filter : {};
+        filter = this.convertToDates(filter);
+
+        return this._getDatabaseAsync().then((db: any) => {
+            return db.collection(TRANSACTIONS_COLLECTION);
+        }).then((collection) => {
+            return collection.find(filter).count();
         });
     }
 }
