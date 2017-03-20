@@ -1,4 +1,5 @@
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 const stream = require("stream");
 class GridFs {
     constructor(config) {
@@ -36,6 +37,5 @@ class GridFs {
         });
     }
 }
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = GridFs;
 //# sourceMappingURL=GridFs.js.map

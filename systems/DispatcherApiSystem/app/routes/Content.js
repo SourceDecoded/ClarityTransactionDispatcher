@@ -1,4 +1,5 @@
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 const express = require("express");
 const Busboy = require("busboy");
 const contentRouter = express.Router();
@@ -122,6 +123,5 @@ contentRouter.delete("/", (request, response) => {
         response.status(400).send({ message: "An entity is needed to remove a contentStream." });
     }
 });
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = contentRouter;
 //# sourceMappingURL=Content.js.map
