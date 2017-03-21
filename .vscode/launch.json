@@ -26,7 +26,7 @@
             "type": "node",
             "request": "launch",
             "name": "Debug Systems",
-            "program": "${workspaceRoot}\\index.js",
+            "program": "${workspaceRoot}\\examples\\index.js",
             "cwd": "${workspaceRoot}",
             "outFiles": [],
             "sourceMaps": true

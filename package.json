@@ -25,6 +25,7 @@
     "busboy": "^0.2.14",
     "express": "^4.14.1",
     "gridfs-stream": "^1.1.1",
+    "jwt-simple": "^0.5.1",
     "mongodb": "^2.2.24",
     "node-uuid": "^1.4.7",
     "socket.io": "^1.7.3",

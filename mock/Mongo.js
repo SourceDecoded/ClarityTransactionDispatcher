@@ -1,4 +1,5 @@
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 const MongoClient_1 = require("./MongoClient");
 const ObjectID_1 = require("./ObjectID");
 class Mongo {
@@ -8,6 +9,5 @@ class Mongo {
         this.ObjectID = ObjectID_1.default;
     }
 }
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = Mongo;
 //# sourceMappingURL=Mongo.js.map

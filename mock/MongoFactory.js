@@ -1,4 +1,5 @@
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 const GridFs_1 = require("./GridFs");
 const Mongo_1 = require("./Mongo");
 class MongoFactory {
@@ -13,6 +14,5 @@ class MongoFactory {
         return this.gridFs;
     }
 }
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = MongoFactory;
 //# sourceMappingURL=MongoFactory.js.map

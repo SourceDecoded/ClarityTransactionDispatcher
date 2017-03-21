@@ -1,4 +1,5 @@
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 const express = require("express");
 const Busboy = require("busboy");
 const entityRouter = express.Router();
@@ -126,6 +127,5 @@ entityRouter.delete("/", (request, response) => {
         response.status(400).send({ message: "The id of the entity to be deleted was not provided as a parameter." });
     }
 });
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = entityRouter;
 //# sourceMappingURL=Entities.js.map

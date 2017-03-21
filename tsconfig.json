@@ -3,7 +3,6 @@
         "target": "es2015",
         "module":"commonjs",
         "sourceMap": true,
-        "typeRoots" : ["./typings/globals"],
         "removeComments": false
     }
 }

@@ -1,4 +1,5 @@
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 const Uptimes_1 = require("./routes/Uptimes");
 const Transactions_1 = require("./routes/Transactions");
 class Router {
@@ -18,6 +19,5 @@ class Router {
         this.app.use("/api/transactions", Transactions_1.default);
     }
 }
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = Router;
 //# sourceMappingURL=Router.js.map
