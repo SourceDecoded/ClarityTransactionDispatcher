@@ -16,7 +16,7 @@ export default class Router {
 
     getToken(authorizationHeader) {
         var parts = authorizationHeader.split(" ");
-        return parts[parts.length-1].trim();
+        return parts[parts.length - 1].trim();
     }
 
     authenticate(request, response) {
@@ -27,12 +27,14 @@ export default class Router {
                 return {
                     verified: true,
                     message: null,
-                    statusCode: null
+                    statusCode: null,
+                    token: token
                 };
             } catch (error) {
                 return {
                     verified: false,
                     message: error.message,
+                    token: null,
                     statusCode: 401
                 };
             }
@@ -40,6 +42,7 @@ export default class Router {
         return {
             verified: true,
             message: null,
+            token: null,
             statusCode: null
         };
     }
@@ -55,6 +58,7 @@ export default class Router {
             var authenticationResult = this.authenticate(request, response);
 
             if (authenticationResult.verified) {
+                response.locals.token = authenticationResult.token;
                 next();
             } else {
                 response.status(authenticationResult.statusCode).send({ message: authenticationResult.message });

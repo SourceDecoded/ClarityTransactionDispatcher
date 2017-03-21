@@ -20,13 +20,15 @@ class Router {
                 return {
                     verified: true,
                     message: null,
-                    statusCode: null
+                    statusCode: null,
+                    token: token
                 };
             }
             catch (error) {
                 return {
                     verified: false,
                     message: error.message,
+                    token: null,
                     statusCode: 401
                 };
             }
@@ -34,6 +36,7 @@ class Router {
         return {
             verified: true,
             message: null,
+            token: null,
             statusCode: null
         };
     }
@@ -46,6 +49,7 @@ class Router {
             response.locals.authenticator = this.authenticator;
             var authenticationResult = this.authenticate(request, response);
             if (authenticationResult.verified) {
+                response.locals.token = authenticationResult.token;
                 next();
             }
             else {
