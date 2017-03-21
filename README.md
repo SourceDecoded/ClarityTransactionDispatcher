@@ -3,9 +3,14 @@ Getting Started with Clarity Transaction Dispatcher
 
 [Documentation](https://sourcedecoded.github.io/ClarityTransactionDispatcher/gen/index.html)
 
+In order to use Clarity Transaction Dispatcher there needs to be a MongoDb instance running.
+[Click here](https://docs.mongodb.com/manual/installation/) to install MongoDb.
+
+Once MongoDb is installed start the database as instructed in the link above.
+
 Install Clarity Transaction Dispatcher with npm.
 ```bash
-npm install ...To be determined
+npm install clarity-transaction-dispatcher
 ```
 The purpose of the transaction dispatcher is to be the mechanism by which data can flow and notify systems of that data flow.
 Data can come from devices, database systems, apis, or user input. We will give concrete examples in business where the
