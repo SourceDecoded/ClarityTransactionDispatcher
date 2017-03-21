@@ -1,34 +1,35 @@
 import * as express from "express";
-import * as Busboy from "busboy";
 
 const transactionRouter = express.Router();
 
-// Parameters: filter
 transactionRouter.get("/", (request, response) => {
     const monitor = response.locals.monitor;
-    const filter = request.query.filter;
-    const count = request.query.count;
+    const transactionId = request.query.id;
+    const getCount = request.query.count;
+    let filter = request.query.filter;
 
-    if (!filter) {
-        response.status(400).json({
-            message: "Please provide a filter parameter."
-        });
-    } else if (filter && count == "true") {
-        return monitor._getDatabaseAsync().then((db: any) => {
-            db.collection("transactions").then((collection: any) => {
-                collection.find(filter).count(total => {
-                    response.status(200).json({
-                        message: "Found total number of transactions!",
-                        count: total
-                    });
-                })
-            })
+    if (filter) {
+        try {
+            filter = JSON.parse(filter)
+        } catch (error) {
+            return response.status(400).send({ message: error.message });
+        }
+    }
+
+    if (transactionId) {
+        monitor.getTransactionByIdAsync(transactionId).then(transaction => {
+            response.status(200).send({ data: { transaction } });
         }).catch(error => {
-            response.status(400).json({
-                message: "ERROR!",
-                error: error
-            });;
+            response.status(400).send({ message: error.message });
         });
+    } else if (getCount == "true") {
+        monitor.getTransactionCountAsync(filter).then(count => {
+            response.status(200).send({ data: { count } });
+        }).catch(error => {
+            response.status(400).send({ message: error.message });
+        });
+    } else {
+        response.status(400).send({ message: "The id or count parameter needed." });
     }
 });
 

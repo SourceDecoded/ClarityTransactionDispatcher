@@ -1,26 +1,46 @@
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 const express = require("express");
 const Busboy = require("busboy");
-// TODO: Handle streaming content
 const entityRouter = express.Router();
 entityRouter.post("/", (request, response) => {
     const busboy = new Busboy({ headers: request.headers });
     const dispatcher = response.locals.clarityTransactionDispatcher;
     let entityForm = {};
     const addEntity = () => {
-        const components = entityForm.components ? JSON.parse(entityForm.components) : [];
+        let components = [];
+        if (entityForm.components) {
+            try {
+                components = JSON.parse(entityForm.components);
+            }
+            catch (error) {
+                return response.status(400).send({ message: error.message });
+            }
+        }
         const id = entityForm.id || null;
-        dispatcher.addEntityAsync(null, components, id).then(result => {
-            response.status(200).send(result);
-        }).catch((error) => {
-            response.status(400).send(error);
+        let content = entityForm.content || null;
+        dispatcher.addEntityAsync(content, components, id).then(result => {
+            response.status(200).send({ data: result });
+        }).catch(error => {
+            response.status(400).send({ message: error.message });
         });
     };
     busboy.on("field", (fieldName, value, fieldNameTruncated, valueTruncated, encoding, mimeType) => {
         entityForm[fieldName] = value;
     });
+    busboy.on("file", (fieldName, file, fileName, encoding, mimeType) => {
+        if (entityForm.components) {
+            entityForm[fieldName] = file;
+            addEntity();
+        }
+        else {
+            response.status(400).send({ message: "Components field needs to be sent before file stream in form data." });
+        }
+    });
     busboy.on("finish", () => {
-        addEntity();
+        if (!entityForm.content) {
+            addEntity();
+        }
     });
     request.pipe(busboy);
 });
@@ -28,22 +48,36 @@ entityRouter.get("/", (request, response) => {
     const dispatcher = response.locals.clarityTransactionDispatcher;
     const entityId = request.query.id;
     const getCount = request.query.count;
+    const lastId = request.query.lastId;
+    const pageSize = request.query.pageSize;
+    const lastUpdatedDate = request.query.lastUpdatedDate;
+    const lastCreatedDate = request.query.lastCreatedDate;
     if (entityId) {
         dispatcher.getEntityByIdAsync(entityId).then(entity => {
-            response.status(200).send(entity);
+            response.status(200).send({ data: { entity } });
         }).catch(error => {
-            response.status(400).send(error);
+            response.status(400).send({ message: error.message });
         });
     }
     else if (getCount == "true") {
         dispatcher.getEntityCountAsync().then(count => {
-            response.status(200).send(count);
+            response.status(200).send({ data: { count } });
         }).catch(error => {
-            response.status(400).send(error);
+            response.status(400).send({ message: error.message });
         });
     }
     else {
-        response.status(400).send(new Error("Please provide an id or count parameter."));
+        const config = {
+            lastId,
+            lastUpdatedDate,
+            lastCreatedDate,
+            pageSize
+        };
+        dispatcher.getEntitiesAsync(config).then(entities => {
+            response.status(200).send({ data: { entities } });
+        }).catch(error => {
+            response.status(400).send({ message: error.message });
+        });
     }
 });
 entityRouter.patch("/", (request, response) => {
@@ -51,12 +85,23 @@ entityRouter.patch("/", (request, response) => {
     const dispatcher = response.locals.clarityTransactionDispatcher;
     let entityForm = {};
     const updateEntity = () => {
-        const entity = JSON.parse(entityForm.entity);
-        dispatcher.updateEntityAsync(entity).then(entity => {
-            response.status(200).send(entity);
-        }).catch(error => {
-            response.status(400).send(error);
-        });
+        if (entityForm.entity) {
+            let entity;
+            try {
+                entity = JSON.parse(entityForm.entity);
+            }
+            catch (error) {
+                return response.status(400).send({ message: error.message });
+            }
+            dispatcher.updateEntityAsync(entity).then(entity => {
+                response.status(200).send({ data: { entity } });
+            }).catch(error => {
+                response.status(400).send({ message: error.message });
+            });
+        }
+        else {
+            response.status(400).send({ message: "An entity was not provided in the body." });
+        }
     };
     busboy.on("field", (fieldName, value, fieldNameTruncated, valueTruncated, encoding, mimeType) => {
         entityForm[fieldName] = value;
@@ -72,16 +117,15 @@ entityRouter.delete("/", (request, response) => {
     if (entityId) {
         dispatcher.getEntityByIdAsync(entityId).then(entity => {
             return dispatcher.removeEntityAsync(entity).then(() => {
-                response.status(200).send(entity);
+                response.status(200).send({ data: { entity } });
             });
         }).catch(error => {
-            response.status(400).send(error);
+            response.status(400).send({ message: error.message });
         });
     }
     else {
-        response.status(400).send(new Error("Please provide the id of the entity to be deleted."));
+        response.status(400).send({ message: "The id of the entity to be deleted was not provided as a parameter." });
     }
 });
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = entityRouter;
 //# sourceMappingURL=Entities.js.map
