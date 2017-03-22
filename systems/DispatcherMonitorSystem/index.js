@@ -5,7 +5,9 @@ const mongodb = require("mongodb");
 const Router_1 = require("./app/Router");
 const TRANSACTIONS_COLLECTION = "transactions";
 const UPTIMES_COLLECTION = "uptimes";
+const LOGS_COLLECTION = "logs";
 const ALL_TRANSACTIONS = "allTransactions";
+const ALL_LOGS = "allLogs";
 class DispatcherMonitorSystem {
     constructor() {
         this.clarityTransactionDispatcher;
@@ -25,6 +27,16 @@ class DispatcherMonitorSystem {
             item._id = result.insertedId;
             return item;
         });
+    }
+    _addLogAsync(type, subType, message, data) {
+        const log = {
+            type,
+            subType,
+            message,
+            data,
+            createdDate: new Date()
+        };
+        return this._addItemToCollectionAsync(log, LOGS_COLLECTION);
     }
     _addTransactionAsync(type, data) {
         const transaction = {
@@ -46,6 +58,31 @@ class DispatcherMonitorSystem {
             console.log("Monitor Client connected on port 3007...");
         });
         server.listen(3007, () => console.log("Socket Monitor Server is running locally on port 3007..."));
+    }
+    _convertToDates(obj) {
+        if (obj == null) {
+            return obj;
+        }
+        var result = Array.isArray(obj) ? [] : {};
+        Object.keys(obj).forEach((key) => {
+            if (obj[key] != null && obj[key].$date != null) {
+                result[key] = new Date(obj[key].$date);
+            }
+            else if (obj[key] != null && typeof obj[key] === "object") {
+                result[key] = this._convertToDates(obj[key]);
+            }
+            else {
+                result[key] = obj[key];
+            }
+        });
+        return result;
+    }
+    _createLogByIdAsync(id) {
+        return this._createObjectIdAsync(id).then((objectId) => {
+            return {
+                _id: objectId
+            };
+        });
     }
     _createTransactionByIdAsync(id) {
         return this._createObjectIdAsync(id).then((objectId) => {
@@ -70,7 +107,11 @@ class DispatcherMonitorSystem {
         };
         return this._addItemToCollectionAsync(uptime, UPTIMES_COLLECTION);
     }
-    _emitIOEvents(type, transaction) {
+    _emitLogEvents(type, log) {
+        this.io.emit(type, { log });
+        this.io.emit(ALL_LOGS, { log });
+    }
+    _emitTransactionEvents(type, transaction) {
         this.io.emit(type, { transaction });
         this.io.emit(ALL_TRANSACTIONS, { transaction });
     }
@@ -105,64 +146,104 @@ class DispatcherMonitorSystem {
     }
     entityAddedAsync(entity) {
         const type = "entityAdded";
-        this._addTransactionAsync(type, { entityId: this.ObjectID(entity._id) }).then((transaction) => {
-            this._emitIOEvents(type, transaction);
+        return this._addTransactionAsync(type, { entityId: this.ObjectID(entity._id) }).then((transaction) => {
+            this._emitTransactionEvents(type, transaction);
+            return transaction.data;
+        }).then(data => {
+            return this._addLogAsync("transaction", type, "Entity Added Successfully", data);
+        }).then(log => {
+            this._emitLogEvents("logTransaction", log);
         }).catch(error => {
             console.log(error);
         });
     }
     entityUpdatedAsync(oldEntity, newEntity) {
         const type = "entityUpdated";
-        this._addTransactionAsync(type, { oldEntityId: this.ObjectID(oldEntity._id), newEntityId: this.ObjectID(newEntity._id) }).then((transaction) => {
-            this._emitIOEvents(type, transaction);
+        return this._addTransactionAsync(type, { oldEntityId: this.ObjectID(oldEntity._id), newEntityId: this.ObjectID(newEntity._id) }).then((transaction) => {
+            this._emitTransactionEvents(type, transaction);
+            return transaction.data;
+        }).then(data => {
+            return this._addLogAsync("transaction", type, "Entity Updated Successfully", data);
+        }).then(log => {
+            this._emitLogEvents("logTransaction", log);
         }).catch(error => {
             console.log(error);
         });
     }
     entityRemovedAsync(entity) {
         const type = "entityRemoved";
-        this._addTransactionAsync(type, { entityId: this.ObjectID(entity._id) }).then((transaction) => {
-            this._emitIOEvents(type, transaction);
+        return this._addTransactionAsync(type, { entityId: this.ObjectID(entity._id) }).then((transaction) => {
+            this._emitTransactionEvents(type, transaction);
+            return transaction.data;
+        }).then(data => {
+            return this._addLogAsync("transaction", type, "Entity Removed Successfully", data);
+        }).then(log => {
+            this._emitLogEvents("logTransaction", log);
         }).catch(error => {
             console.log(error);
         });
     }
     entityRetrievedAsync(entity) {
         const type = "entityRetrieved";
-        this._addTransactionAsync(type, { entityId: this.ObjectID(entity._id) }).then((transaction) => {
-            this._emitIOEvents(type, transaction);
+        return this._addTransactionAsync(type, { entityId: this.ObjectID(entity._id) }).then((transaction) => {
+            this._emitTransactionEvents(type, transaction);
+            return transaction.data;
+        }).then(data => {
+            return this._addLogAsync("transaction", type, "Entity Retrieved Successfully", data);
+        }).then(log => {
+            this._emitLogEvents("logTransaction", log);
         }).catch(error => {
             console.log(error);
         });
     }
     entityContentUpdatedAsync(oldContentId, newContentId) {
         const type = "entityContentUpdated";
-        this._addTransactionAsync(type, { oldContentId: this.ObjectID(oldContentId), newContentId: this.ObjectID(newContentId) }).then((transaction) => {
-            this._emitIOEvents(type, transaction);
+        return this._addTransactionAsync(type, { oldContentId: this.ObjectID(oldContentId), newContentId: this.ObjectID(newContentId) }).then((transaction) => {
+            this._emitTransactionEvents(type, transaction);
+            return transaction.data;
+        }).then(data => {
+            return this._addLogAsync("transaction", type, "Entity Content Updated Successfully", data);
+        }).then(log => {
+            this._emitLogEvents("logTransaction", log);
         }).catch(error => {
             console.log(error);
         });
     }
     entityComponentAddedAsync(entity, component) {
         const type = "entityComponentAdded";
-        this._addTransactionAsync(type, { entityId: this.ObjectID(entity._id), componentId: this.ObjectID(component._id) }).then((transaction) => {
-            this._emitIOEvents(type, transaction);
+        return this._addTransactionAsync(type, { entityId: this.ObjectID(entity._id), componentId: this.ObjectID(component._id) }).then((transaction) => {
+            this._emitTransactionEvents(type, transaction);
+            return transaction.data;
+        }).then(data => {
+            return this._addLogAsync("transaction", type, "Component Added Successfully", data);
+        }).then(log => {
+            this._emitLogEvents("logTransaction", log);
         }).catch(error => {
             console.log(error);
         });
     }
     entityComponentUpdatedAsync(entity, oldComponent, newComponent) {
         const type = "entityComponentUpdated";
-        this._addTransactionAsync(type, { entityId: this.ObjectID(entity._id), componentId: this.ObjectID(newComponent._id) }).then((transaction) => {
-            this._emitIOEvents(type, transaction);
+        return this._addTransactionAsync(type, { entityId: this.ObjectID(entity._id), componentId: this.ObjectID(newComponent._id) }).then((transaction) => {
+            this._emitTransactionEvents(type, transaction);
+            return transaction.data;
+        }).then(data => {
+            return this._addLogAsync("transaction", type, "Component Updated Successfully", data);
+        }).then(log => {
+            this._emitLogEvents("logTransaction", log);
         }).catch(error => {
             console.log(error);
         });
     }
     entityComponentRemovedAsync(entity, component) {
         const type = "entityComponentRemoved";
-        this._addTransactionAsync(type, { entityId: this.ObjectID(entity._id), componentId: this.ObjectID(component._id) }).then((transaction) => {
-            this._emitIOEvents(type, transaction);
+        return this._addTransactionAsync(type, { entityId: this.ObjectID(entity._id), componentId: this.ObjectID(component._id) }).then((transaction) => {
+            this._emitTransactionEvents(type, transaction);
+            return transaction.data;
+        }).then(data => {
+            return this._addLogAsync("transaction", type, "Component Removed Successfully", data);
+        }).then(log => {
+            this._emitLogEvents("logTransaction", log);
         }).catch(error => {
             console.log(error);
         });
@@ -170,8 +251,37 @@ class DispatcherMonitorSystem {
     entityComponentRetrievedAsync(entity, component) {
         const type = "entityComponentRetrieved";
         const entityId = entity ? this.ObjectID(entity._id) : null;
-        this._addTransactionAsync(type, { entityId, componentId: this.ObjectID(component._id) }).then((transaction) => {
-            this._emitIOEvents(type, transaction);
+        return this._addTransactionAsync(type, { entityId, componentId: this.ObjectID(component._id) }).then((transaction) => {
+            this._emitTransactionEvents(type, transaction);
+            return transaction.data;
+        }).then(data => {
+            return this._addLogAsync("transaction", type, "Component Retrieved Successfully", data);
+        }).then(log => {
+            this._emitLogEvents("logTransaction", log);
+        }).catch(error => {
+            console.log(error);
+        });
+    }
+    logError(error) {
+        const type = "logError";
+        this._addLogAsync("error", error.type, error.message).then(log => {
+            this._emitLogEvents(type, log);
+        }).catch(error => {
+            console.log(error);
+        });
+    }
+    logMessage(message) {
+        const type = "logMessage";
+        this._addLogAsync("message", message.type, message.message).then(log => {
+            this._emitLogEvents(type, log);
+        }).catch(error => {
+            console.log(error);
+        });
+    }
+    logWarning(warning) {
+        const type = "logWarning";
+        this._addLogAsync("warning", warning.type, warning.message).then(log => {
+            this._emitLogEvents(type, log);
         }).catch(error => {
             console.log(error);
         });
@@ -186,6 +296,29 @@ class DispatcherMonitorSystem {
     getLatestUptimeAsync() {
         return this._getDatabaseAsync().then((db) => {
             return db.collection(UPTIMES_COLLECTION).findOne({}, { sort: { $natural: -1 } });
+        });
+    }
+    getLogByIdAsync(logId) {
+        return this._createLogByIdAsync(logId).then(filter => {
+            return this._findOneAsync(LOGS_COLLECTION, filter);
+        }).then(log => {
+            return log;
+        }).catch((error) => {
+            console.log(error);
+        });
+    }
+    getLogsAsync(config) {
+        var lastId = config.lastId;
+        var pageSize = config.pageSize < 50 ? config.pageSize : 50;
+        var sort = [["_id", -1]];
+        var filter = {};
+        if (lastId != null) {
+            filter._id = {
+                $lt: this.ObjectID(lastId)
+            };
+        }
+        return this._getDatabaseAsync().then((db) => {
+            return db.collection(LOGS_COLLECTION).find(filter).limit(parseInt(pageSize, 10)).sort(sort).toArray();
         });
     }
     getTransactionByIdAsync(transactionId) {
@@ -211,27 +344,9 @@ class DispatcherMonitorSystem {
             return db.collection(TRANSACTIONS_COLLECTION).find(filter).limit(parseInt(pageSize, 10)).sort(sort).toArray();
         });
     }
-    convertToDates(obj) {
-        if (obj == null) {
-            return obj;
-        }
-        var result = Array.isArray(obj) ? [] : {};
-        Object.keys(obj).forEach((key) => {
-            if (obj[key] != null && obj[key].$date != null) {
-                result[key] = new Date(obj[key].$date);
-            }
-            else if (obj[key] != null && typeof obj[key] === "object") {
-                result[key] = this.convertToDates(obj[key]);
-            }
-            else {
-                result[key] = obj[key];
-            }
-        });
-        return result;
-    }
     getTransactionCountAsync(filter) {
         filter = filter ? filter : {};
-        filter = this.convertToDates(filter);
+        filter = this._convertToDates(filter);
         return this._getDatabaseAsync().then((db) => {
             return db.collection(TRANSACTIONS_COLLECTION);
         }).then((collection) => {

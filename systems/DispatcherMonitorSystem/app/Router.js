@@ -1,6 +1,7 @@
 "use strict";
 const Uptimes_1 = require("./routes/Uptimes");
 const Transactions_1 = require("./routes/Transactions");
+const Logs_1 = require("./routes/Logs");
 class Router {
     constructor(app, monitor) {
         this.app = app;
@@ -16,6 +17,7 @@ class Router {
         });
         this.app.use("/api/uptimes", Uptimes_1.default);
         this.app.use("/api/transactions", Transactions_1.default);
+        this.app.use("/api/logs", Logs_1.default);
     }
 }
 Object.defineProperty(exports, "__esModule", { value: true });
