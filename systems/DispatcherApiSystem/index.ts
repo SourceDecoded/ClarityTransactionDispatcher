@@ -5,12 +5,14 @@ export default class DispatcherApiSystem {
     app: any;
     guid: string;
     name: string;
+    authenticator: { decode: (token: string) => any };
 
     constructor() {
         this.clarityTransactionDispatcher = null;
         this.app = null;
         this.guid = "13CE560D-9B85-4C85-8BA4-72EA1686EBAA";
         this.name = "Dispatcher Api System";
+        this.authenticator = null;
     }
 
     private _initAPI() {
@@ -20,8 +22,6 @@ export default class DispatcherApiSystem {
 
     activatedAsync(clarityTransactionDispatcher) {
         this.clarityTransactionDispatcher = clarityTransactionDispatcher;
-        this.app = this.clarityTransactionDispatcher.getService("express");
-
         this._initAPI();
     }
 
