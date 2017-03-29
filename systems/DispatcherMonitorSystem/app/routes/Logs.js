@@ -1,4 +1,5 @@
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 const express = require("express");
 const logRouter = express.Router();
 logRouter.get("/", (request, response) => {
@@ -25,6 +26,5 @@ logRouter.get("/", (request, response) => {
         });
     }
 });
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = logRouter;
 //# sourceMappingURL=Logs.js.map

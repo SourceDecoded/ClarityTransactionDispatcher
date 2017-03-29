@@ -20,7 +20,7 @@ let dispatcher = new ClarityTransactionDispatcher({
 
 
 dispatcher.addServiceAsync("express", app).then(() => {
-    return dispatcher.addServiceAsync("authenticator", authenticator);
+    //return dispatcher.addServiceAsync("authenticator", authenticator);
 }).then(() => {
     return dispatcher.addSystemAsync(new DispatcherApiSystem());
 }).then(() => {

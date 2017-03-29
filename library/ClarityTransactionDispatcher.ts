@@ -372,6 +372,7 @@ export default class ClarityTransactionDispatcher {
      * @return {Promise}
      */
     addEntityAsync(contentStream?: NodeJS.ReadableStream, components?: Array<{ type: string }>, entityId?: string) {
+        components = Array.isArray(components) ? components : [];
         var contentId;
         var savedComponents = [];
         var entity: IEntity;
@@ -938,7 +939,7 @@ export default class ClarityTransactionDispatcher {
      * 
      * @param {object} entity - The entity whos content is to be update.
      * @param {NodeJS.WritableStream}  - The stream to save to the content of the entity.
-     * @return {Promise<undefined>}
+     * @return {Promise<IEntity>}
      */
     updateEntityContentByStreamAsync(entity: IEntity, stream: NodeJS.ReadableStream) {
         var contentId = null;
@@ -953,7 +954,9 @@ export default class ClarityTransactionDispatcher {
             return this.updateEntityAsync(entity);
         }).then((entity) => {
             updatedEntity = entity;
-            return this._removeItemFromGridFsAsync(oldContentId);
+            if (oldContentId != null) {
+                return this._removeItemFromGridFsAsync(oldContentId);
+            }
         }).then(() => {
             return updatedEntity;
         }).catch((error) => {

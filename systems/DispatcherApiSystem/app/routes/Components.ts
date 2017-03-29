@@ -21,7 +21,7 @@ componentRouter.post("/", (request, response) => {
             }
 
             dispatcher.addComponentAsync(entity, component).then(component => {
-                response.status(200).send({ data: { component } });
+                response.status(200).send({ data: component });
             }).catch(error => {
                 response.status(400).send({ message: error.message });
             });
@@ -50,7 +50,7 @@ componentRouter.get("/", (request, response) => {
 
     if (componentId) {
         dispatcher.getComponentByIdAsync(componentId).then(component => {
-            response.status(200).send({ data: { component } });
+            response.status(200).send({ data: component });
         }).catch(error => {
             response.status(400).send({ message: error.message });
         });
@@ -63,13 +63,13 @@ componentRouter.get("/", (request, response) => {
     } else {
         if (entityId && !type) {
             dispatcher.getComponentsByEntityAsync({ _id: entityId }).then(components => {
-                response.status(200).send({ data: { components } });
+                response.status(200).send({ data: components });
             }).catch(error => {
                 response.status(400).send({ message: error.message });
             });
         } else if (entityId && type) {
             dispatcher.getComponentsByEntityAsync({ _id: entityId }, type).then(components => {
-                response.status(200).send({ data: { components } });
+                response.status(200).send({ data: components });
             }).catch(error => {
                 response.status(400).send({ message: error.message });
             });
@@ -95,7 +95,7 @@ componentRouter.patch("/", (request, response) => {
             }
 
             dispatcher.updateComponentAsync(component).then(component => {
-                response.status(200).send({ data: { component } });
+                response.status(200).send({ data: component });
             }).catch(error => {
                 response.status(400).send({ message: error.message });
             });
@@ -122,7 +122,7 @@ componentRouter.delete("/", (request, response) => {
     if (componentId) {
         dispatcher.getComponentByIdAsync(componentId).then(component => {
             return dispatcher.removeComponentAsync(component).then(() => {
-                response.status(200).send({ data: { component } });
+                response.status(200).send({ data: component });
             });
         }).catch(error => {
             response.status(400).send({ message: error.message });

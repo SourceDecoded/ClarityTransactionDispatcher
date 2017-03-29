@@ -326,6 +326,7 @@ class ClarityTransactionDispatcher {
      * @return {Promise}
      */
     addEntityAsync(contentStream, components, entityId) {
+        components = Array.isArray(components) ? components : [];
         var contentId;
         var savedComponents = [];
         var entity;
@@ -842,7 +843,7 @@ class ClarityTransactionDispatcher {
      *
      * @param {object} entity - The entity whos content is to be update.
      * @param {NodeJS.WritableStream}  - The stream to save to the content of the entity.
-     * @return {Promise<undefined>}
+     * @return {Promise<IEntity>}
      */
     updateEntityContentByStreamAsync(entity, stream) {
         var contentId = null;
@@ -856,7 +857,9 @@ class ClarityTransactionDispatcher {
             return this.updateEntityAsync(entity);
         }).then((entity) => {
             updatedEntity = entity;
-            return this._removeItemFromGridFsAsync(oldContentId);
+            if (oldContentId != null) {
+                return this._removeItemFromGridFsAsync(oldContentId);
+            }
         }).then(() => {
             return updatedEntity;
         }).catch((error) => {

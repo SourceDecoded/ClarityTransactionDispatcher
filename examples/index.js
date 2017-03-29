@@ -17,7 +17,7 @@ let dispatcher = new ClarityTransactionDispatcher_1.default({
     databaseUrl: "mongodb://localhost:27017/ClarityTransactionDispatcher"
 });
 dispatcher.addServiceAsync("express", app).then(() => {
-    return dispatcher.addServiceAsync("authenticator", authenticator);
+    //return dispatcher.addServiceAsync("authenticator", authenticator);
 }).then(() => {
     return dispatcher.addSystemAsync(new DispatcherApiSystem_1.default());
 }).then(() => {
