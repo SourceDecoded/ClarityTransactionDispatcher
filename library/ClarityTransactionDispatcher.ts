@@ -342,7 +342,7 @@ export default class ClarityTransactionDispatcher {
             return this.getEntityByIdAsync(entityId);
         }).then(entity => {
             component.entity_id = entity._id;
-            return this.validateComponentAsync(entity, component);
+            return this.validateEntityComponentAsync(entity, component);
         }).then(() => {
             return this._addItemToCollectionAsync(component, COMPONENTS_COLLECTION);
         }).then(newComponent => {
@@ -400,7 +400,7 @@ export default class ClarityTransactionDispatcher {
             return components.reduce((promise: Promise<any>, component: any) => {
                 component.entity_id = entity._id;
 
-                return this.validateComponentAsync(entity, component).then(() => {
+                return this.validateEntityComponentAsync(entity, component).then(() => {
                     return this._addItemToCollectionAsync(component, COMPONENTS_COLLECTION);
                 }).then((savedComponent) => {
                     savedComponents.push(savedComponent);
@@ -487,7 +487,7 @@ export default class ClarityTransactionDispatcher {
      *  - initializeAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher)
      *  - serviceRemovedAsync(name: string, service: any);
      *  - validateEntityAsync(entity: {_id: string})
-     *  - validateComponentAsync(component: {_id: string})
+     *  - validateEntityComponentAsync(entity: {_id: string}, component: {_id: string})
      *  - validateEntityContentAsync(entity: {_id: string}, oldContentId: string, newContentId: string)
      *  - approveComponentRemovalAsync(component:{_id: string; entity_id: string})
      *  - approveEntityRemovalAsync(entity:{_id: string})
@@ -987,7 +987,7 @@ export default class ClarityTransactionDispatcher {
             return this.getEntityByIdAsync(entityId);
         }).then((entity) => {
             oldEntity = entity;
-            return this.validateComponentAsync(entity, component);
+            return this.validateEntityComponentAsync(entity, component);
         }).then(() => {
             return this.getComponentByIdAsync(component._id);
         }).then((oldComponent: any) => {
@@ -1012,8 +1012,8 @@ export default class ClarityTransactionDispatcher {
     /**
      * This allows systems to validate the component being saved.
      */
-    validateComponentAsync(entity: IEntity, component: IComponent) {
-        return this._notifySystemsAsync("validateComponentAsync", [entity, component]);
+    validateEntityComponentAsync(entity: IEntity, component: IComponent) {
+        return this._notifySystemsAsync("validateEntityComponentAsync", [entity, component]);
     }
 
     /**
