@@ -3,6 +3,7 @@ import ClarityTransactionDispatcher from "./../library/ClarityTransactionDispatc
 import MongoFactory from "./../library/MongoFactory";
 import DispatcherApiSystem from "./../systems/DispatcherApiSystem";
 import DispatcherMonitorSystem from "./../systems/DispatcherMonitorSystem";
+import LeavittSocialSystem from "./../systems/LeavittSocialSystem";
 import LeavittGroupAuthentication from "./../services/LeavittGroupAuthentication";
 import * as jwtSimple from "jwt-simple";
 
@@ -25,6 +26,8 @@ dispatcher.addServiceAsync("express", app).then(() => {
     return dispatcher.addSystemAsync(new DispatcherApiSystem());
 }).then(() => {
     return dispatcher.addSystemAsync(new DispatcherMonitorSystem());
+}).then(() => {
+    return dispatcher.addSystemAsync(new LeavittSocialSystem());
 }).catch((error) => {
     console.log(error);
 });

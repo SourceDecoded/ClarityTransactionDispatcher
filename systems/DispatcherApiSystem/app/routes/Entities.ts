@@ -8,79 +8,47 @@ const entityRouter = express.Router();
 entityRouter.post("/", (request, response) => {
     const busboy = new Busboy({ headers: request.headers });
     const dispatcher = <ClarityTransactionDispatcher>response.locals.clarityTransactionDispatcher;
-    let entity;
-    let result = {
-        entity: null,
-        components: []
-    };
 
-    let savingPromise = dispatcher.addEntityAsync().then((dispatcherResult) => {
-        entity = dispatcherResult.entity;
-        result.entity = dispatcherResult.entity;
-    }).catch((error) => {
-        response.status(500).send({ message: error.message });
-    });
+    let promiseStarted = false;
+    let components = null;
+    let content = null;
 
-    let removeEntityAsync = (error) => {
-        response.status(500).send({ message: error.message });
+    let addEntity = () => {
+        promiseStarted = true;
 
-        return dispatcher.removeEntityAsync(entity).catch((error) => {
-            dispatcher.logError(error);
+        dispatcher.addEntityAsync(content, components).then(result => {
+            response.status(200).send({ data: result });
+        }).catch(error => {
+            response.status(400).send({ message: error.message });
         });
     };
 
     busboy.on("field", (fieldName, value, fieldNameTruncated, valueTruncated, encoding, mimeType) => {
         if (fieldName === "components") {
-
             try {
-
-                var components = JSON.parse(value);
-                savingPromise = savingPromise.then(() => {
-                    var componentsPromises = components.map((component) => {
-                        return dispatcher.addComponentAsync(entity, component).then((savedComponent) => {
-                            result.components.push(savedComponent);
-                        });
-                    });
-
-                    return Promise.all(componentsPromises);
-                }).catch((error) => {
-                    return removeEntityAsync(error);
-                });
-
+                components = JSON.parse(value);
             } catch (error) {
                 response.status(400).send({ message: error.message });
             }
-
         } else if (fieldName === "content") {
-            var contentStream = new stream.Readable();
-            contentStream._read = () => { };
-            contentStream.push(value);
-            contentStream.push(null);
-
-            savingPromise = savingPromise.then(() => {
-                return dispatcher.updateEntityContentByStreamAsync(entity, contentStream);
-            }).then((entity) => {
-                result.entity.content_id = entity.content_id;
-            });
+            content = new stream.Readable();
+            content._read = () => { };
+            content.push(value);
+            content.push(null);
         }
     });
 
     busboy.on("file", (fieldName, file, fileName, encoding, mimeType) => {
         if (fieldName === "content") {
-            savingPromise = savingPromise.then(() => {
-                return dispatcher.updateEntityContentByStreamAsync(entity, file)
-            }).then((entity) => {
-                result.entity.content_id = entity.content_id;
-            }).catch((error) => {
-                return removeEntityAsync(error);
-            });
+            content = file;
+            addEntity();
         }
     });
 
     busboy.on("finish", () => {
-        savingPromise.then(() => {
-            response.status(200).send({ data: result });
-        });
+        if (!promiseStarted) {
+            addEntity();
+        }
     });
 
     request.pipe(busboy);

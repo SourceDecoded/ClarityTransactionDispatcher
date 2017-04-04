@@ -1,10 +1,8 @@
 "use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
 const NullableLogger_1 = require("./NullableLogger");
 const nullableLogger = new NullableLogger_1.default();
 const resolvedPromise = Promise.resolve(null);
 const ENTITIES_COLLECTION = "entities";
-const COMPONENTS_COLLECTION = "components";
 const SYSTEM_DATA_COLLECTION = "systemData";
 const NOTICE = "notice";
 /**
@@ -21,10 +19,6 @@ const NOTICE = "notice";
  * communicate for a company to run smoothly. We believe that the answer to
  * these needs is a data dispatcher which lets all independent systems know
  * about data changes.
- *
- * The dispatcher will also notify the system when components on the entity
- * have been added updated or removed. This is critical for the systems to
- * fulfill their responsibilities efficiently.
  */
 class ClarityTransactionDispatcher {
     /**
@@ -41,11 +35,11 @@ class ClarityTransactionDispatcher {
         this.services = {};
     }
     _addItemToGridFs(stream) {
-        var newContentId = this.ObjectID();
+        let newContentId = this.ObjectID();
         stream.pause();
         return this._getGridFsAsync().then((gfs) => {
             return new Promise((resolve, reject) => {
-                var writeStream = gfs.createWriteStream({
+                let writeStream = gfs.createWriteStream({
                     _id: newContentId
                 });
                 stream.on("end", () => {
@@ -63,8 +57,8 @@ class ClarityTransactionDispatcher {
      * Add an item to a collection.
      * @private
      */
-    _addItemToCollectionAsync(item, collectionName) {
-        item.updatedDate = new Date();
+    _addItemToCollectionAsync(collectionName, item) {
+        item.modifiedDate = new Date();
         item.createdDate = new Date();
         return this._getDatabaseAsync().then((db) => {
             return db.collection(collectionName);
@@ -106,11 +100,11 @@ class ClarityTransactionDispatcher {
     * Find many in a collection.
     * @private
     */
-    _findAsync(collectionName, filter) {
+    _findAsync(collectionName, filter, sort, pageSize) {
         return this._getDatabaseAsync().then((db) => {
             return db.collection(collectionName);
         }).then((collection) => {
-            return collection.find(filter).toArray();
+            return collection.find(filter).limit(parseInt(pageSize, 10)).sort(sort).toArray();
         });
     }
     /**
@@ -147,16 +141,17 @@ class ClarityTransactionDispatcher {
      * @private
      */
     _initializingSystemAsync(system) {
-        var filter = {
-            systemGuid: system.getGuid()
+        let systemGuid = system.getGuid();
+        let filter = {
+            systemGuid
         };
         return this._findOneAsync(SYSTEM_DATA_COLLECTION, filter).then((systemData) => {
             if (systemData == null) {
-                var newSystemData = {
-                    systemGuid: system.getGuid(),
+                let newSystemData = {
+                    systemGuid,
                     isInitialized: false
                 };
-                return this._addItemToCollectionAsync(newSystemData, SYSTEM_DATA_COLLECTION);
+                return this._addItemToCollectionAsync(SYSTEM_DATA_COLLECTION, newSystemData);
             }
             else {
                 return systemData;
@@ -165,11 +160,11 @@ class ClarityTransactionDispatcher {
             if (!systemData.isInitialized) {
                 return this._invokeMethodAsync(system, "initializeAsync", [this]).then(() => {
                     systemData.isInitialized = true;
-                    return this._updateItemInCollectionAsync(systemData, SYSTEM_DATA_COLLECTION);
+                    return this._updateItemInCollectionAsync(SYSTEM_DATA_COLLECTION, systemData);
                 });
             }
         }).catch((error) => {
-            this.logError(error);
+            this.logError({ message: error.message });
             throw error;
         });
     }
@@ -233,7 +228,7 @@ class ClarityTransactionDispatcher {
         }, resolvedPromise);
     }
     /**
-     * Remove the content of an entity.
+     * Remove the content from gridFs.
      * @private
      */
     _removeItemFromGridFsAsync(id) {
@@ -253,11 +248,11 @@ class ClarityTransactionDispatcher {
         });
     }
     /**
-     * Remove and item from a collection
+     * Remove an item from a collection.
      * @private
      * @returns {Promise<undefined>}
      */
-    _removeItemfromCollection(item, collectionName) {
+    _removeItemfromCollection(collectionName, item) {
         return this._getDatabaseAsync().then((db) => {
             return db.collection(collectionName);
         }).then((collection) => {
@@ -271,7 +266,8 @@ class ClarityTransactionDispatcher {
      * @private
      * @returns {Promise<undefined>}
      */
-    _updateItemInCollectionAsync(item, collectionName) {
+    _updateItemInCollectionAsync(collectionName, item) {
+        item.modifiedDate = new Date();
         return this._getDatabaseAsync().then((db) => {
             return db.collection(collectionName);
         }).then((collection) => {
@@ -281,108 +277,33 @@ class ClarityTransactionDispatcher {
         });
     }
     /**
-     * Adds a component to an entity.
-     *
-     * The dispatcher does the following when adding a component.
-     *
-     * - Validate the component with all systems. All systems have to validate to pass.
-     * - Saves the component to the datastore.
-     * - Notifies the systems that a component has been added.
-     * @param {object} entity - The entity of the component being added.
-     * @param {object} component - The component being added.
-     */
-    addComponentAsync(entity, component) {
-        var savedComponent;
-        return this._createObjectIdAsync(entity._id).then((entityId) => {
-            return this.getEntityByIdAsync(entityId);
-        }).then(entity => {
-            component.entity_id = entity._id;
-            return this.validateComponentAsync(entity, component);
-        }).then(() => {
-            return this._addItemToCollectionAsync(component, COMPONENTS_COLLECTION);
-        }).then(newComponent => {
-            savedComponent = newComponent;
-            return this._notifySystemsWithRecoveryAsync("entityComponentAddedAsync", [entity, savedComponent]);
-        }).then(() => {
-            return savedComponent;
-        }).catch((error) => {
-            this.logError(error);
-            throw error;
-        });
-    }
-    /**
      * Add an Entity to the datastore. The steps the dispatcher takes when saving an
      * entity are.
      *
-     * - Saves the content of the entity to a datastore.
      * - Validate the entity with all systems. All systems have to validate to pass.
      * - Save the entity to the datastore.
-     * - Validate and save the components.
-     * - Notify the systems that an entity with its components and content have been saved.
+     * - Notify the systems that an entity has been saved.
      * - If any of the steps above fail, it will retract the whole transaction and notify the systems of doing so.
-     * @param {NodeJS.ReadableStream} stream - The content of the entity.
-     * @param {Array<component>} components - An array of components belonging to the entity.
-     * @param {string} entityId - The id that you want to assign to the entity.
-     * @return {Promise}
+     * @param {IEntity} entity - The entity that you want to save to the datastore.
+     * @return {Promise<Entity>}
      */
-    addEntityAsync(contentStream, components, entityId) {
-        components = Array.isArray(components) ? components : [];
-        var contentId;
-        var savedComponents = [];
-        var entity;
-        return this._createEntityByIdAsync(entityId).then((newEntity) => {
-            entity = newEntity;
-            if (contentStream == null) {
-                return Promise.resolve(null);
-            }
-            else {
-                return this._addItemToGridFs(contentStream);
-            }
-        }).then((newContentId) => {
-            // Validate the entity, and save the contentId.
-            contentId = newContentId;
-            return this.validateEntityAsync(entity);
+    addEntityAsync(entity) {
+        let newEntity = {
+            _id: entity._id ? this.ObjectID(entity._id) : this.ObjectID(),
+            components: Array.isArray(entity.components) ? entity.components : []
+        };
+        let createdEntity;
+        return this.validateEntityAsync(newEntity).then(() => {
+            return this._addItemToCollectionAsync(ENTITIES_COLLECTION, newEntity);
+        }).then(newEntity => {
+            createdEntity = newEntity;
+            return this._notifySystemsWithRecoveryAsync("entityAddedAsync", [createdEntity]);
         }).then(() => {
-            // Save the entity.
-            entity.content_id = contentId;
-            return this._addItemToCollectionAsync(entity, ENTITIES_COLLECTION);
-        }).then(() => {
-            // Validate and save all the components. 
-            return components.reduce((promise, component) => {
-                component.entity_id = entity._id;
-                return this.validateComponentAsync(entity, component).then(() => {
-                    return this._addItemToCollectionAsync(component, COMPONENTS_COLLECTION);
-                }).then((savedComponent) => {
-                    savedComponents.push(savedComponent);
-                });
-            }, resolvedPromise);
-        }).then(() => {
-            // Notify the systems of all that has taken place.
-            return this._notifySystemsWithRecoveryAsync("entityAddedAsync", [entity]).then(() => {
-                return this._notifySystemsWithRecoveryAsync("entityContentUpdatedAsync", [null, contentId]);
-            }).then(() => {
-                return savedComponents.reduce((promise, component) => {
-                    return this._notifySystemsWithRecoveryAsync("entityComponentAddedAsync", [entity, component]);
-                }, resolvedPromise);
-            });
-        }).then(() => {
-            const savedData = {
-                entity: entity,
-                components: savedComponents
-            };
-            return savedData;
-        }).catch((error) => {
-            // Since we save the content first we may have the content saved and not the entity.
-            // If we were able to save the entity then the removeEntityAsync will take care of removing the content.
-            // Otherwise we need to remove the content manually.
+            return createdEntity;
+        }).catch(error => {
             this.logError(error);
-            if (entity != null) {
-                this.removeEntityAsync(entity);
-            }
-            else {
-                if (contentId != null) {
-                    this._removeItemFromGridFsAsync(contentId);
-                }
+            if (createdEntity != null) {
+                this.removeEntityAsync(createdEntity);
             }
             throw error;
         });
@@ -416,24 +337,22 @@ class ClarityTransactionDispatcher {
      *
      * #### Optional System Methods
      *  - activatedAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher)
-     *  - deactivatedAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher)
-     *  - disposeAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher)
-     *  - entityAddedAsync(entity: {_id: string})
-     *  - entityUpdatedAsync(oldEntity: any, newEntity: any)
-     *  - entityRemovedAsync(entity: {_id: string})
-     *  - entityRetrievedAsync?(entity: { _id: string });
-     *  - entityContentUpdatedAsync(oldContentId: string, newContentId: string)
-     *  - entityComponentAddedAsync(entity: {_id: string}, component: any)
-     *  - entityComponentUpdatedAsync(entity: {_id: string}, oldComponent: any, newComponent: any)
-     *  - entityComponentRemovedAsync(entity: {_id: string}, component: any)
-     *  - entityComponentRetrievedAsync?(entity: { _id: string }, component: any);
+     *  - approveEntityRemovalAsync(entity: IEntity)
+     *  - deactivatedAsync()
+     *  - disposedAsync()
+     *  - entityAddedAsync(entity: IEntity)
+     *  - entityRemovedAsync(entity: IEntity)
+     *  - entityRetrievedAsync(entity: IEntity)
+     *  - entityUpdatedAsync(oldEntity: IEntity, updatedEntity: IEntity)
+     *  - fileAddedAsync(id: string)
+     *  - fileRemovedAsync(id: string)
+     *  - fileUpdatedAsync(oldId: string, newId: string)
+     *  - logError(error: { type?: string; message?: string; })
+     *  - logMessage(message: { type?: string; message?: string; })
+     *  - logWarning(warning: { type?: string; message?: string; })
      *  - initializeAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher)
-     *  - serviceRemovedAsync(name: string, service: any);
-     *  - validateEntityAsync(entity: {_id: string})
-     *  - validateComponentAsync(component: {_id: string})
-     *  - validateEntityContentAsync(entity: {_id: string}, oldContentId: string, newContentId: string)
-     *  - approveComponentRemovalAsync(component:{_id: string; entity_id: string})
-     *  - approveEntityRemovalAsync(entity:{_id: string})
+     *  - serviceRemovedAsync(name: string)
+     *  - validateEntityAsync(entity: IEntity)
      * @param {ISystem} system - The system to add.
      * @return {Promise} - An undefined Promise.
      */
@@ -454,7 +373,7 @@ class ClarityTransactionDispatcher {
                     type: NOTICE,
                     message: `System "${system.getName()}" was activated.`
                 });
-            }).catch((error) => {
+            }).catch(error => {
                 this.logError(error);
                 throw error;
             });
@@ -468,21 +387,14 @@ class ClarityTransactionDispatcher {
         return this._notifySystemsAsync("approveEntityRemovalAsync", [entity]);
     }
     /**
-     * Approves whether a component can be removed. Systems can deny the ability to remove components.
-     * @param entity {object} - The entity to be removed.
-     */
-    approveComponentRemovalAsync(component) {
-        return this._notifySystemsAsync("approveComponentRemovalAsync", [component]);
-    }
-    /**
      * Deactivates a system and removes it from the systems being notified. To activate again use addSystemAsync.
      * Think of this like a pause. The dispatcher calls deactivatedAsync on the system being removed.
      * @param {ISystem} system - The system to be deactivate.
      * @returns {Promise<undefined>} - Resolves when the system is deactivated.
      */
     deactivateSystemAsync(system) {
-        var deactivatedPromise;
-        var index = this.systems.indexOf(system);
+        let deactivatedPromise;
+        let index = this.systems.indexOf(system);
         if (index === -1) {
             return Promise.reject(new Error("Couldn't find system to be deactivated."));
         }
@@ -498,7 +410,7 @@ class ClarityTransactionDispatcher {
                     return resolvedPromise;
                 });
             }
-            catch (e) {
+            catch (error) {
                 return resolvedPromise;
             }
         }
@@ -518,7 +430,7 @@ class ClarityTransactionDispatcher {
         else {
             this.systems.splice(index, 1);
             try {
-                return disposedPromise = this._invokeMethodAsync(system, "disposeAsync", []).then(() => {
+                return disposedPromise = this._invokeMethodAsync(system, "disposedAsync", []).then(() => {
                     this.logMessage({
                         type: NOTICE,
                         message: `System "${system.getName()}" was disposed.`
@@ -527,94 +439,25 @@ class ClarityTransactionDispatcher {
                     return resolvedPromise;
                 });
             }
-            catch (e) {
+            catch (error) {
                 return resolvedPromise;
             }
         }
     }
     /**
-     * Gets the component by the id provided.
-     * @param {string} componentId - The id of the component.
-     * @return {Promise<Array>}
-     */
-    getComponentByIdAsync(componentId) {
-        return this._createObjectIdAsync(componentId).then(objectId => {
-            const filter = { _id: objectId };
-            return this._findOneAsync(COMPONENTS_COLLECTION, filter).then(component => {
-                return this._notifySystemsWithRecoveryAsync("entityComponentRetrievedAsync", [null, component]).then(() => {
-                    return component;
-                });
-            });
-        }).catch((error) => {
-            this.logError(error);
-            throw error;
-        });
-    }
-    /**
-     * Get count for all components in collection.
-     */
-    getComponentCountAsync() {
-        return this._getCountAsync(COMPONENTS_COLLECTION);
-    }
-    /**
-     * Get the components of an entity by the entity.
-     * @param {IEntity} entity - The entity of the components.
-     * @return {Promise<Array>}
-     */
-    getComponentsByEntityAsync(entity) {
-        var retrievedComponents;
-        var filter = {
-            entity_id: this.ObjectID(entity._id)
-        };
-        return this._findAsync(COMPONENTS_COLLECTION, filter).then((components) => {
-            retrievedComponents = components;
-            return retrievedComponents.reduce((promise, component) => {
-                return this._notifySystemsWithRecoveryAsync("entityComponentRetrievedAsync", [entity, component]);
-            }, resolvedPromise);
-        }).then(() => {
-            return retrievedComponents;
-        }).catch((error) => {
-            this.logError(error);
-            throw error;
-        });
-    }
-    /**
-     * Get the Components on the entity provided matching the type provided.
-     * @param {IEntity} entity - The entity of the needed components.
-     * @param {string} type - The type of the component needed.
-     */
-    getComponentsByEntityAndTypeAsync(entity, type) {
-        var retrievedComponents;
-        var filter = {
-            entity_id: this.ObjectID(entity._id),
-            type: type
-        };
-        return this._findAsync(COMPONENTS_COLLECTION, filter).then((components) => {
-            retrievedComponents = components;
-            return retrievedComponents.reduce((promise, component) => {
-                return this._notifySystemsWithRecoveryAsync("entityComponentRetrievedAsync", [entity, component]);
-            }, resolvedPromise);
-        }).then(() => {
-            return retrievedComponents;
-        }).catch((error) => {
-            this.logError(error);
-            throw error;
-        });
-    }
-    /**
      * Page through entities using the lastId from a previous query. Use null or undefined to begin at the beginning.
-     * @param config {} - The configuration of the query. It takes a lastId, and a pageSize.
+     * @param config {} - The configuration of the query. It takes a lastId, pageSize, lastModifiedDate, and a lastCreatedDate.
      */
     getEntitiesAsync(config) {
-        var lastId = config.lastId;
-        var pageSize = config.pageSize < 50 ? config.pageSize : 50;
-        var lastUpdatedDate = config.lastUpdatedDate;
-        var lastCreatedDate = config.lastCreatedDate;
-        var sort = [["_id", 1]];
-        var filter = {};
+        let lastId = this.ObjectID(config.lastId);
+        let pageSize = config.pageSize < 50 ? config.pageSize : 50;
+        let lastModifiedDate = config.lastModifiedDate;
+        let lastCreatedDate = config.lastCreatedDate;
+        let sort = [["_id", 1]];
+        let filter = {};
         if (lastId != null) {
             filter._id = {
-                $gt: this.ObjectID(lastId)
+                $gt: lastId
             };
         }
         if (lastCreatedDate != null) {
@@ -623,14 +466,22 @@ class ClarityTransactionDispatcher {
             };
             sort.push(["createdDate", 1]);
         }
-        if (lastUpdatedDate != null) {
-            filter.updatedDate = {
-                $gt: lastUpdatedDate
+        if (lastModifiedDate != null) {
+            filter.modifiedDate = {
+                $gt: lastModifiedDate
             };
-            sort.push(["updatedDate", 1]);
+            sort.push(["modifiedDate", 1]);
         }
-        return this._getDatabaseAsync().then((db) => {
-            return db.collection(ENTITIES_COLLECTION).find(filter).limit(parseInt(pageSize, 10)).sort(sort).toArray();
+        return this._findAsync(ENTITIES_COLLECTION, filter, sort, pageSize).then(entities => {
+            let notifySystemsPromises = entities.map(entity => {
+                return this._notifySystemsWithRecoveryAsync("entityRetrievedAsync", [entity]);
+            });
+            return Promise.all(notifySystemsPromises).then(() => {
+                return entities;
+            });
+        }).catch(error => {
+            this.logError(error);
+            throw error;
         });
     }
     /**
@@ -651,34 +502,41 @@ class ClarityTransactionDispatcher {
         });
     }
     /**
-     * Get a stream of the content of the entity.
-     * @param {IEntity} entity - The entity of the content needed.
-     * @returns {Promise<stream>} - Node read stream.
-     */
-    getEntityContentStreamByEntityAsync(entity) {
-        return this._getGridFsAsync().then((gfs) => {
-            return gfs.createReadStream({
-                _id: this.ObjectID(entity.content_id)
-            });
-        });
-    }
-    /**
-     * Get a stream of the content of the entity by its id.
-     * @param {string} contentId - The id of the content needed..
-     * @returns {NodeJS.ReadableStream} - Node read stream.
-     */
-    getEntityContentStreamByContentIdAsync(contentId) {
-        return this._getGridFsAsync().then((gfs) => {
-            return gfs.createReadStream({
-                _id: this.ObjectID(contentId)
-            });
-        });
-    }
-    /**
      * Get count for all entities in collection.
      */
     getEntityCountAsync() {
         return this._getCountAsync(ENTITIES_COLLECTION);
+    }
+    /**
+     * Get a file read stream.
+     * @param {string} fileId - The id of the file needed.
+     * @returns {Promise<stream>} - Node read stream.
+     */
+    getFileReadStreamAsync(fileId) {
+        return this._getGridFsAsync().then((gfs) => {
+            return gfs.createReadStream({
+                _id: this.ObjectID(fileId)
+            });
+        }).catch(error => {
+            this.logError(error);
+            throw error;
+        });
+    }
+    /**
+     * Get a file write stream.
+     * @param {string} fileId - The id of the file writing to.
+     * @returns {Promise<stream>} - Node write stream.
+     */
+    getFileWriteStreamAsync(fileId) {
+        let newFileId = fileId ? this.ObjectID(fileId) : this.ObjectID();
+        return this._getGridFsAsync().then((gfs) => {
+            return gfs.createWriteStream({
+                _id: fileId
+            });
+        }).catch(error => {
+            this.logError(error);
+            throw error;
+        });
     }
     /**
      * Get a service by the name given.
@@ -689,6 +547,13 @@ class ClarityTransactionDispatcher {
         return this.services[name] || null;
     }
     /**
+     * Get all systems.
+     * @returns {Array<ISystems>}
+     */
+    getSystems() {
+        return this.systems;
+    }
+    /**
      * Notifies the systems about an error.
      * @param error {object} - The error to be sent to the systems.
      * @returns {undefined}
@@ -697,7 +562,7 @@ class ClarityTransactionDispatcher {
         this._notifySystemsAsync("logError", [error]);
     }
     /**
-     * Notifies the systems about an error.
+     * Notifies the systems about a message.
      * @param message {object} - The message to be sent to the systems.
      * @returns {undefined}
      */
@@ -713,71 +578,27 @@ class ClarityTransactionDispatcher {
         this._notifySystemsAsync("logWarning", [warning]);
     }
     /**
-     * Remove a component from an entity.
-     * @param {object} component - The component to be removed.
-     * @returns {Promise<undefined>}
-     */
-    removeComponentAsync(component) {
-        return this.approveComponentRemovalAsync(component).then(() => {
-            return this._removeItemfromCollection(component, COMPONENTS_COLLECTION).then(() => {
-                return this.getEntityByIdAsync(component.entity_id);
-            });
-        }).then((entity) => {
-            return this._notifySystemsWithRecoveryAsync("entityComponentRemovedAsync", [entity, component]);
-        }).catch((error) => {
-            this.logError(error);
-            throw error;
-        });
-    }
-    /**
-     * Removes an entity, and its associated content. The dispatcher does the following to remove an entity.
-     *
-     * - Removes all of the components on the entity notifying the systems that the components have been removed.
-     * - Removes the content and notifies the systems.
-     * - Removes the entity to be removed and notifies the systems the entity has been removed.
+     * Removes the entity to be removed and notifies the systems the entity has been removed.
      * @param {IEntity} entity - The entity to be removed.
      * @returns {Promise<undefined>}
      */
     removeEntityAsync(entity) {
-        return this.approveEntityRemovalAsync(entity).then(() => {
-            return this.getComponentsByEntityAsync(entity).then((components) => {
-                return components.reduce((promise, component) => {
-                    return promise.then(() => {
-                        // We don't need to approve these to be removed because we already got approved to remove the entity.
-                        // And the components are just an extension of the entity.
-                        return this.removeComponentAsync(component);
-                    }).catch((error) => {
-                        return resolvedPromise;
-                    });
-                }, resolvedPromise);
-            });
-        }).then(() => {
-            return this.removeEntityContentAsync(entity);
-        }).then(() => {
-            return this._removeItemfromCollection(entity, "entities");
-        }).then(() => {
+        return this._removeItemfromCollection(ENTITIES_COLLECTION, entity).then(() => {
             return this._notifySystemsWithRecoveryAsync("entityRemovedAsync", [entity]);
-        }).catch((error) => {
+        }).then(() => {
+            return entity;
+        }).catch(error => {
             this.logError(error);
             throw error;
         });
     }
     /**
-     * Removes the content of an entity.
-     * @param {IEntity} entity - The entity of the content to be removed.
+     * Removes the file.
+     * @param {string} fileId - The id of the file to be removed.
      */
-    removeEntityContentAsync(entity) {
-        var contentId = entity.content_id;
-        if (contentId == null) {
-            return resolvedPromise;
-        }
-        return this._removeItemFromGridFsAsync(contentId).then(() => {
-            entity.content_id = null;
-            return this.updateEntityAsync(entity);
-        }).then(() => {
-            return this._notifySystemsWithRecoveryAsync("entityContentRemovedAsync", [null, contentId]);
-        }).then(() => {
-            return this.getEntityByIdAsync(entity._id);
+    removeFileAsync(fileId) {
+        return this._removeItemFromGridFsAsync(fileId).then(() => {
+            return this._notifySystemsWithRecoveryAsync("fileRemovedAsync", [fileId]);
         }).catch((error) => {
             this.logError(error);
             throw error;
@@ -792,7 +613,7 @@ class ClarityTransactionDispatcher {
     removeServiceAsync(name) {
         if (this.services[name]) {
             delete this.services[name];
-            return this._notifySystemsWithRecoveryAsync("serviceRemovedAsync", [name, this.services[name]]);
+            return this._notifySystemsWithRecoveryAsync("serviceRemovedAsync", [name]);
         }
         else {
             var error = Error("Couldn't find service to be removed.");
@@ -801,9 +622,7 @@ class ClarityTransactionDispatcher {
         }
     }
     /**
-     * Updated an entity. The dispatcher will perform the following actions when updating.
-     * This really shouldn't be used much. The entity is really just a container for the
-     * content_id and the components.
+     * Update an entity. The dispatcher will perform the following actions when updating.
      *
      * - Validate the entity. All interested systems need to validate to pass.
      * - Entity's updates are saved.
@@ -812,124 +631,34 @@ class ClarityTransactionDispatcher {
      * @returns {Promise<undefined>} - Resolves when the entity is saved.
      */
     updateEntityAsync(entity) {
-        return this.validateEntityAsync(entity).then(() => {
+        let updatedEntity = {
+            _id: entity._id ? this.ObjectID(entity._id) : this.ObjectID,
+            components: Array.isArray(entity.components) ? entity.components : []
+        };
+        return this.validateEntityAsync(updatedEntity).then(() => {
             return this._findOneAsync(ENTITIES_COLLECTION, {
-                _id: this.ObjectID(entity._id)
+                _id: updatedEntity._id
             });
         }).then((oldEntity) => {
-            entity._id = oldEntity._id;
-            entity.updatedDate = new Date();
-            return this._updateItemInCollectionAsync(entity, ENTITIES_COLLECTION).then(() => {
+            updatedEntity._id = oldEntity._id;
+            updatedEntity.createdDate = oldEntity.createdDate;
+            return this._updateItemInCollectionAsync(ENTITIES_COLLECTION, updatedEntity).then(() => {
                 return oldEntity;
             });
         }).then((oldEntity) => {
-            return this._notifySystemsWithRecoveryAsync("entityUpdatedAsync", [oldEntity, entity]);
-        }).then(() => {
-            return entity;
-        }).catch((error) => {
-            this.logError(error);
-            throw error;
-        });
-    }
-    /**
-     * Update an entity's content. The dispatcher will perform the following actions when
-     * updated the content of an entity.
-     *
-     * - Save the new content to the datastore.
-     * - Validate the new content. All interested systems need to validate to pass.
-     * - The entity.content_id is updated and saved.
-     * - Notify the systems of the updated content.
-     * - The old content is now removed from the datastore.
-     *
-     * @param {object} entity - The entity whos content is to be update.
-     * @param {NodeJS.WritableStream}  - The stream to save to the content of the entity.
-     * @return {Promise<IEntity>}
-     */
-    updateEntityContentByStreamAsync(entity, stream) {
-        var contentId = null;
-        var updatedEntity = null;
-        var oldContentId = entity.content_id;
-        return this._addItemToGridFs(stream).then((id) => {
-            contentId = id;
-            return this.validateEntityContentAsync(entity, id);
-        }).then(() => {
-            entity.content_id = this.ObjectID(contentId);
-            return this.updateEntityAsync(entity);
-        }).then((entity) => {
-            updatedEntity = entity;
-            if (oldContentId != null) {
-                return this._removeItemFromGridFsAsync(oldContentId);
-            }
+            return this._notifySystemsWithRecoveryAsync("entityUpdatedAsync", [oldEntity, updatedEntity]);
         }).then(() => {
             return updatedEntity;
         }).catch((error) => {
-            if (contentId != null) {
-                entity.content_id = oldContentId;
-                return this._updateItemInCollectionAsync(entity, ENTITIES_COLLECTION).catch(() => {
-                    this.logError(error);
-                });
-            }
-            throw error;
-        });
-    }
-    /**
-     * Update a component. The dispatcher will perform the following actions when
-     * updating the component of an entity.
-     *
-     * - Validate the component. All interested systems need to validate to pass.
-     * - Save the component to the datastore.
-     * - Notify the systems that the component was updated.
-     *
-     * @param {object} component - The component to be updated.
-     */
-    updateComponentAsync(component) {
-        let oldEntity;
-        return this._createObjectIdAsync(component.entity_id).then(entityId => {
-            return this.getEntityByIdAsync(entityId);
-        }).then((entity) => {
-            oldEntity = entity;
-            return this.validateComponentAsync(entity, component);
-        }).then(() => {
-            return this.getComponentByIdAsync(component._id);
-        }).then((oldComponent) => {
-            component._id = oldComponent._id;
-            component.updatedDate = new Date();
-            return this._updateItemInCollectionAsync(component, COMPONENTS_COLLECTION).then(() => {
-                return oldComponent;
-            });
-        }).then((oldComponent) => {
-            return this._notifySystemsWithRecoveryAsync("entityComponentUpdatedAsync", [oldEntity, oldComponent, component]);
-        }).then(() => {
-            return this.updateEntityAsync(oldEntity);
-        }).then(() => {
-            return component;
-        }).catch((error) => {
             this.logError(error);
             throw error;
         });
-    }
-    /**
-     * This allows systems to validate the component being saved.
-     */
-    validateComponentAsync(entity, component) {
-        return this._notifySystemsAsync("validateComponentAsync", [entity, component]);
     }
     /**
      * This allows systems to validate the entity being saved.
      */
     validateEntityAsync(entity) {
         return this._notifySystemsAsync("validateEntityAsync", [entity]);
-    }
-    /**
-     * This allows the systems to validate content before its accepted.
-     * The dispatcher saves it to a temporary location so systems can validate it
-     * independently. The content could be an extremely large file so we don't want
-     * to hold it in memory.
-     * @param {IEntity} entity - The entity the content belongs to.
-     * @param {string} newContentId - The id of the new content.
-     */
-    validateEntityContentAsync(entity, newContentId) {
-        return this._notifySystemsAsync("validateEntityContentAsync", [entity, newContentId]);
     }
     /**
      * Ensures the system has the required methods.
@@ -943,5 +672,6 @@ class ClarityTransactionDispatcher {
         return true;
     }
 }
+Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = ClarityTransactionDispatcher;
 //# sourceMappingURL=ClarityTransactionDispatcher.js.map

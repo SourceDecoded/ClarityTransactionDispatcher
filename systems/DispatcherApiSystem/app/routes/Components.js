@@ -1,5 +1,4 @@
 "use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
 const express = require("express");
 const Busboy = require("busboy");
 const componentRouter = express.Router();
@@ -123,5 +122,6 @@ componentRouter.delete("/", (request, response) => {
         response.status(400).send({ message: "The id of the component to be deleted was not provided as a parameter." });
     }
 });
+Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = componentRouter;
 //# sourceMappingURL=Components.js.map

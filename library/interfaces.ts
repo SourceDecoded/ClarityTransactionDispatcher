@@ -3,9 +3,9 @@ import * as stream from "stream";
 
 export interface IEntity {
     _id?: any;
-    content_id?: any;
-    updatedDate?: Date;
+    modifiedDate?: Date;
     createdDate?: Date;
+    components?: Array<any>;
 }
 
 export interface IComponent {

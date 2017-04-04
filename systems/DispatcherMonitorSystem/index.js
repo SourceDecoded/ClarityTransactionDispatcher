@@ -1,5 +1,4 @@
 "use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
 const http = require("http");
 const socketIO = require("socket.io");
 const mongodb = require("mongodb");
@@ -355,5 +354,6 @@ class DispatcherMonitorSystem {
         });
     }
 }
+Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = DispatcherMonitorSystem;
 //# sourceMappingURL=index.js.map
