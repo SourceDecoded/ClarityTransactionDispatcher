@@ -1,5 +1,4 @@
-import { IEntity, IComponent, ISystem, ISystemData, IGridFs, IObjectID, ILogger, IObjectIDInstance, IMongo, IMongoDb, IMongoClient, IMongoCollection, IMongoFactory } from "./interfaces";
-import * as Grid from "gridfs-stream";
+import { IEntity, IComponent, ISystem, ISystemData, IObjectID, ILogger, IObjectIDInstance, IMongo, IMongoDb, IMongoClient, IMongoCollection, IMongoFactory } from "./interfaces";
 import * as fs from "fs";
 import * as uuid from "node-uuid";
 import MongoDbIterator from "./MongoDbIterator";
@@ -48,30 +47,6 @@ export default class ClarityTransactionDispatcher {
         this.databaseUrl = config.databaseUrl;
         this.systems = [];
         this.services = {};
-    }
-
-    private _addItemToGridFs(stream: NodeJS.ReadableStream): any {
-        let newContentId = this.ObjectID();
-        stream.pause();
-
-        return this._getGridFsAsync().then((gfs: IGridFs) => {
-            return new Promise((resolve, reject) => {
-                let writeStream = gfs.createWriteStream({
-                    _id: newContentId
-                });
-
-                stream.on("end", () => {
-                    resolve(newContentId);
-                });
-
-                stream.on("error", (error) => {
-                    reject(error);
-                });
-
-                stream.pipe(writeStream);
-                stream.resume();
-            });
-        });
     }
 
     /**
@@ -151,17 +126,6 @@ export default class ClarityTransactionDispatcher {
      */
     private _getDatabaseAsync() {
         return this.MongoClient.connect(this.databaseUrl);
-    }
-
-    /**
-     * Get a gridFs.
-     * @private
-     * @returns {Promise<gridfs>}
-     */
-    private _getGridFsAsync() {
-        return this._getDatabaseAsync().then((db: any) => {
-            return this.mongoFactory.createGridFs(db, this.mongodb);
-        });
     }
 
     /**
@@ -269,28 +233,6 @@ export default class ClarityTransactionDispatcher {
     }
 
     /**
-     * Remove the content from gridFs.
-     * @private
-     */
-    private _removeItemFromGridFsAsync(id: string) {
-        return this._getGridFsAsync().then((gfs: IGridFs) => {
-            return new Promise((resolve, reject) => {
-
-                gfs.remove({
-                    _id: id
-                }, (error) => {
-                    if (error != null) {
-                        reject(error);
-                    } else {
-                        resolve();
-                    }
-                });
-
-            });
-        });
-    }
-
-    /**
      * Remove an item from a collection.
      * @private
      * @returns {Promise<undefined>}
@@ -338,6 +280,14 @@ export default class ClarityTransactionDispatcher {
             components: Array.isArray(entity.components) ? entity.components : []
         };
         let createdEntity: IEntity;
+
+        newEntity.components.forEach(component => {
+            if (!component._id) {
+                component._id = this.ObjectID();
+            } else {
+                component._id = this.ObjectID(component._id);
+            }
+        });
 
         return this.validateEntityAsync(newEntity).then(() => {
             return this._addItemToCollectionAsync(ENTITIES_COLLECTION, newEntity);
@@ -394,9 +344,6 @@ export default class ClarityTransactionDispatcher {
      *  - entityRemovedAsync(entity: IEntity)
      *  - entityRetrievedAsync(entity: IEntity)
      *  - entityUpdatedAsync(oldEntity: IEntity, updatedEntity: IEntity)
-     *  - fileAddedAsync(id: string)
-     *  - fileRemovedAsync(id: string)
-     *  - fileUpdatedAsync(oldId: string, newId: string)
      *  - logError(error: { type?: string; message?: string; })
      *  - logMessage(message: { type?: string; message?: string; })
      *  - logWarning(warning: { type?: string; message?: string; })
@@ -573,40 +520,6 @@ export default class ClarityTransactionDispatcher {
     }
 
     /**
-     * Get a file read stream.
-     * @param {string} fileId - The id of the file needed.
-     * @returns {Promise<stream>} - Node read stream.
-     */
-    getFileReadStreamAsync(fileId: string) {
-        return this._getGridFsAsync().then((gfs: any) => {
-            return gfs.createReadStream({
-                _id: this.ObjectID(fileId)
-            });
-        }).catch(error => {
-            this.logError(error);
-            throw error;
-        });
-    }
-
-    /**
-     * Get a file write stream.
-     * @param {string} fileId - The id of the file writing to.
-     * @returns {Promise<stream>} - Node write stream.
-     */
-    getFileWriteStreamAsync(fileId?: string) {
-        let newFileId = fileId ? this.ObjectID(fileId) : this.ObjectID()
-
-        return this._getGridFsAsync().then((gfs: any) => {
-            return gfs.createWriteStream({
-                _id: fileId
-            });
-        }).catch(error => {
-            this.logError(error);
-            throw error;
-        });
-    }
-
-    /**
      * Get a service by the name given.
      * @param {string} name - The name of the desired service.
      * @returns {object} - Null or the desired service.
@@ -667,19 +580,6 @@ export default class ClarityTransactionDispatcher {
     }
 
     /**
-     * Removes the file.
-     * @param {string} fileId - The id of the file to be removed.
-     */
-    removeFileAsync(fileId) {
-        return this._removeItemFromGridFsAsync(fileId).then(() => {
-            return this._notifySystemsWithRecoveryAsync("fileRemovedAsync", [fileId]);
-        }).catch((error) => {
-            this.logError(error);
-            throw error;
-        });
-    }
-
-    /**
      * Removes a service by its name. The dispatcher will notify the systems that this service is being 
      * removed.
      * @param {string} name - The name of the service to be removed.
@@ -710,6 +610,14 @@ export default class ClarityTransactionDispatcher {
             _id: entity._id ? this.ObjectID(entity._id) : this.ObjectID,
             components: Array.isArray(entity.components) ? entity.components : []
         };
+
+        updatedEntity.components.forEach(component => {
+            if (!component._id) {
+                component._id = this.ObjectID();
+            } else {
+                component._id = this.ObjectID(component._id);
+            }
+        });
 
         return this.validateEntityAsync(updatedEntity).then(() => {
             return this._findOneAsync(ENTITIES_COLLECTION, {

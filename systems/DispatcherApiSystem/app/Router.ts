@@ -1,6 +1,4 @@
 import entitiesRoute from "./routes/Entities";
-import componentsRoute from "./routes/Components";
-import contentRoute from "./routes/Content";
 
 export default class Router {
     app: any;
@@ -54,6 +52,7 @@ export default class Router {
             response.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
             response.locals.clarityTransactionDispatcher = this.clarityTransactionDispatcher;
             response.locals.authenticator = this.authenticator;
+            response.locals.fileSystem = this.fileSystem;
 
             var authenticationResult = this.authenticate(request, response);
 
@@ -66,7 +65,13 @@ export default class Router {
         });
 
         this.app.use("/api/entities", entitiesRoute);
-        this.app.use("/api/components", componentsRoute);
-        this.app.use("/api/content", contentRoute);
+
+        this.app.use((error, request, response, next) => {
+            if (error) {
+                response.status(400).send({ message: error.message });
+            } else {
+                next();
+            }
+        });
     }
 }

@@ -1,132 +1,119 @@
 "use strict";
 const express = require("express");
-const Busboy = require("busboy");
-const stream = require("stream");
+const bodyParser = require("body-parser");
 const entityRouter = express.Router();
-entityRouter.post("/", (request, response) => {
-    const busboy = new Busboy({ headers: request.headers });
+const jsonParser = bodyParser.json();
+entityRouter.post("/", jsonParser, (request, response) => {
     const dispatcher = response.locals.clarityTransactionDispatcher;
-    let promiseStarted = false;
-    let components = null;
-    let content = null;
-    let addEntity = () => {
-        promiseStarted = true;
-        dispatcher.addEntityAsync(content, components).then(result => {
-            response.status(200).send({ data: result });
+    const entity = request.body.entity;
+    if (entity) {
+        dispatcher.addEntityAsync(entity).then(createdEntity => {
+            response.status(200).send(createdEntity);
         }).catch(error => {
             response.status(400).send({ message: error.message });
         });
-    };
-    busboy.on("field", (fieldName, value, fieldNameTruncated, valueTruncated, encoding, mimeType) => {
-        if (fieldName === "components") {
-            try {
-                components = JSON.parse(value);
-            }
-            catch (error) {
-                response.status(400).send({ message: error.message });
-            }
-        }
-        else if (fieldName === "content") {
-            content = new stream.Readable();
-            content._read = () => { };
-            content.push(value);
-            content.push(null);
-        }
-    });
-    busboy.on("file", (fieldName, file, fileName, encoding, mimeType) => {
-        if (fieldName === "content") {
-            content = file;
-            addEntity();
-        }
-    });
-    busboy.on("finish", () => {
-        if (!promiseStarted) {
-            addEntity();
-        }
-    });
-    request.pipe(busboy);
+    }
+    else {
+        response.status(400).send({ message: "The following field(s) are required in the body of the request: entity." });
+    }
 });
 entityRouter.get("/", (request, response) => {
     const dispatcher = response.locals.clarityTransactionDispatcher;
-    const entityId = request.query.id;
-    const getCount = request.query.count;
     const lastId = request.query.lastId;
-    const pageSize = request.query.pageSize;
-    const lastUpdatedDate = request.query.lastUpdatedDate;
-    const lastCreatedDate = request.query.lastCreatedDate;
-    if (entityId) {
-        dispatcher.getEntityByIdAsync(entityId).then(entity => {
-            response.status(200).send({ data: entity });
-        }).catch(error => {
-            response.status(400).send({ message: error.message });
-        });
-    }
-    else if (getCount == "true") {
-        dispatcher.getEntityCountAsync().then(count => {
-            response.status(200).send({ data: { count } });
+    if (lastId) {
+        dispatcher.getEntitiesAsync({ lastId }).then(entities => {
+            response.status(200).send(entities);
         }).catch(error => {
             response.status(400).send({ message: error.message });
         });
     }
     else {
-        const config = {
-            lastId,
-            lastUpdatedDate,
-            lastCreatedDate,
-            pageSize
-        };
-        dispatcher.getEntitiesAsync(config).then(entities => {
-            response.status(200).send({ data: entities });
-        }).catch(error => {
-            response.status(400).send({ message: error.message });
-        });
+        response.status(400).send({ message: "The following parameter(s) are required in the request url: lastId." });
     }
 });
-entityRouter.patch("/", (request, response) => {
-    const busboy = new Busboy({ headers: request.headers });
+entityRouter.get("/:id", (request, response) => {
     const dispatcher = response.locals.clarityTransactionDispatcher;
-    let entityForm = {};
-    const updateEntity = () => {
-        if (entityForm.entity) {
-            let entity;
-            try {
-                entity = JSON.parse(entityForm.entity);
-            }
-            catch (error) {
-                return response.status(400).send({ message: error.message });
-            }
-            dispatcher.updateEntityAsync(entity).then(entity => {
-                response.status(200).send({ data: entity });
-            }).catch(error => {
-                response.status(400).send({ message: error.message });
-            });
-        }
-        else {
-            response.status(400).send({ message: "An entity was not provided in the body." });
-        }
-    };
-    busboy.on("field", (fieldName, value, fieldNameTruncated, valueTruncated, encoding, mimeType) => {
-        entityForm[fieldName] = value;
+    const id = request.params.id;
+    dispatcher.getEntityByIdAsync(id).then(entity => {
+        response.status(200).send(entity);
+    }).catch(error => {
+        response.status(400).send({ message: error.message });
     });
-    busboy.on("finish", () => {
-        updateEntity();
-    });
-    request.pipe(busboy);
 });
-entityRouter.delete("/", (request, response) => {
+entityRouter.patch("/:id", jsonParser, (request, response) => {
     const dispatcher = response.locals.clarityTransactionDispatcher;
-    const entityId = request.query.id;
-    if (entityId) {
-        dispatcher.getEntityByIdAsync(entityId).then(entity => {
-            return dispatcher.removeEntityAsync(entity).then(() => {
-                response.status(200).send({ data: entity });
-            });
+    const id = request.params.id;
+    const entity = request.body.entity;
+    if (entity) {
+        entity._id = id;
+        dispatcher.updateEntityAsync(entity).then(updatedEntity => {
+            response.status(200).send(updatedEntity);
         }).catch(error => {
             response.status(400).send({ message: error.message });
         });
     }
     else {
-        response.status(400).send({ message: "The id of the entity to be deleted was not provided as a parameter." });
+        response.status(400).send({ message: "The following field(s) are required in the body of the request: entity." });
+    }
+});
+entityRouter.delete("/:id", (request, response) => {
+    const dispatcher = response.locals.clarityTransactionDispatcher;
+    const id = request.params.id;
+    dispatcher.getEntityByIdAsync(id).then(entity => {
+        return dispatcher.removeEntityAsync(entity);
+    }).then((removedEntity) => {
+        response.status(200).send(removedEntity);
+    }).catch(error => {
+        response.status(400).send({ message: error.message });
+    });
+});
+entityRouter.get("/:id/components", (request, response) => {
+    const dispatcher = response.locals.clarityTransactionDispatcher;
+    const id = request.params.id;
+    dispatcher.getEntityByIdAsync(id).then(entity => {
+        response.status(200).send(entity.components);
+    }).catch(error => {
+        response.status(400).send({ message: error.message });
+    });
+});
+entityRouter.get("/:entityId/components/:componentId", (request, response) => {
+    const dispatcher = response.locals.clarityTransactionDispatcher;
+    const entityId = request.params.entityId;
+    const componentId = request.params.componentId;
+    const getFile = request.query.getFile;
+    if (getFile === "true") {
+    }
+    else {
+        dispatcher.getEntityByIdAsync(entityId).then(entity => {
+            const component = entity.components.filter(component => component._id == componentId);
+            if (component[0]) {
+                response.status(200).send(component);
+            }
+            else {
+                response.status(400).send({ message: "The entity provided does not have a component with that id." });
+            }
+        }).catch(error => {
+            response.status(400).send({ message: error.message });
+        });
+    }
+});
+entityRouter.post("/:id/components", jsonParser, (request, response) => {
+    const dispatcher = response.locals.clarityTransactionDispatcher;
+    const id = request.params.id;
+    const component = request.body.component;
+    if (component) {
+        dispatcher.getEntityByIdAsync(id).then(entity => {
+            entity._id = id;
+            entity.components.push(component);
+            return dispatcher.updateEntityAsync(entity);
+        }).then(updatedEntity => {
+            response.status(200).send(updatedEntity);
+        }).catch(error => {
+            response.status(400).send(error.message);
+        });
+    }
+    else {
+        response.status(400).send({ message: "The following field(s) are required in the body of the request: component." });
     }
 });
 Object.defineProperty(exports, "__esModule", { value: true });

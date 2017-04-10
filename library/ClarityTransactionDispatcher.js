@@ -34,25 +34,6 @@ class ClarityTransactionDispatcher {
         this.systems = [];
         this.services = {};
     }
-    _addItemToGridFs(stream) {
-        let newContentId = this.ObjectID();
-        stream.pause();
-        return this._getGridFsAsync().then((gfs) => {
-            return new Promise((resolve, reject) => {
-                let writeStream = gfs.createWriteStream({
-                    _id: newContentId
-                });
-                stream.on("end", () => {
-                    resolve(newContentId);
-                });
-                stream.on("error", (error) => {
-                    reject(error);
-                });
-                stream.pipe(writeStream);
-                stream.resume();
-            });
-        });
-    }
     /**
      * Add an item to a collection.
      * @private
@@ -125,16 +106,6 @@ class ClarityTransactionDispatcher {
      */
     _getDatabaseAsync() {
         return this.MongoClient.connect(this.databaseUrl);
-    }
-    /**
-     * Get a gridFs.
-     * @private
-     * @returns {Promise<gridfs>}
-     */
-    _getGridFsAsync() {
-        return this._getDatabaseAsync().then((db) => {
-            return this.mongoFactory.createGridFs(db, this.mongodb);
-        });
     }
     /**
      * Initialize a system.
@@ -228,26 +199,6 @@ class ClarityTransactionDispatcher {
         }, resolvedPromise);
     }
     /**
-     * Remove the content from gridFs.
-     * @private
-     */
-    _removeItemFromGridFsAsync(id) {
-        return this._getGridFsAsync().then((gfs) => {
-            return new Promise((resolve, reject) => {
-                gfs.remove({
-                    _id: id
-                }, (error) => {
-                    if (error != null) {
-                        reject(error);
-                    }
-                    else {
-                        resolve();
-                    }
-                });
-            });
-        });
-    }
-    /**
      * Remove an item from a collection.
      * @private
      * @returns {Promise<undefined>}
@@ -293,6 +244,14 @@ class ClarityTransactionDispatcher {
             components: Array.isArray(entity.components) ? entity.components : []
         };
         let createdEntity;
+        newEntity.components.forEach(component => {
+            if (!component._id) {
+                component._id = this.ObjectID();
+            }
+            else {
+                component._id = this.ObjectID(component._id);
+            }
+        });
         return this.validateEntityAsync(newEntity).then(() => {
             return this._addItemToCollectionAsync(ENTITIES_COLLECTION, newEntity);
         }).then(newEntity => {
@@ -344,9 +303,6 @@ class ClarityTransactionDispatcher {
      *  - entityRemovedAsync(entity: IEntity)
      *  - entityRetrievedAsync(entity: IEntity)
      *  - entityUpdatedAsync(oldEntity: IEntity, updatedEntity: IEntity)
-     *  - fileAddedAsync(id: string)
-     *  - fileRemovedAsync(id: string)
-     *  - fileUpdatedAsync(oldId: string, newId: string)
      *  - logError(error: { type?: string; message?: string; })
      *  - logMessage(message: { type?: string; message?: string; })
      *  - logWarning(warning: { type?: string; message?: string; })
@@ -508,37 +464,6 @@ class ClarityTransactionDispatcher {
         return this._getCountAsync(ENTITIES_COLLECTION);
     }
     /**
-     * Get a file read stream.
-     * @param {string} fileId - The id of the file needed.
-     * @returns {Promise<stream>} - Node read stream.
-     */
-    getFileReadStreamAsync(fileId) {
-        return this._getGridFsAsync().then((gfs) => {
-            return gfs.createReadStream({
-                _id: this.ObjectID(fileId)
-            });
-        }).catch(error => {
-            this.logError(error);
-            throw error;
-        });
-    }
-    /**
-     * Get a file write stream.
-     * @param {string} fileId - The id of the file writing to.
-     * @returns {Promise<stream>} - Node write stream.
-     */
-    getFileWriteStreamAsync(fileId) {
-        let newFileId = fileId ? this.ObjectID(fileId) : this.ObjectID();
-        return this._getGridFsAsync().then((gfs) => {
-            return gfs.createWriteStream({
-                _id: fileId
-            });
-        }).catch(error => {
-            this.logError(error);
-            throw error;
-        });
-    }
-    /**
      * Get a service by the name given.
      * @param {string} name - The name of the desired service.
      * @returns {object} - Null or the desired service.
@@ -593,18 +518,6 @@ class ClarityTransactionDispatcher {
         });
     }
     /**
-     * Removes the file.
-     * @param {string} fileId - The id of the file to be removed.
-     */
-    removeFileAsync(fileId) {
-        return this._removeItemFromGridFsAsync(fileId).then(() => {
-            return this._notifySystemsWithRecoveryAsync("fileRemovedAsync", [fileId]);
-        }).catch((error) => {
-            this.logError(error);
-            throw error;
-        });
-    }
-    /**
      * Removes a service by its name. The dispatcher will notify the systems that this service is being
      * removed.
      * @param {string} name - The name of the service to be removed.
@@ -635,6 +548,14 @@ class ClarityTransactionDispatcher {
             _id: entity._id ? this.ObjectID(entity._id) : this.ObjectID,
             components: Array.isArray(entity.components) ? entity.components : []
         };
+        updatedEntity.components.forEach(component => {
+            if (!component._id) {
+                component._id = this.ObjectID();
+            }
+            else {
+                component._id = this.ObjectID(component._id);
+            }
+        });
         return this.validateEntityAsync(updatedEntity).then(() => {
             return this._findOneAsync(ENTITIES_COLLECTION, {
                 _id: updatedEntity._id

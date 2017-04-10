@@ -6,6 +6,7 @@ export default class DispatcherApiSystem {
     guid: string;
     name: string;
     authenticator: { decode: (token: string) => any };
+    fileSystem: any;
 
     constructor() {
         this.clarityTransactionDispatcher = null;
@@ -13,6 +14,7 @@ export default class DispatcherApiSystem {
         this.guid = "13CE560D-9B85-4C85-8BA4-72EA1686EBAA";
         this.name = "Dispatcher Api System";
         this.authenticator = null;
+        this.fileSystem = null;
     }
 
     private _initAPI() {
@@ -22,6 +24,7 @@ export default class DispatcherApiSystem {
 
     activatedAsync(clarityTransactionDispatcher) {
         this.clarityTransactionDispatcher = clarityTransactionDispatcher;
+        this.fileSystem = this.clarityTransactionDispatcher.getService("fileSystem");
         this._initAPI();
     }
 
