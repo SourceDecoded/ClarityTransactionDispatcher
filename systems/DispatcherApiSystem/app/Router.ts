@@ -3,13 +3,16 @@ import entitiesRoute from "./routes/Entities";
 export default class Router {
     app: any;
     authenticator: any;
+    fileSystem: any;
     clarityTransactionDispatcher: any;
+    dispatcherApi: any;
 
-    constructor(app, clarityTransactionDispatcher) {
-        this.app = clarityTransactionDispatcher.getService("express");
-        this.authenticator = clarityTransactionDispatcher.getService("authenticator");
-        this.clarityTransactionDispatcher = clarityTransactionDispatcher;
-
+    constructor(dispatcherApi) {
+        this.app = dispatcherApi.clarityTransactionDispatcher.getService("express");
+        this.authenticator = dispatcherApi.clarityTransactionDispatcher.getService("authenticator");
+        this.fileSystem = dispatcherApi.clarityTransactionDispatcher.getService("fileSystem");
+        this.clarityTransactionDispatcher = dispatcherApi.clarityTransactionDispatcher;
+        this.dispatcherApi = dispatcherApi;
     }
 
     getToken(authorizationHeader) {
@@ -50,7 +53,7 @@ export default class Router {
             response.header("Access-Control-Allow-Origin", "*");
             response.header("Access-Control-Allow-Methods", "GET, PATCH, POST, DELETE");
             response.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
-            response.locals.clarityTransactionDispatcher = this.clarityTransactionDispatcher;
+            response.locals.dispatcherApi = this.dispatcherApi;
             response.locals.authenticator = this.authenticator;
             response.locals.fileSystem = this.fileSystem;
 

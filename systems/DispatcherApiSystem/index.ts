@@ -18,7 +18,7 @@ export default class DispatcherApiSystem {
     }
 
     private _initAPI() {
-        const router = new Router(this.app, this.clarityTransactionDispatcher);
+        const router = new Router(this);
         router.init();
     }
 
@@ -34,5 +34,23 @@ export default class DispatcherApiSystem {
 
     getName() {
         return this.name;
+    }
+
+    getComponentsByEntityIdAsync(id) {
+        return this.clarityTransactionDispatcher.getEntityByIdAsync(id).then(entity => {
+            return Promise.resolve(entity.components);
+        });
+    }
+
+    getComponentByIdAsync(componentId, entityId) {
+        return this.getComponentsByEntityIdAsync(entityId).then(components => {
+            const component = components.filter(component => component._id == componentId)[0];
+
+            if (component) {
+                return Promise.resolve(component);
+            } else {
+                return Promise.reject(new Error("The entity provided does not have a component with that id."));
+            }
+        });
     }
 }
