@@ -9,41 +9,45 @@ const jsonParser = bodyParser.json();
 entityRouter.post("/", jsonParser, (request, response) => {
     const api = response.locals.dispatcherApi;
     const dispatcher = <ClarityTransactionDispatcher>api.clarityTransactionDispatcher;
-    const entity = request.body.entity;
+    const entity = request.body;
 
-    if (entity) {
-        dispatcher.addEntityAsync(entity).then(createdEntity => {
-            response.status(200).send(createdEntity);
-        }).catch(error => {
-            response.status(400).send({ message: error.message });
-        });
-    } else {
-        response.status(400).send({ message: "The following field(s) are required in the body of the request: entity." });
-    }
+    dispatcher.addEntityAsync(entity).then(createdEntity => {
+        response.status(200).send(createdEntity);
+    }).catch(error => {
+        response.status(400).send({ message: error.message });
+    });
 });
 
 entityRouter.get("/", (request, response) => {
     const api = response.locals.dispatcherApi;
     const dispatcher = <ClarityTransactionDispatcher>api.clarityTransactionDispatcher;
     const lastId = request.query.lastId;
+    const pageSize = request.query.pageSize;
+    const lastModifiedDate = request.query.lastModifiedDate;
+    const lastCreatedDate = request.query.lastCreatedDate;
+    const getCount = request.query.getCount;
 
-    if (lastId) {
-        dispatcher.getEntitiesAsync({ lastId }).then(entities => {
+    if (getCount !== "true") {
+        dispatcher.getEntitiesAsync({ lastId, pageSize, lastModifiedDate, lastCreatedDate }).then(entities => {
             response.status(200).send(entities);
         }).catch(error => {
             response.status(400).send({ message: error.message });
         });
     } else {
-        response.status(400).send({ message: "The following parameter(s) are required in the request url: lastId." });
+        dispatcher.getEntityCountAsync().then(count => {
+            response.status(200).send(count.toString());
+        }).catch(error => {
+            response.status(400).send({ message: error.message });
+        });
     }
 });
 
 entityRouter.get("/:id", (request, response) => {
     const api = response.locals.dispatcherApi;
     const dispatcher = <ClarityTransactionDispatcher>api.clarityTransactionDispatcher;
-    const id = request.params.id;
+    const entityId = request.params.id;
 
-    dispatcher.getEntityByIdAsync(id).then(entity => {
+    dispatcher.getEntityByIdAsync(entityId).then(entity => {
         response.status(200).send(entity);
     }).catch(error => {
         response.status(400).send({ message: error.message });
@@ -53,34 +57,22 @@ entityRouter.get("/:id", (request, response) => {
 entityRouter.patch("/:id", jsonParser, (request, response) => {
     const api = response.locals.dispatcherApi;
     const dispatcher = <ClarityTransactionDispatcher>api.clarityTransactionDispatcher;
-    const id = request.params.id;
-    const entity = request.body.entity;
+    const entityId = request.params.id;
+    const entity = request.body;
 
-    if (entity) {
-        dispatcher.getEntityByIdAsync(id).then(oldEntity => {
-            entity._id = oldEntity._id;
-            entity.createdDate = oldEntity.createdDate;
-            return Object.assign({}, oldEntity, entity);
-        }).then(newEntity => {
-            return dispatcher.updateEntityAsync(newEntity);
-        }).then(updatedEntity => {
-            response.status(200).send(updatedEntity);
-        }).catch(error => {
-            response.status(400).send({ message: error.message });
-        });
-    } else {
-        response.status(400).send({ message: "The following field(s) are required in the body of the request: entity." });
-    }
+    api.updateEntityAsync(entityId, entity).then(updatedEntity => {
+        response.status(200).send(updatedEntity);
+    }).catch(error => {
+        response.status(400).send({ message: error.message });
+    });
 });
 
 entityRouter.delete("/:id", (request, response) => {
     const api = response.locals.dispatcherApi;
     const dispatcher = <ClarityTransactionDispatcher>api.clarityTransactionDispatcher;
-    const id = request.params.id;
+    const entityId = request.params.id;
 
-    dispatcher.getEntityByIdAsync(id).then(entity => {
-        return dispatcher.removeEntityAsync(entity);
-    }).then((removedEntity) => {
+    api.removeEntityByIdAsync(entityId).then((removedEntity) => {
         response.status(200).send(removedEntity);
     }).catch(error => {
         response.status(400).send({ message: error.message });
@@ -90,9 +82,9 @@ entityRouter.delete("/:id", (request, response) => {
 entityRouter.get("/:id/components", (request, response) => {
     const api = response.locals.dispatcherApi;
     const dispatcher = <ClarityTransactionDispatcher>api.clarityTransactionDispatcher;
-    const id = request.params.id;
+    const entityId = request.params.id;
 
-    api.getComponentsByEntityIdAsync(id).then(components => {
+    api.getComponentsByEntityIdAsync(entityId).then(components => {
         response.status(200).send(components);
     }).catch(error => {
         response.status(400).send({ message: error.message });
@@ -107,19 +99,20 @@ entityRouter.get("/:entityId/components/:componentId", (request, response) => {
     const componentId = request.params.componentId;
     const getFile = request.query.getFile;
 
-    api.getComponentByIdAsync(componentId, entityId).then(component => {
+    api.getComponentAsync(componentId, entityId).then(component => {
         if (getFile === "true") {
-            const fileId = component.fileId ? component.fileId : null;
+            return fileSystem.getFileReadStreamByIdAsync(component.fileId).then(fileStream => {
+                try {
+                    fileStream.read();
+                } catch (error) {
+                    throw error;
+                }
 
-            if (fileId) {
-                fileSystem.getFileReadStreamByIdAsync(fileId).then(fileStream => {
-                    response.set("Content-Type", component.contentType);
-                    response.set("Content-Length", component.contentLength);
-                    fileStream.pipe(response);
-                });
-            } else {
-                throw new Error("The component provided does not have a fileId on it.");
-            }
+                response.set("Content-Type", component.contentType);
+                response.set("Content-Length", component.contentLength);
+
+                fileStream.pipe(response);
+            });
         } else {
             response.status(200).send(component);
         }
@@ -131,76 +124,34 @@ entityRouter.get("/:entityId/components/:componentId", (request, response) => {
 entityRouter.post("/:id/components", jsonParser, (request, response) => {
     const api = response.locals.dispatcherApi;
     const dispatcher = <ClarityTransactionDispatcher>api.clarityTransactionDispatcher;
-    const id = request.params.id;
+    const entityId = request.params.id;
 
-    const jsonRequestHandler = () => {
-        const component = request.body.component;
+    const addJsonComponent = () => {
+        const component = request.body;
 
-        if (component) {
-            dispatcher.getEntityByIdAsync(id).then(entity => {
-                entity.components.push(component);
-                return dispatcher.updateEntityAsync(entity);
-            }).then(updatedEntity => {
-                response.status(200).send(updatedEntity);
-            }).catch(error => {
-                response.status(400).send({ message: error.message });
-            });
-        } else {
-            response.status(400).send({ message: "The following field(s) are required in the body of the request: component." })
-        }
+        api.addComponentAsync(entityId, component).then(newComponent => {
+            response.status(200).send(newComponent);
+        }).catch(error => {
+            response.status(400).send({ message: error.message });
+        });
     };
 
-    const multiPartRequestHandler = () => {
+    const addFileComponent = () => {
         const busboy = new Busboy({ headers: request.headers });
-        const fileSystem = response.locals.fileSystem;
-        const newFileId = response.locals.fileSystem.ObjectID();
-
-        const addFileAsync = file => {
-            file.pause();
-
-            return new Promise((resolve, reject) => {
-                return fileSystem.getFileWriteStreamByIdAsync(newFileId).then(writeStream => {
-                    let dataLength = 0;
-
-                    file.on("data", data => {
-                        dataLength += data.length;
-                    });
-
-                    file.on("end", () => {
-                        resolve(dataLength);
-                    });
-
-                    file.on("error", error => {
-                        reject(error);
-                    });
-
-                    file.pipe(writeStream);
-                    file.resume();
-                }).catch(error => {
-                    reject(error)
-                });
-            });
-        };
 
         busboy.on("file", (fieldName, file, fileName, encoding, mimeType) => {
-            let contentLength = 0;
-
-            addFileAsync(file).then((dataLength: any) => {
-                contentLength = dataLength;
-                return dispatcher.getEntityByIdAsync(id);
-            }).then((entity: any) => {
+            api.addFileAsync(file).then(data => {
                 const component = {
-                    fileId: newFileId,
+                    fileId: data.fileId,
                     fileName,
                     contentType: mimeType,
-                    contentLength,
+                    contentLength: data.contentLength,
                     type: "file"
                 };
 
-                entity.components.push(component);
-                return dispatcher.updateEntityAsync(entity);
-            }).then(updatedEntity => {
-                response.status(200).send(updatedEntity);
+                return api.addComponentAsync(entityId, component);
+            }).then(newComponent => {
+                response.status(200).send(newComponent);
             }).catch(error => {
                 response.status(400).send({ message: error.message });
             });
@@ -214,9 +165,9 @@ entityRouter.post("/:id/components", jsonParser, (request, response) => {
     };
 
     if (request.headers["content-type"] === "application/json") {
-        jsonRequestHandler();
+        addJsonComponent();
     } else {
-        multiPartRequestHandler();
+        addFileComponent();
     }
 });
 
@@ -226,42 +177,62 @@ entityRouter.patch("/:entityId/components/:componentId", jsonParser, (request, r
     const entityId = request.params.entityId;
     const componentId = request.params.componentId;
 
-    const jsonRequestHandler = () => {
-        const component = request.body.component;
-        let updatedComponent = {};
+    const updateJsonComponent = () => {
+        const component = request.body;
 
-        if (component) {
-            api.getComponentByIdAsync(componentId, entityId).then(oldComponent => {
-                if (oldComponent.type !== "file") {
-                    component._id = oldComponent._id;
-                    updatedComponent = Object.assign({}, oldComponent, component);
+        api.updateComponentAsync(componentId, entityId, component).then(updatedComponent => {
+            response.status(200).send(updatedComponent);
+        }).catch(error => {
+            response.status(400).send({ message: error.message });
+        });
+    };
 
-                    return Promise.resolve();
-                } else {
-                    throw new Error("Component is of type file. Use multipart/form-data to modifiy the component.");
-                }
-            }).then(() => {
-                return dispatcher.getEntityByIdAsync(entityId);
-            }).then(entity => {
-                const componentIndex = entity.components.findIndex(component => component._id == componentId);
-                entity.components[componentIndex] = updatedComponent;
+    const updateFileComponent = () => {
+        const busboy = new Busboy({ headers: request.headers });
 
-                return dispatcher.updateEntityAsync(entity);
-            }).then(updatedEntity => {
-                response.status(200).send(updatedEntity);
+        busboy.on("file", (fieldName, file, fileName, encoding, mimeType) => {
+            api.addFileAsync(file).then(data => {
+                const component = {
+                    fileId: data.fileId,
+                    fileName,
+                    contentType: mimeType,
+                    contentLength: data.contentLength,
+                    type: "file"
+                };
+
+                return api.updateComponentAsync(componentId, entityId, component);
+            }).then(updatedComponent => {
+                response.status(200).send(updatedComponent);
             }).catch(error => {
                 response.status(400).send({ message: error.message });
             });
-        } else {
-            response.status(400).send({ message: "The following field(s) are required in the body of the request: component." })
-        }
+        });
+
+        busboy.on("error", error => {
+            response.status(400).send({ message: error.message });
+        });
+
+        request.pipe(busboy);
     };
 
     if (request.headers["content-type"] === "application/json") {
-        jsonRequestHandler();
+        updateJsonComponent();
     } else {
-        // multiPartRequestHandler();
+        updateFileComponent();
     }
+});
+
+entityRouter.delete("/:entityId/components/:componentId", (request, response) => {
+    const api = response.locals.dispatcherApi;
+    const dispatcher = <ClarityTransactionDispatcher>api.clarityTransactionDispatcher;
+    const entityId = request.params.entityId;
+    const componentId = request.params.componentId;
+
+    api.removeComponentAsync(componentId, entityId).then((removedComponent) => {
+        response.status(200).send(removedComponent);
+    }).catch(error => {
+        response.status(400).send({ message: error.message });
+    });
 });
 
 export default entityRouter;

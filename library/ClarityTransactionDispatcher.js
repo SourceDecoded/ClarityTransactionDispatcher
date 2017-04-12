@@ -239,11 +239,11 @@ class ClarityTransactionDispatcher {
      * @return {Promise<Entity>}
      */
     addEntityAsync(entity) {
+        let createdEntity;
         let newEntity = {
             _id: entity._id ? this.ObjectID(entity._id) : this.ObjectID(),
             components: Array.isArray(entity.components) ? entity.components : []
         };
-        let createdEntity;
         newEntity.components.forEach(component => {
             if (!component._id) {
                 component._id = this.ObjectID();
@@ -405,7 +405,7 @@ class ClarityTransactionDispatcher {
      * @param config {} - The configuration of the query. It takes a lastId, pageSize, lastModifiedDate, and a lastCreatedDate.
      */
     getEntitiesAsync(config) {
-        let lastId = this.ObjectID(config.lastId);
+        let lastId = config.lastId ? this.ObjectID(config.lastId) : null;
         let pageSize = config.pageSize < 50 ? config.pageSize : 50;
         let lastModifiedDate = config.lastModifiedDate;
         let lastCreatedDate = config.lastCreatedDate;
