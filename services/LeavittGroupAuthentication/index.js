@@ -1,4 +1,5 @@
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 class LeavittGroupAuthentication {
     constructor(jwtSimple) {
         if (jwtSimple == null) {
@@ -19,6 +20,5 @@ FwIDAQAB
         return this.jwtSimple.decode(token, this.publicKey);
     }
 }
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = LeavittGroupAuthentication;
 //# sourceMappingURL=index.js.map

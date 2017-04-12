@@ -1,4 +1,5 @@
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 const mongo = require("mongodb");
 class MongoDbIterator {
     constructor(config) {
@@ -71,6 +72,5 @@ class MongoDbIterator {
         });
     }
 }
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = MongoDbIterator;
 //# sourceMappingURL=MongoDbIterator.js.map

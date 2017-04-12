@@ -1,4 +1,5 @@
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 const express = require("express");
 const transactionRouter = express.Router();
 transactionRouter.get("/", (request, response) => {
@@ -32,6 +33,5 @@ transactionRouter.get("/", (request, response) => {
         response.status(400).send({ message: "The id or count parameter needed." });
     }
 });
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = transactionRouter;
 //# sourceMappingURL=Transactions.js.map

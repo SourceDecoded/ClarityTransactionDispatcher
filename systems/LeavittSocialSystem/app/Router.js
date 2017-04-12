@@ -1,4 +1,5 @@
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 const Posts_1 = require("./routes/Posts");
 class Router {
     constructor(app, system) {
@@ -16,6 +17,5 @@ class Router {
         this.app.use("/api/posts", Posts_1.default);
     }
 }
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = Router;
 //# sourceMappingURL=Router.js.map

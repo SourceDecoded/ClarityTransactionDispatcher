@@ -1,4 +1,5 @@
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 const Router_1 = require("./app/Router");
 class DispatcherApiSystem {
     constructor() {
@@ -28,8 +29,8 @@ class DispatcherApiSystem {
     }
     addFileAsync(file) {
         const fileId = this.clarityTransactionDispatcher.ObjectID();
-        return new Promise((resolve, reject) => {
-            this.fileSystem.getFileWriteStreamByIdAsync(fileId).then(writeStream => {
+        return this.fileSystem.getFileWriteStreamByIdAsync(fileId).then(writeStream => {
+            return new Promise((resolve, reject) => {
                 let contentLength = 0;
                 file.on("data", data => {
                     contentLength += data.length;
@@ -38,11 +39,9 @@ class DispatcherApiSystem {
                     resolve({ contentLength, fileId });
                 });
                 file.on("error", error => {
-                    throw error;
+                    reject(error);
                 });
                 file.pipe(writeStream);
-            }).catch(error => {
-                reject(error);
             });
         });
     }
@@ -112,6 +111,5 @@ class DispatcherApiSystem {
         });
     }
 }
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = DispatcherApiSystem;
 //# sourceMappingURL=index.js.map

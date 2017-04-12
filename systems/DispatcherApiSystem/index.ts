@@ -40,8 +40,8 @@ export default class DispatcherApiSystem {
     addFileAsync(file) {
         const fileId = this.clarityTransactionDispatcher.ObjectID();
 
-        return new Promise((resolve, reject) => {
-            this.fileSystem.getFileWriteStreamByIdAsync(fileId).then(writeStream => {
+        return this.fileSystem.getFileWriteStreamByIdAsync(fileId).then(writeStream => {
+            return new Promise((resolve, reject) => {
                 let contentLength = 0;
 
                 file.on("data", data => {
@@ -53,12 +53,10 @@ export default class DispatcherApiSystem {
                 });
 
                 file.on("error", error => {
-                    throw error;
+                    reject(error);
                 });
 
                 file.pipe(writeStream);
-            }).catch(error => {
-                reject(error);
             });
         });
     }

@@ -85,10 +85,7 @@ added, updated, or removed.</p>
 There are many systems, devices, and other technologies that need to
 communicate for a company to run smoothly. We believe that the answer to
 these needs is a data dispatcher which lets all independent systems know
-about data changes.</p>
-<p>The dispatcher will also notify the system when components on the entity
-have been added updated or removed. This is critical for the systems to
-fulfill their responsibilities efficiently.</p></div>
+about data changes.</p></div>
         
     
 </header>
@@ -196,7 +193,7 @@ fulfill their responsibilities efficiently.</p></div>
             
 <hr>
 <dt>
-    <h4 class="name" id="addComponentAsync"><span class="type-signature"></span>addComponentAsync(entity, component)</h4>
+    <h4 class="name" id="addEntityAsync"><span class="type-signature"></span>addEntityAsync(entity)</h4>
     
     
 </dt>
@@ -204,12 +201,12 @@ fulfill their responsibilities efficiently.</p></div>
 
     
     <div class="description">
-        <p>Adds a component to an entity.</p>
-<p>The dispatcher does the following when adding a component.</p>
+        <p>Add an Entity to the datastore. The steps the dispatcher takes when saving an
+entity are.</p>
 <ul>
-<li>Validate the component with all systems. All systems have to validate to pass.</li>
-<li>Saves the component to the datastore.</li>
-<li>Notifies the systems that a component has been added.</li>
+<li>Validate the entity with all systems. All systems have to validate to pass.</li>
+<li>Save the entity to the datastore.</li>
+<li>Notify the systems that an entity has been added.</li>
 </ul>
     </div>
     
@@ -251,7 +248,7 @@ fulfill their responsibilities efficiently.</p></div>
             <td class="type">
             
                 
-<span class="param-type">object</span>
+<span class="param-type">IEntity</span>
 
 
 
@@ -262,216 +259,7 @@ fulfill their responsibilities efficiently.</p></div>
 
             
 
-            <td class="description last"><p>The entity of the component being added.</p></td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>component</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">object</span>
-
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>The component being added.</p></td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-    
-
-    
-<dl class="details">
-    
-
-	
-
-	
-
-	
-
-    
-
-    
-
-    
-
-    
-
-	
-
-	
-
-	
-
-	
-
-	
-
-
-
-	
-
-	
-
-	
-
-	
-</dl>
-
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-</dd>
-
-        
-            
-<hr>
-<dt>
-    <h4 class="name" id="addEntityAsync"><span class="type-signature"></span>addEntityAsync(stream, components, entityId)</h4>
-    
-    
-</dt>
-<dd>
-
-    
-    <div class="description">
-        <p>Add an Entity to the datastore. The steps the dispatcher takes when saving an
-entity are.</p>
-<ul>
-<li>Saves the content of the entity to a datastore.</li>
-<li>Validate the entity with all systems. All systems have to validate to pass.</li>
-<li>Save the entity to the datastore.</li>
-<li>Validate and save the components.</li>
-<li>Notify the systems that an entity with its components and content have been saved.</li>
-<li>If any of the steps above fail, it will retract the whole transaction and notify the systems of doing so.</li>
-</ul>
-    </div>
-    
-
-    
-
-    
-
-    
-    
-        <h5>Parameters:</h5>
-        
-
-<table class="params table table-striped">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>stream</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">NodeJS.ReadableStream</span>
-
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>The content of the entity.</p></td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>components</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">Array.&lt;component></span>
-
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>An array of components belonging to the entity.</p></td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>entityId</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">string</span>
-
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>The id that you want to assign to the entity.</p></td>
+            <td class="description last"><p>The entity that you want to save to the datastore.</p></td>
         </tr>
 
     
@@ -542,7 +330,7 @@ entity are.</p>
     </dt>
     <dd>
         
-<span class="param-type">Promise</span>
+<span class="param-type">Promise.&lt;Entity></span>
 
 
 
@@ -746,35 +534,28 @@ on the composition of components.
 The dispatcher does the following when adding a system.</p>
 <ul>
 <li>Adds the system.</li>
-<li>Invokes initializeAsync if the systems hasn't been used before, and invokes
-activatedAsync after initializeAsync is finished.</li>
+<li>Invokes initializeAsync if the system hasn't been initialized before.</li>
+<li>Invokes activatedAsync after initializeAsync is finished.</li>
 </ul>
-<p>For example an Image Thumbnail System will look to see if the entity has the
-component of image</p>
 <h4>Required System Methods</h4><ul>
 <li>getGuid()</li>
 <li>getName()</li>
 </ul>
 <h4>Optional System Methods</h4><ul>
 <li>activatedAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher)</li>
-<li>deactivatedAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher)</li>
-<li>disposeAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher)</li>
-<li>entityAddedAsync(entity: {_id: string})</li>
-<li>entityUpdatedAsync(oldEntity: any, newEntity: any)</li>
-<li>entityRemovedAsync(entity: {_id: string})</li>
-<li>entityRetrievedAsync?(entity: { _id: string });</li>
-<li>entityContentUpdatedAsync(oldContentId: string, newContentId: string)</li>
-<li>entityComponentAddedAsync(entity: {_id: string}, component: any)</li>
-<li>entityComponentUpdatedAsync(entity: {_id: string}, oldComponent: any, newComponent: any)</li>
-<li>entityComponentRemovedAsync(entity: {_id: string}, component: any)</li>
-<li>entityComponentRetrievedAsync?(entity: { _id: string }, component: any);</li>
+<li>approveEntityRemovalAsync(entity: IEntity)</li>
+<li>deactivatedAsync()</li>
+<li>disposedAsync()</li>
+<li>entityAddedAsync(entity: IEntity)</li>
+<li>entityRemovedAsync(entity: IEntity)</li>
+<li>entityRetrievedAsync(entity: IEntity)</li>
+<li>entityUpdatedAsync(oldEntity: IEntity, updatedEntity: IEntity)</li>
+<li>logError(error: { type?: string; message?: string; })</li>
+<li>logMessage(message: { type?: string; message?: string; })</li>
+<li>logWarning(warning: { type?: string; message?: string; })</li>
 <li>initializeAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher)</li>
-<li>serviceRemovedAsync(name: string, service: any);</li>
-<li>validateEntityAsync(entity: {_id: string})</li>
-<li>validateComponentAsync(component: {_id: string})</li>
-<li>validateEntityContentAsync(entity: {_id: string}, oldContentId: string, newContentId: string)</li>
-<li>approveComponentRemovalAsync(component:{_id: string; entity_id: string})</li>
-<li>approveEntityRemovalAsync(entity:{_id: string})</li>
+<li>serviceRemovedAsync(name: string)</li>
+<li>validateEntityAsync(entity: IEntity)</li>
 </ul>
     </div>
     
@@ -913,134 +694,6 @@ component of image</p>
 
 
         
-
-    
-</dd>
-
-        
-            
-<hr>
-<dt>
-    <h4 class="name" id="approveComponentRemovalAsync"><span class="type-signature"></span>approveComponentRemovalAsync(entity)</h4>
-    
-    
-</dt>
-<dd>
-
-    
-    <div class="description">
-        <p>Approves whether a component can be removed. Systems can deny the ability to remove components.</p>
-    </div>
-    
-
-    
-
-    
-
-    
-    
-        <h5>Parameters:</h5>
-        
-
-<table class="params table table-striped">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>entity</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">object</span>
-
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>The entity to be removed.</p></td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-    
-
-    
-<dl class="details">
-    
-
-	
-
-	
-
-	
-
-    
-
-    
-
-    
-
-    
-
-	
-
-	
-
-	
-
-	
-
-	
-
-
-
-	
-
-	
-
-	
-
-	
-</dl>
-
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
 
     
 </dd>
@@ -1487,532 +1140,6 @@ good. This allows the system to clean up after itself if needed. The dispatcher 
             
 <hr>
 <dt>
-    <h4 class="name" id="getComponentByIdAsync"><span class="type-signature"></span>getComponentByIdAsync(componentId)</h4>
-    
-    
-</dt>
-<dd>
-
-    
-    <div class="description">
-        <p>Gets the component by the id provided.</p>
-    </div>
-    
-
-    
-
-    
-
-    
-    
-        <h5>Parameters:</h5>
-        
-
-<table class="params table table-striped">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>componentId</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">string</span>
-
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>The id of the component.</p></td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-    
-
-    
-<dl class="details">
-    
-
-	
-
-	
-
-	
-
-    
-
-    
-
-    
-
-    
-
-	
-
-	
-
-	
-
-	
-
-	
-
-
-
-	
-
-	
-
-	
-
-	
-</dl>
-
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <h5>Returns:</h5>
-    
-            
-
-
-<dl>
-    <dt>
-        Type
-    </dt>
-    <dd>
-        
-<span class="param-type">Promise.&lt;Array></span>
-
-
-
-    </dd>
-</dl>
-
-
-        
-
-    
-</dd>
-
-        
-            
-<hr>
-<dt>
-    <h4 class="name" id="getComponentCountAsync"><span class="type-signature"></span>getComponentCountAsync()</h4>
-    
-    
-</dt>
-<dd>
-
-    
-    <div class="description">
-        <p>Get count for all components in collection.</p>
-    </div>
-    
-
-    
-
-    
-
-    
-    
-
-    
-<dl class="details">
-    
-
-	
-
-	
-
-	
-
-    
-
-    
-
-    
-
-    
-
-	
-
-	
-
-	
-
-	
-
-	
-
-
-
-	
-
-	
-
-	
-
-	
-</dl>
-
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-</dd>
-
-        
-            
-<hr>
-<dt>
-    <h4 class="name" id="getComponentsByEntityAndTypeAsync"><span class="type-signature"></span>getComponentsByEntityAndTypeAsync(entity, type)</h4>
-    
-    
-</dt>
-<dd>
-
-    
-    <div class="description">
-        <p>Get the Components on the entity provided matching the type provided.</p>
-    </div>
-    
-
-    
-
-    
-
-    
-    
-        <h5>Parameters:</h5>
-        
-
-<table class="params table table-striped">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>entity</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">IEntity</span>
-
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>The entity of the needed components.</p></td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>type</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">string</span>
-
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>The type of the component needed.</p></td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-    
-
-    
-<dl class="details">
-    
-
-	
-
-	
-
-	
-
-    
-
-    
-
-    
-
-    
-
-	
-
-	
-
-	
-
-	
-
-	
-
-
-
-	
-
-	
-
-	
-
-	
-</dl>
-
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-</dd>
-
-        
-            
-<hr>
-<dt>
-    <h4 class="name" id="getComponentsByEntityAsync"><span class="type-signature"></span>getComponentsByEntityAsync(entity)</h4>
-    
-    
-</dt>
-<dd>
-
-    
-    <div class="description">
-        <p>Get the components of an entity by the entity.</p>
-    </div>
-    
-
-    
-
-    
-
-    
-    
-        <h5>Parameters:</h5>
-        
-
-<table class="params table table-striped">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>entity</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">IEntity</span>
-
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>The entity of the components.</p></td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-    
-
-    
-<dl class="details">
-    
-
-	
-
-	
-
-	
-
-    
-
-    
-
-    
-
-    
-
-	
-
-	
-
-	
-
-	
-
-	
-
-
-
-	
-
-	
-
-	
-
-	
-</dl>
-
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <h5>Returns:</h5>
-    
-            
-
-
-<dl>
-    <dt>
-        Type
-    </dt>
-    <dd>
-        
-<span class="param-type">Promise.&lt;Array></span>
-
-
-
-    </dd>
-</dl>
-
-
-        
-
-    
-</dd>
-
-        
-            
-<hr>
-<dt>
     <h4 class="name" id="getEntitiesAsync"><span class="type-signature"></span>getEntitiesAsync(config)</h4>
     
     
@@ -2067,7 +1194,7 @@ good. This allows the system to clean up after itself if needed. The dispatcher 
 
             
 
-            <td class="description last"><p>The configuration of the query. It takes a lastId, and a pageSize.</p></td>
+            <td class="description last"><p>The configuration of the query. It takes a lastId, pageSize, lastModifiedDate, and a lastCreatedDate.</p></td>
         </tr>
 
     
@@ -2273,314 +1400,6 @@ good. This allows the system to clean up after itself if needed. The dispatcher 
     <dd>
         
 <span class="param-type">Promise.&lt;Entity></span>
-
-
-
-    </dd>
-</dl>
-
-
-        
-
-    
-</dd>
-
-        
-            
-<hr>
-<dt>
-    <h4 class="name" id="getEntityContentStreamByContentIdAsync"><span class="type-signature"></span>getEntityContentStreamByContentIdAsync(contentId)</h4>
-    
-    
-</dt>
-<dd>
-
-    
-    <div class="description">
-        <p>Get a stream of the content of the entity by its id.</p>
-    </div>
-    
-
-    
-
-    
-
-    
-    
-        <h5>Parameters:</h5>
-        
-
-<table class="params table table-striped">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>contentId</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">string</span>
-
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>The id of the content needed..</p></td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-    
-
-    
-<dl class="details">
-    
-
-	
-
-	
-
-	
-
-    
-
-    
-
-    
-
-    
-
-	
-
-	
-
-	
-
-	
-
-	
-
-
-
-	
-
-	
-
-	
-
-	
-</dl>
-
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <h5>Returns:</h5>
-    
-            
-<div class="param-desc">
-    <ul>
-<li>Node read stream.</li>
-</ul>
-</div>
-
-
-
-<dl>
-    <dt>
-        Type
-    </dt>
-    <dd>
-        
-<span class="param-type">NodeJS.ReadableStream</span>
-
-
-
-    </dd>
-</dl>
-
-
-        
-
-    
-</dd>
-
-        
-            
-<hr>
-<dt>
-    <h4 class="name" id="getEntityContentStreamByEntityAsync"><span class="type-signature"></span>getEntityContentStreamByEntityAsync(entity)</h4>
-    
-    
-</dt>
-<dd>
-
-    
-    <div class="description">
-        <p>Get a stream of the content of the entity.</p>
-    </div>
-    
-
-    
-
-    
-
-    
-    
-        <h5>Parameters:</h5>
-        
-
-<table class="params table table-striped">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>entity</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">IEntity</span>
-
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>The entity of the content needed.</p></td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-    
-
-    
-<dl class="details">
-    
-
-	
-
-	
-
-	
-
-    
-
-    
-
-    
-
-    
-
-	
-
-	
-
-	
-
-	
-
-	
-
-
-
-	
-
-	
-
-	
-
-	
-</dl>
-
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <h5>Returns:</h5>
-    
-            
-<div class="param-desc">
-    <ul>
-<li>Node read stream.</li>
-</ul>
-</div>
-
-
-
-<dl>
-    <dt>
-        Type
-    </dt>
-    <dd>
-        
-<span class="param-type">Promise.&lt;stream></span>
 
 
 
@@ -2829,6 +1648,104 @@ good. This allows the system to clean up after itself if needed. The dispatcher 
             
 <hr>
 <dt>
+    <h4 class="name" id="getSystems"><span class="type-signature"></span>getSystems()</h4>
+    
+    
+</dt>
+<dd>
+
+    
+    <div class="description">
+        <p>Get all systems.</p>
+    </div>
+    
+
+    
+
+    
+
+    
+    
+
+    
+<dl class="details">
+    
+
+	
+
+	
+
+	
+
+    
+
+    
+
+    
+
+    
+
+	
+
+	
+
+	
+
+	
+
+	
+
+
+
+	
+
+	
+
+	
+
+	
+</dl>
+
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <h5>Returns:</h5>
+    
+            
+
+
+<dl>
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">Array.&lt;ISystems></span>
+
+
+
+    </dd>
+</dl>
+
+
+        
+
+    
+</dd>
+
+        
+            
+<hr>
+<dt>
     <h4 class="name" id="logError"><span class="type-signature"></span>logError(error)</h4>
     
     
@@ -2985,7 +1902,7 @@ good. This allows the system to clean up after itself if needed. The dispatcher 
 
     
     <div class="description">
-        <p>Notifies the systems about an error.</p>
+        <p>Notifies the systems about a message.</p>
     </div>
     
 
@@ -3273,154 +2190,6 @@ good. This allows the system to clean up after itself if needed. The dispatcher 
             
 <hr>
 <dt>
-    <h4 class="name" id="removeComponentAsync"><span class="type-signature"></span>removeComponentAsync(component)</h4>
-    
-    
-</dt>
-<dd>
-
-    
-    <div class="description">
-        <p>Remove a component from an entity.</p>
-    </div>
-    
-
-    
-
-    
-
-    
-    
-        <h5>Parameters:</h5>
-        
-
-<table class="params table table-striped">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>component</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">object</span>
-
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>The component to be removed.</p></td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-    
-
-    
-<dl class="details">
-    
-
-	
-
-	
-
-	
-
-    
-
-    
-
-    
-
-    
-
-	
-
-	
-
-	
-
-	
-
-	
-
-
-
-	
-
-	
-
-	
-
-	
-</dl>
-
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <h5>Returns:</h5>
-    
-            
-
-
-<dl>
-    <dt>
-        Type
-    </dt>
-    <dd>
-        
-<span class="param-type">Promise.&lt;undefined></span>
-
-
-
-    </dd>
-</dl>
-
-
-        
-
-    
-</dd>
-
-        
-            
-<hr>
-<dt>
     <h4 class="name" id="removeEntityAsync"><span class="type-signature"></span>removeEntityAsync(entity)</h4>
     
     
@@ -3429,12 +2198,7 @@ good. This allows the system to clean up after itself if needed. The dispatcher 
 
     
     <div class="description">
-        <p>Removes an entity, and its associated content. The dispatcher does the following to remove an entity.</p>
-<ul>
-<li>Removes all of the components on the entity notifying the systems that the components have been removed.</li>
-<li>Removes the content and notifies the systems.</li>
-<li>Removes the entity to be removed and notifies the systems the entity has been removed.</li>
-</ul>
+        <p>Removes the entity to be removed and notifies the systems the entity has been removed.</p>
     </div>
     
 
@@ -3566,134 +2330,6 @@ good. This allows the system to clean up after itself if needed. The dispatcher 
 
 
         
-
-    
-</dd>
-
-        
-            
-<hr>
-<dt>
-    <h4 class="name" id="removeEntityContentAsync"><span class="type-signature"></span>removeEntityContentAsync(entity)</h4>
-    
-    
-</dt>
-<dd>
-
-    
-    <div class="description">
-        <p>Removes the content of an entity.</p>
-    </div>
-    
-
-    
-
-    
-
-    
-    
-        <h5>Parameters:</h5>
-        
-
-<table class="params table table-striped">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>entity</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">IEntity</span>
-
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>The entity of the content to be removed.</p></td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-    
-
-    
-<dl class="details">
-    
-
-	
-
-	
-
-	
-
-    
-
-    
-
-    
-
-    
-
-	
-
-	
-
-	
-
-	
-
-	
-
-
-
-	
-
-	
-
-	
-
-	
-</dl>
-
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
 
     
 </dd>
@@ -3851,140 +2487,6 @@ removed.</p>
             
 <hr>
 <dt>
-    <h4 class="name" id="updateComponentAsync"><span class="type-signature"></span>updateComponentAsync(component)</h4>
-    
-    
-</dt>
-<dd>
-
-    
-    <div class="description">
-        <p>Update a component. The dispatcher will perform the following actions when
-updating the component of an entity.</p>
-<ul>
-<li>Validate the component. All interested systems need to validate to pass.</li>
-<li>Save the component to the datastore.</li>
-<li>Notify the systems that the component was updated.</li>
-</ul>
-    </div>
-    
-
-    
-
-    
-
-    
-    
-        <h5>Parameters:</h5>
-        
-
-<table class="params table table-striped">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>component</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">object</span>
-
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>The component to be updated.</p></td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-    
-
-    
-<dl class="details">
-    
-
-	
-
-	
-
-	
-
-    
-
-    
-
-    
-
-    
-
-	
-
-	
-
-	
-
-	
-
-	
-
-
-
-	
-
-	
-
-	
-
-	
-</dl>
-
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-</dd>
-
-        
-            
-<hr>
-<dt>
     <h4 class="name" id="updateEntityAsync"><span class="type-signature"></span>updateEntityAsync(entity)</h4>
     
     
@@ -3993,9 +2495,7 @@ updating the component of an entity.</p>
 
     
     <div class="description">
-        <p>Updated an entity. The dispatcher will perform the following actions when updating.
-This really shouldn't be used much. The entity is really just a container for the
-content_id and the components.</p>
+        <p>Update an entity. The dispatcher will perform the following actions when updating.</p>
 <ul>
 <li>Validate the entity. All interested systems need to validate to pass.</li>
 <li>Entity's updates are saved.</li>
@@ -4146,264 +2646,6 @@ content_id and the components.</p>
             
 <hr>
 <dt>
-    <h4 class="name" id="updateEntityContentByStreamAsync"><span class="type-signature"></span>updateEntityContentByStreamAsync(entity, stream)</h4>
-    
-    
-</dt>
-<dd>
-
-    
-    <div class="description">
-        <p>Update an entity's content. The dispatcher will perform the following actions when
-updated the content of an entity.</p>
-<ul>
-<li>Save the new content to the datastore.</li>
-<li>Validate the new content. All interested systems need to validate to pass.</li>
-<li>The entity.content_id is updated and saved.</li>
-<li>Notify the systems of the updated content.</li>
-<li>The old content is now removed from the datastore.</li>
-</ul>
-    </div>
-    
-
-    
-
-    
-
-    
-    
-        <h5>Parameters:</h5>
-        
-
-<table class="params table table-striped">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>entity</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">object</span>
-
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>The entity whos content is to be update.</p></td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>stream</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">NodeJS.WritableStream</span>
-
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>The stream to save to the content of the entity.</p></td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-    
-
-    
-<dl class="details">
-    
-
-	
-
-	
-
-	
-
-    
-
-    
-
-    
-
-    
-
-	
-
-	
-
-	
-
-	
-
-	
-
-
-
-	
-
-	
-
-	
-
-	
-</dl>
-
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <h5>Returns:</h5>
-    
-            
-
-
-<dl>
-    <dt>
-        Type
-    </dt>
-    <dd>
-        
-<span class="param-type">Promise.&lt;undefined></span>
-
-
-
-    </dd>
-</dl>
-
-
-        
-
-    
-</dd>
-
-        
-            
-<hr>
-<dt>
-    <h4 class="name" id="validateComponentAsync"><span class="type-signature"></span>validateComponentAsync()</h4>
-    
-    
-</dt>
-<dd>
-
-    
-    <div class="description">
-        <p>This allows systems to validate the component being saved.</p>
-    </div>
-    
-
-    
-
-    
-
-    
-    
-
-    
-<dl class="details">
-    
-
-	
-
-	
-
-	
-
-    
-
-    
-
-    
-
-    
-
-	
-
-	
-
-	
-
-	
-
-	
-
-
-
-	
-
-	
-
-	
-
-	
-</dl>
-
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-</dd>
-
-        
-            
-<hr>
-<dt>
     <h4 class="name" id="validateEntityAsync"><span class="type-signature"></span>validateEntityAsync()</h4>
     
     
@@ -4421,161 +2663,6 @@ updated the content of an entity.</p>
     
 
     
-    
-
-    
-<dl class="details">
-    
-
-	
-
-	
-
-	
-
-    
-
-    
-
-    
-
-    
-
-	
-
-	
-
-	
-
-	
-
-	
-
-
-
-	
-
-	
-
-	
-
-	
-</dl>
-
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-</dd>
-
-        
-            
-<hr>
-<dt>
-    <h4 class="name" id="validateEntityContentAsync"><span class="type-signature"></span>validateEntityContentAsync(entity, newContentId)</h4>
-    
-    
-</dt>
-<dd>
-
-    
-    <div class="description">
-        <p>This allows the systems to validate content before its accepted.
-The dispatcher saves it to a temporary location so systems can validate it
-independently. The content could be an extremely large file so we don't want
-to hold it in memory.</p>
-    </div>
-    
-
-    
-
-    
-
-    
-    
-        <h5>Parameters:</h5>
-        
-
-<table class="params table table-striped">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>entity</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">IEntity</span>
-
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>The entity the content belongs to.</p></td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>newContentId</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">string</span>
-
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>The id of the new content.</p></td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
     
 
     
@@ -4811,7 +2898,7 @@ to hold it in memory.</p>
 <span class="jsdoc-message">
 	Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.3</a>
 	
-		on March 22nd 2017, 2:28:49 pm
+		on April 12th 2017, 4:36:03 pm
 	
 	using the <a href="https://github.com/docstrap/docstrap">DocStrap template</a>.
 </span>

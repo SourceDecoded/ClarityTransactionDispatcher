@@ -1,4 +1,5 @@
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 const express = require("express");
 const uptimeRouter = express.Router();
 uptimeRouter.get("/", (request, response) => {
@@ -9,6 +10,5 @@ uptimeRouter.get("/", (request, response) => {
         response.status(400).send({ message: error.message });
     });
 });
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = uptimeRouter;
 //# sourceMappingURL=Uptimes.js.map

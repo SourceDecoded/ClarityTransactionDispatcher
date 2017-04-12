@@ -50,8 +50,10 @@ export default class ClarityTransactionDispatcher {
     }
 
     /**
-     * Add an item to a collection.
-     * @private
+     * Add an item to a collection into mongodb.
+     * @private 
+     * @param {string} collectionName - The mongodb collection name.
+     * @param {object} item - The item to be added.
      */
     private _addItemToCollectionAsync(collectionName: string, item: any) {
         item.modifiedDate = new Date();
@@ -64,23 +66,6 @@ export default class ClarityTransactionDispatcher {
             item._id = result.insertedId;
             return item;
         });
-    }
-
-    private _createEntityByIdAsync(id?) {
-        return this._createObjectIdAsync(id).then((objectId) => {
-            return {
-                _id: objectId
-            };
-        });
-    }
-
-    private _createObjectIdAsync(id) {
-        try {
-            id = id != null ? this.ObjectID(id) : null
-            return Promise.resolve(id);
-        } catch (error) {
-            return Promise.reject(error);
-        }
     }
 
     /** 
@@ -269,13 +254,11 @@ export default class ClarityTransactionDispatcher {
      * 
      * - Validate the entity with all systems. All systems have to validate to pass.
      * - Save the entity to the datastore.
-     * - Notify the systems that an entity has been saved.
-     * - If any of the steps above fail, it will retract the whole transaction and notify the systems of doing so.
+     * - Notify the systems that an entity has been added.
      * @param {IEntity} entity - The entity that you want to save to the datastore.
      * @return {Promise<Entity>}
      */
     addEntityAsync(entity: IEntity) {
-        let createdEntity: IEntity;
         let newEntity: any = {
             _id: entity._id ? this.ObjectID(entity._id) : this.ObjectID(),
             components: Array.isArray(entity.components) ? entity.components : []
@@ -291,18 +274,10 @@ export default class ClarityTransactionDispatcher {
 
         return this.validateEntityAsync(newEntity).then(() => {
             return this._addItemToCollectionAsync(ENTITIES_COLLECTION, newEntity);
-        }).then(newEntity => {
-            createdEntity = newEntity;
-            return this._notifySystemsWithRecoveryAsync("entityAddedAsync", [createdEntity]);
-        }).then(() => {
-            return createdEntity;
+        }).then(entity => {
+            return this._notifySystemsWithRecoveryAsync("entityAddedAsync", [entity]);
         }).catch(error => {
             this.logError(error);
-
-            if (createdEntity != null) {
-                this.removeEntityAsync(createdEntity);
-            }
-
             throw error;
         });
     }
@@ -326,11 +301,9 @@ export default class ClarityTransactionDispatcher {
      * The dispatcher does the following when adding a system.
      * 
      * - Adds the system.
-     * - Invokes initializeAsync if the systems hasn't been used before, and invokes
-     * activatedAsync after initializeAsync is finished.
+     * - Invokes initializeAsync if the system hasn't been initialized before.
+     * - Invokes activatedAsync after initializeAsync is finished.
      * 
-     * For example an Image Thumbnail System will look to see if the entity has the 
-     * component of image
      * #### Required System Methods
      * - getGuid()
      * - getName()
@@ -500,8 +473,8 @@ export default class ClarityTransactionDispatcher {
      * @return {Promise<Entity>} - A Promise resolved with the entity or null.
      */
     getEntityByIdAsync(entityId: string) {
-        return this._createEntityByIdAsync(entityId).then(filter => {
-            return this._findOneAsync(ENTITIES_COLLECTION, filter);
+        return this._findOneAsync(ENTITIES_COLLECTION, {
+            _id: this.ObjectID(entityId)
         }).then(entity => {
             return this._notifySystemsWithRecoveryAsync("entityRetrievedAsync", [entity]).then(() => {
                 return entity;
