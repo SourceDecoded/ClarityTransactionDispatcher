@@ -3,7 +3,22 @@
     // for the documentation about the tasks.json format
     "version": "0.1.0",
     "command": "gulp",
-    "args": [],
-    "isBuildCommand": true,
-    "showOutput": "silent"
+    "isShellCommand": true,
+    "args": [
+        "--no-color"
+    ],
+    "tasks": [
+        {
+            "taskName": "default",
+            "identifier": "default",
+            "args": [],
+            "isBuildCommand": true,
+            "isWatching": false,
+            "problemMatcher": [
+                "$lessCompile",
+                "$tsc",
+                "$jshint"
+            ]
+        }
+    ]
 }

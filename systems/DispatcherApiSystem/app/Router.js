@@ -1,13 +1,13 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const Entities_1 = require("./routes/Entities");
-const Components_1 = require("./routes/Components");
-const Content_1 = require("./routes/Content");
 class Router {
-    constructor(app, clarityTransactionDispatcher) {
-        this.app = clarityTransactionDispatcher.getService("express");
-        this.authenticator = clarityTransactionDispatcher.getService("authenticator");
-        this.clarityTransactionDispatcher = clarityTransactionDispatcher;
+    constructor(dispatcherApi) {
+        this.app = dispatcherApi.clarityTransactionDispatcher.getService("express");
+        this.authenticator = dispatcherApi.clarityTransactionDispatcher.getService("authenticator");
+        this.fileSystem = dispatcherApi.clarityTransactionDispatcher.getService("fileSystem");
+        this.clarityTransactionDispatcher = dispatcherApi.clarityTransactionDispatcher;
+        this.dispatcherApi = dispatcherApi;
     }
     getToken(authorizationHeader) {
         var parts = authorizationHeader.split(" ");
@@ -45,8 +45,9 @@ class Router {
             response.header("Access-Control-Allow-Origin", "*");
             response.header("Access-Control-Allow-Methods", "GET, PATCH, POST, DELETE");
             response.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
-            response.locals.clarityTransactionDispatcher = this.clarityTransactionDispatcher;
+            response.locals.dispatcherApi = this.dispatcherApi;
             response.locals.authenticator = this.authenticator;
+            response.locals.fileSystem = this.fileSystem;
             var authenticationResult = this.authenticate(request, response);
             if (authenticationResult.verified) {
                 response.locals.token = authenticationResult.token;
@@ -57,8 +58,14 @@ class Router {
             }
         });
         this.app.use("/api/entities", Entities_1.default);
-        this.app.use("/api/components", Components_1.default);
-        this.app.use("/api/content", Content_1.default);
+        this.app.use((error, request, response, next) => {
+            if (error) {
+                response.status(400).send({ message: error.message });
+            }
+            else {
+                next();
+            }
+        });
     }
 }
 exports.default = Router;

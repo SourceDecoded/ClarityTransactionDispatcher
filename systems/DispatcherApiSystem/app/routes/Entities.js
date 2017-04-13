@@ -2,130 +2,206 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const express = require("express");
 const Busboy = require("busboy");
+const bodyParser = require("body-parser");
 const entityRouter = express.Router();
-entityRouter.post("/", (request, response) => {
-    const busboy = new Busboy({ headers: request.headers });
-    const dispatcher = response.locals.clarityTransactionDispatcher;
-    let entityForm = {};
-    const addEntity = () => {
-        let components = [];
-        if (entityForm.components) {
-            try {
-                components = JSON.parse(entityForm.components);
-            }
-            catch (error) {
-                return response.status(400).send({ message: error.message });
-            }
-        }
-        const id = entityForm.id || null;
-        let content = entityForm.content || null;
-        dispatcher.addEntityAsync(content, components, id).then(result => {
-            response.status(200).send({ data: result });
-        }).catch(error => {
-            response.status(400).send({ message: error.message });
-        });
-    };
-    busboy.on("field", (fieldName, value, fieldNameTruncated, valueTruncated, encoding, mimeType) => {
-        entityForm[fieldName] = value;
+const jsonParser = bodyParser.json();
+entityRouter.post("/", jsonParser, (request, response) => {
+    const api = response.locals.dispatcherApi;
+    const dispatcher = api.clarityTransactionDispatcher;
+    const entity = request.body;
+    dispatcher.addEntityAsync(entity).then(createdEntity => {
+        response.status(200).send(createdEntity);
+    }).catch(error => {
+        response.status(400).send({ message: error.message });
     });
-    busboy.on("file", (fieldName, file, fileName, encoding, mimeType) => {
-        if (entityForm.components) {
-            entityForm[fieldName] = file;
-            addEntity();
-        }
-        else {
-            response.status(400).send({ message: "Components field needs to be sent before file stream in form data." });
-        }
-    });
-    busboy.on("finish", () => {
-        if (!entityForm.content) {
-            addEntity();
-        }
-    });
-    request.pipe(busboy);
 });
 entityRouter.get("/", (request, response) => {
-    const dispatcher = response.locals.clarityTransactionDispatcher;
-    const entityId = request.query.id;
-    const getCount = request.query.count;
+    const api = response.locals.dispatcherApi;
+    const dispatcher = api.clarityTransactionDispatcher;
     const lastId = request.query.lastId;
     const pageSize = request.query.pageSize;
-    const lastUpdatedDate = request.query.lastUpdatedDate;
+    const lastModifiedDate = request.query.lastModifiedDate;
     const lastCreatedDate = request.query.lastCreatedDate;
-    if (entityId) {
-        dispatcher.getEntityByIdAsync(entityId).then(entity => {
-            response.status(200).send({ data: { entity } });
-        }).catch(error => {
-            response.status(400).send({ message: error.message });
-        });
-    }
-    else if (getCount == "true") {
-        dispatcher.getEntityCountAsync().then(count => {
-            response.status(200).send({ data: { count } });
+    const getCount = request.query.getCount;
+    if (getCount !== "true") {
+        dispatcher.getEntitiesAsync({ lastId, pageSize, lastModifiedDate, lastCreatedDate }).then(entities => {
+            response.status(200).send(entities);
         }).catch(error => {
             response.status(400).send({ message: error.message });
         });
     }
     else {
-        const config = {
-            lastId,
-            lastUpdatedDate,
-            lastCreatedDate,
-            pageSize
-        };
-        dispatcher.getEntitiesAsync(config).then(entities => {
-            response.status(200).send({ data: { entities } });
+        dispatcher.getEntityCountAsync().then(count => {
+            response.status(200).send(count.toString());
         }).catch(error => {
             response.status(400).send({ message: error.message });
         });
     }
 });
-entityRouter.patch("/", (request, response) => {
-    const busboy = new Busboy({ headers: request.headers });
-    const dispatcher = response.locals.clarityTransactionDispatcher;
-    let entityForm = {};
-    const updateEntity = () => {
-        if (entityForm.entity) {
-            let entity;
-            try {
-                entity = JSON.parse(entityForm.entity);
-            }
-            catch (error) {
-                return response.status(400).send({ message: error.message });
-            }
-            dispatcher.updateEntityAsync(entity).then(entity => {
-                response.status(200).send({ data: { entity } });
+entityRouter.get("/:id", (request, response) => {
+    const api = response.locals.dispatcherApi;
+    const dispatcher = api.clarityTransactionDispatcher;
+    const entityId = request.params.id;
+    dispatcher.getEntityByIdAsync(entityId).then(entity => {
+        response.status(200).send(entity);
+    }).catch(error => {
+        response.status(400).send({ message: error.message });
+    });
+});
+entityRouter.patch("/:id", jsonParser, (request, response) => {
+    const api = response.locals.dispatcherApi;
+    const dispatcher = api.clarityTransactionDispatcher;
+    const entityId = request.params.id;
+    const entity = request.body;
+    api.updateEntityAsync(entityId, entity).then(updatedEntity => {
+        response.status(200).send(updatedEntity);
+    }).catch(error => {
+        response.status(400).send({ message: error.message });
+    });
+});
+entityRouter.delete("/:id", (request, response) => {
+    const api = response.locals.dispatcherApi;
+    const dispatcher = api.clarityTransactionDispatcher;
+    const entityId = request.params.id;
+    api.removeEntityByIdAsync(entityId).then((removedEntity) => {
+        response.status(200).send(removedEntity);
+    }).catch(error => {
+        response.status(400).send({ message: error.message });
+    });
+});
+entityRouter.get("/:id/components", (request, response) => {
+    const api = response.locals.dispatcherApi;
+    const dispatcher = api.clarityTransactionDispatcher;
+    const entityId = request.params.id;
+    api.getComponentsByEntityIdAsync(entityId).then(components => {
+        response.status(200).send(components);
+    }).catch(error => {
+        response.status(400).send({ message: error.message });
+    });
+});
+entityRouter.get("/:entityId/components/:componentId", (request, response) => {
+    const api = response.locals.dispatcherApi;
+    const dispatcher = api.clarityTransactionDispatcher;
+    const fileSystem = response.locals.fileSystem;
+    const entityId = request.params.entityId;
+    const componentId = request.params.componentId;
+    const getFile = request.query.getFile;
+    api.getComponentAsync(componentId, entityId).then(component => {
+        if (getFile === "true") {
+            return fileSystem.getFileReadStreamByIdAsync(component.fileId).then(fileStream => {
+                try {
+                    fileStream.read();
+                }
+                catch (error) {
+                    throw error;
+                }
+                response.set("Content-Type", component.contentType);
+                response.set("Content-Length", component.contentLength);
+                fileStream.pipe(response);
+            });
+        }
+        else {
+            response.status(200).send(component);
+        }
+    }).catch(error => {
+        response.status(400).send({ message: error.message });
+    });
+});
+entityRouter.post("/:id/components", jsonParser, (request, response) => {
+    const api = response.locals.dispatcherApi;
+    const dispatcher = api.clarityTransactionDispatcher;
+    const entityId = request.params.id;
+    const addJsonComponent = () => {
+        const component = request.body;
+        api.addComponentAsync(entityId, component).then(newComponent => {
+            response.status(200).send(newComponent);
+        }).catch(error => {
+            response.status(400).send({ message: error.message });
+        });
+    };
+    const addFileComponent = () => {
+        const busboy = new Busboy({ headers: request.headers });
+        busboy.on("file", (fieldName, file, fileName, encoding, mimeType) => {
+            api.addFileAsync(file).then(data => {
+                const component = {
+                    fileId: data.fileId,
+                    fileName,
+                    contentType: mimeType,
+                    contentLength: data.contentLength,
+                    type: "file"
+                };
+                return api.addComponentAsync(entityId, component);
+            }).then(newComponent => {
+                response.status(200).send(newComponent);
             }).catch(error => {
                 response.status(400).send({ message: error.message });
             });
-        }
-        else {
-            response.status(400).send({ message: "An entity was not provided in the body." });
-        }
+        });
+        busboy.on("error", error => {
+            response.status(400).send({ message: error.message });
+        });
+        request.pipe(busboy);
     };
-    busboy.on("field", (fieldName, value, fieldNameTruncated, valueTruncated, encoding, mimeType) => {
-        entityForm[fieldName] = value;
-    });
-    busboy.on("finish", () => {
-        updateEntity();
-    });
-    request.pipe(busboy);
+    if (request.headers["content-type"] === "application/json") {
+        addJsonComponent();
+    }
+    else {
+        addFileComponent();
+    }
 });
-entityRouter.delete("/", (request, response) => {
-    const dispatcher = response.locals.clarityTransactionDispatcher;
-    const entityId = request.query.id;
-    if (entityId) {
-        dispatcher.getEntityByIdAsync(entityId).then(entity => {
-            return dispatcher.removeEntityAsync(entity).then(() => {
-                response.status(200).send({ data: { entity } });
-            });
+entityRouter.patch("/:entityId/components/:componentId", jsonParser, (request, response) => {
+    const api = response.locals.dispatcherApi;
+    const dispatcher = api.clarityTransactionDispatcher;
+    const entityId = request.params.entityId;
+    const componentId = request.params.componentId;
+    const updateJsonComponent = () => {
+        const component = request.body;
+        api.updateComponentAsync(componentId, entityId, component).then(updatedComponent => {
+            response.status(200).send(updatedComponent);
         }).catch(error => {
             response.status(400).send({ message: error.message });
         });
+    };
+    const updateFileComponent = () => {
+        const busboy = new Busboy({ headers: request.headers });
+        busboy.on("file", (fieldName, file, fileName, encoding, mimeType) => {
+            api.addFileAsync(file).then(data => {
+                const component = {
+                    fileId: data.fileId,
+                    fileName,
+                    contentType: mimeType,
+                    contentLength: data.contentLength,
+                    type: "file"
+                };
+                return api.updateComponentAsync(componentId, entityId, component);
+            }).then(updatedComponent => {
+                response.status(200).send(updatedComponent);
+            }).catch(error => {
+                response.status(400).send({ message: error.message });
+            });
+        });
+        busboy.on("error", error => {
+            response.status(400).send({ message: error.message });
+        });
+        request.pipe(busboy);
+    };
+    if (request.headers["content-type"] === "application/json") {
+        updateJsonComponent();
     }
     else {
-        response.status(400).send({ message: "The id of the entity to be deleted was not provided as a parameter." });
+        updateFileComponent();
     }
+});
+entityRouter.delete("/:entityId/components/:componentId", (request, response) => {
+    const api = response.locals.dispatcherApi;
+    const dispatcher = api.clarityTransactionDispatcher;
+    const entityId = request.params.entityId;
+    const componentId = request.params.componentId;
+    api.removeComponentAsync(componentId, entityId).then((removedComponent) => {
+        response.status(200).send(removedComponent);
+    }).catch(error => {
+        response.status(400).send({ message: error.message });
+    });
 });
 exports.default = entityRouter;
 //# sourceMappingURL=Entities.js.map
