@@ -1,10 +1,7 @@
 import { IEntity, IComponent, ISystem, ISystemData, IObjectID, ILogger, IObjectIDInstance, IMongo, IMongoDb, IMongoClient, IMongoCollection, IMongoFactory } from "./interfaces";
 import * as fs from "fs";
 import * as uuid from "node-uuid";
-import MongoDbIterator from "./MongoDbIterator";
-import NullableLogger from "./NullableLogger";
 
-const nullableLogger = new NullableLogger();
 const resolvedPromise = Promise.resolve(null);
 
 const ENTITIES_COLLECTION = "entities";

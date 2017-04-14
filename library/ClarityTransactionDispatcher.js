@@ -1,7 +1,5 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const NullableLogger_1 = require("./NullableLogger");
-const nullableLogger = new NullableLogger_1.default();
 const resolvedPromise = Promise.resolve(null);
 const ENTITIES_COLLECTION = "entities";
 const SYSTEM_DATA_COLLECTION = "systemData";
