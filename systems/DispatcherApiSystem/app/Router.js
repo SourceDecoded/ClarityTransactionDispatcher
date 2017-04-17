@@ -1,5 +1,4 @@
 "use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
 const Entities_1 = require("./routes/Entities");
 class Router {
     constructor(dispatcherApi) {
@@ -68,5 +67,6 @@ class Router {
         });
     }
 }
+Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = Router;
 //# sourceMappingURL=Router.js.map

@@ -1,5 +1,4 @@
 "use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
 const mongodb = require("mongodb");
 const Router_1 = require("./app/Router");
 const POSTS_COLLECTION = "posts";
@@ -106,5 +105,6 @@ class LeavittSocialSystem {
         return this.name;
     }
 }
+Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = LeavittSocialSystem;
 //# sourceMappingURL=index.js.map

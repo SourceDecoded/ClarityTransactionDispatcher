@@ -1,5 +1,4 @@
 "use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
 const ClarityTransactionDispatcher_1 = require("./ClarityTransactionDispatcher");
 exports.ClarityTransactionDispatcher = ClarityTransactionDispatcher_1.default;
 const DispatcherApiSystem_1 = require("./../systems/DispatcherApiSystem");
