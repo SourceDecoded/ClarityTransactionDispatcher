@@ -3,7 +3,6 @@ import ClarityTransactionDispatcher from "./../library/ClarityTransactionDispatc
 import MongoFactory from "./../library/MongoFactory";
 import DispatcherApiSystem from "./../systems/DispatcherApiSystem";
 import DispatcherMonitorSystem from "./../systems/DispatcherMonitorSystem";
-import LeavittSocialSystem from "./../systems/LeavittSocialSystem";
 import LeavittGroupAuthentication from "./../services/LeavittGroupAuthentication";
 import FileSystemService from "./../services/FileSystemService";
 import * as jwtSimple from "jwt-simple";
