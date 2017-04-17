@@ -1,5 +1,4 @@
 "use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
 class FileSystemService {
     constructor(config) {
         this.mongoFactory = config.mongoFactory;
@@ -52,5 +51,6 @@ class FileSystemService {
         });
     }
 }
+Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = FileSystemService;
 //# sourceMappingURL=index.js.map

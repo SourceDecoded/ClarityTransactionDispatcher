@@ -3,29 +3,26 @@ import * as express from "express";
 const logRouter = express.Router();
 
 logRouter.get("/", (request, response) => {
-    const monitor = response.locals.monitor;
-    const logId = request.query.id;
+    const dispatcherMonitor = response.locals.dispatcherMonitor;
     const lastId = request.query.lastId === "0" ? null : request.query.lastId;
     const pageSize = request.query.pageSize;
 
-    if (logId) {
-        monitor.getLogByIdAsync(logId).then(log => {
-            response.status(200).send({ data: { log } });
-        }).catch(error => {
-            response.status(400).send({ message: error.message });
-        });
-    } else {
-        const config = {
-            lastId,
-            pageSize
-        };
+    dispatcherMonitor.getLogsAsync({ lastId, pageSize }).then(logs => {
+        response.status(200).send(logs);
+    }).catch(error => {
+        response.status(400).send({ message: error.message });
+    });
+});
 
-        monitor.getLogsAsync(config).then(logs => {
-            response.status(200).send({ data: { logs } });
-        }).catch(error => {
-            response.status(400).send({ message: error.message });
-        });
-    }
+logRouter.get("/:id", (request, response) => {
+    const dispatcherMonitor = response.locals.dispatcherMonitor;
+    const logId = request.params.id;
+
+    dispatcherMonitor.getLogByIdAsync(logId).then(log => {
+        response.status(200).send(log);
+    }).catch(error => {
+        response.status(400).send({ message: error.message });
+    });
 });
 
 export default logRouter;

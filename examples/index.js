@@ -1,11 +1,9 @@
 "use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
 const express = require("express");
 const ClarityTransactionDispatcher_1 = require("./../library/ClarityTransactionDispatcher");
 const MongoFactory_1 = require("./../library/MongoFactory");
 const DispatcherApiSystem_1 = require("./../systems/DispatcherApiSystem");
 const DispatcherMonitorSystem_1 = require("./../systems/DispatcherMonitorSystem");
-const LeavittSocialSystem_1 = require("./../systems/LeavittSocialSystem");
 const LeavittGroupAuthentication_1 = require("./../services/LeavittGroupAuthentication");
 const FileSystemService_1 = require("./../services/FileSystemService");
 const jwtSimple = require("jwt-simple");
@@ -19,13 +17,12 @@ server = app.listen(3005, () => console.log("Disptacher Server is running locall
 let dispatcher = new ClarityTransactionDispatcher_1.default({ mongoFactory, databaseUrl });
 dispatcher.addServiceAsync("express", app).then(() => {
     //return dispatcher.addServiceAsync("authenticator", authenticator);
+}).then(() => {
     return dispatcher.addServiceAsync("fileSystem", fileSystem);
 }).then(() => {
     return dispatcher.addSystemAsync(new DispatcherApiSystem_1.default());
 }).then(() => {
     return dispatcher.addSystemAsync(new DispatcherMonitorSystem_1.default());
-}).then(() => {
-    return dispatcher.addSystemAsync(new LeavittSocialSystem_1.default());
 }).catch((error) => {
     console.log(error);
 });

@@ -4,11 +4,11 @@ import logsRoute from "./routes/Logs";
 
 export default class Router {
     app: any;
-    monitor: any;
+    dispatcherMonitor: any;
 
-    constructor(app, monitor) {
+    constructor(app, dispatcherMonitor) {
         this.app = app;
-        this.monitor = monitor;
+        this.dispatcherMonitor = dispatcherMonitor;
     }
 
     init() {
@@ -16,12 +16,20 @@ export default class Router {
             response.header("Access-Control-Allow-Origin", "*");
             response.header("Access-Control-Allow-Methods", "GET, PATCH, POST, DELETE");
             response.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
-            response.locals.monitor = this.monitor;
+            response.locals.dispatcherMonitor = this.dispatcherMonitor;
             next();
         });
 
         this.app.use("/api/uptimes", uptimesRoute);
         this.app.use("/api/transactions", transactionsRoute);
         this.app.use("/api/logs", logsRoute);
+
+        this.app.use((error, request, response, next) => {
+            if (error) {
+                response.status(400).send({ message: error.message });
+            } else {
+                next();
+            }
+        });
     }
 }
