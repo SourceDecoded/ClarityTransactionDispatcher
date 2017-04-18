@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+const EntityOutOfDateError_1 = require("./EntityOutOfDateError");
 const resolvedPromise = Promise.resolve(null);
 const ENTITIES_COLLECTION = "entities";
 const SYSTEM_DATA_COLLECTION = "systemData";
@@ -32,6 +33,7 @@ class ClarityTransactionDispatcher {
         this.databaseUrl = config.databaseUrl;
         this.systems = [];
         this.services = {};
+        this.entityQueue = new Map();
     }
     /**
      * Add an item to a collection into mongodb.
@@ -50,6 +52,25 @@ class ClarityTransactionDispatcher {
             item._id = result.insertedId;
             return item;
         });
+    }
+    _executeOnQueueAsync(entity, actionAsync) {
+        var pendingPromise = this.entityQueue.get(entity._id);
+        if (pendingPromise == null) {
+            return actionAsync();
+        }
+        else {
+            var promise = pendingPromise.then(() => {
+                return actionAsync();
+            }).catch((error) => {
+                return resolvedPromise;
+            }).then((result) => {
+                if (this.entityQueue.get(entity._id) === promise) {
+                    this.entityQueue.delete(entity._id);
+                }
+                return result;
+            });
+            this.entityQueue.set(entity._id, promise);
+        }
     }
     /**
      * Find one in a collection.
@@ -225,6 +246,7 @@ class ClarityTransactionDispatcher {
     addEntityAsync(entity) {
         let newEntity = {
             _id: entity._id ? this.ObjectID(entity._id) : this.ObjectID(),
+            revision: this.ObjectID(),
             components: Array.isArray(entity.components) ? entity.components : []
         };
         newEntity.components.forEach(component => {
@@ -238,10 +260,15 @@ class ClarityTransactionDispatcher {
         return this.validateEntityAsync(newEntity).then(() => {
             return this._addItemToCollectionAsync(ENTITIES_COLLECTION, newEntity);
         }).then(entity => {
-            return this._notifySystemsWithRecoveryAsync("entityAddedAsync", [entity]);
-        }).catch(error => {
-            this.logError(error);
-            throw error;
+            var actionAsync = () => {
+                return this._notifySystemsWithRecoveryAsync("entityAddedAsync", [entity]).catch(error => {
+                    this.logError(error);
+                    throw error;
+                });
+            };
+            return this._executeOnQueueAsync(entity, actionAsync).then(() => {
+                return entity;
+            });
         });
     }
     /**
@@ -483,14 +510,17 @@ class ClarityTransactionDispatcher {
      * @returns {Promise<undefined>}
      */
     removeEntityAsync(entity) {
-        return this._removeItemfromCollection(ENTITIES_COLLECTION, entity).then(() => {
-            return this._notifySystemsWithRecoveryAsync("entityRemovedAsync", [entity]);
+        var promise = this._executeOnQueueAsync(entity, () => {
+            return this._removeItemfromCollection(ENTITIES_COLLECTION, entity).then(() => {
+                return this._notifySystemsWithRecoveryAsync("entityRemovedAsync", [entity]);
+            }).catch(error => {
+                this.logError(error);
+                throw error;
+            });
         }).then(() => {
             return entity;
-        }).catch(error => {
-            this.logError(error);
-            throw error;
         });
+        return promise;
     }
     /**
      * Removes a service by its name. The dispatcher will notify the systems that this service is being
@@ -521,6 +551,7 @@ class ClarityTransactionDispatcher {
     updateEntityAsync(entity) {
         let updatedEntity = {
             _id: entity._id ? this.ObjectID(entity._id) : this.ObjectID,
+            revision: entity.revision,
             components: Array.isArray(entity.components) ? entity.components : []
         };
         updatedEntity.components.forEach(component => {
@@ -531,24 +562,34 @@ class ClarityTransactionDispatcher {
                 component._id = this.ObjectID(component._id);
             }
         });
-        return this.validateEntityAsync(updatedEntity).then(() => {
-            return this._findOneAsync(ENTITIES_COLLECTION, {
-                _id: updatedEntity._id
+        var actionAsync = () => {
+            return this.validateEntityAsync(updatedEntity).then(() => {
+                return this._findOneAsync(ENTITIES_COLLECTION, {
+                    _id: updatedEntity._id
+                });
+            }).then((oldEntity) => {
+                if (oldEntity.revision != updatedEntity.revision) {
+                    var error = new EntityOutOfDateError_1.default("Entity out of date.");
+                    error.name = "OutOfDate";
+                    error.currentRevision = oldEntity;
+                    throw error;
+                }
+                updatedEntity._id = oldEntity._id;
+                updatedEntity.revision = this.ObjectID();
+                updatedEntity.createdDate = oldEntity.createdDate;
+                return this._updateItemInCollectionAsync(ENTITIES_COLLECTION, updatedEntity).then(() => {
+                    return oldEntity;
+                });
+            }).then((oldEntity) => {
+                return this._notifySystemsWithRecoveryAsync("entityUpdatedAsync", [oldEntity, updatedEntity]);
+            }).then(() => {
+                return updatedEntity;
+            }).catch((error) => {
+                this.logError(error);
+                throw error;
             });
-        }).then((oldEntity) => {
-            updatedEntity._id = oldEntity._id;
-            updatedEntity.createdDate = oldEntity.createdDate;
-            return this._updateItemInCollectionAsync(ENTITIES_COLLECTION, updatedEntity).then(() => {
-                return oldEntity;
-            });
-        }).then((oldEntity) => {
-            return this._notifySystemsWithRecoveryAsync("entityUpdatedAsync", [oldEntity, updatedEntity]);
-        }).then(() => {
-            return updatedEntity;
-        }).catch((error) => {
-            this.logError(error);
-            throw error;
-        });
+        };
+        return this._executeOnQueueAsync(entity, actionAsync);
     }
     /**
      * This allows systems to validate the entity being saved.

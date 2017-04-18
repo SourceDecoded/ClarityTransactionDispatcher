@@ -1,6 +1,7 @@
 import { IEntity, IComponent, ISystem, ISystemData, IObjectID, ILogger, IObjectIDInstance, IMongo, IMongoDb, IMongoClient, IMongoCollection, IMongoFactory } from "./interfaces";
 import * as fs from "fs";
 import * as uuid from "node-uuid";
+import EntityOutOfDateError from "./EntityOutOfDateError";
 
 const resolvedPromise = Promise.resolve(null);
 
@@ -31,6 +32,7 @@ export default class ClarityTransactionDispatcher {
     private databaseUrl: string;
     private services: { [key: string]: any };
     private systems: Array<ISystem>;
+    private entityQueue: Map<string, Promise<any>>;
 
     /**
      * Create a Dispatcher.
@@ -44,6 +46,7 @@ export default class ClarityTransactionDispatcher {
         this.databaseUrl = config.databaseUrl;
         this.systems = [];
         this.services = {};
+        this.entityQueue = new Map();
     }
 
     /**
@@ -64,6 +67,29 @@ export default class ClarityTransactionDispatcher {
             return item;
         });
     }
+
+    private _executeOnQueueAsync(entity, actionAsync) {
+        var pendingPromise = this.entityQueue.get(entity._id);
+
+        if (pendingPromise == null) {
+            return actionAsync();
+        } else {
+            var promise = pendingPromise.then(() => {
+                return actionAsync();
+            }).catch((error) => {
+                return resolvedPromise;
+            }).then((result) => {
+                if (this.entityQueue.get(entity._id) === promise) {
+                    this.entityQueue.delete(entity._id);
+                }
+
+                return result;
+            });
+
+            this.entityQueue.set(entity._id, promise);
+        }
+    }
+
 
     /** 
      * Find one in a collection.
@@ -258,6 +284,7 @@ export default class ClarityTransactionDispatcher {
     addEntityAsync(entity: IEntity) {
         let newEntity: any = {
             _id: entity._id ? this.ObjectID(entity._id) : this.ObjectID(),
+            revision: this.ObjectID(),
             components: Array.isArray(entity.components) ? entity.components : []
         };
 
@@ -272,10 +299,16 @@ export default class ClarityTransactionDispatcher {
         return this.validateEntityAsync(newEntity).then(() => {
             return this._addItemToCollectionAsync(ENTITIES_COLLECTION, newEntity);
         }).then(entity => {
-            return this._notifySystemsWithRecoveryAsync("entityAddedAsync", [entity]);
-        }).catch(error => {
-            this.logError(error);
-            throw error;
+            var actionAsync = () => {
+                return this._notifySystemsWithRecoveryAsync("entityAddedAsync", [entity]).catch(error => {
+                    this.logError(error);
+                    throw error;
+                });
+            }
+
+            return this._executeOnQueueAsync(entity, actionAsync).then(() => {
+                return entity;
+            });
         });
     }
 
@@ -539,14 +572,18 @@ export default class ClarityTransactionDispatcher {
      * @returns {Promise<undefined>} 
      */
     removeEntityAsync(entity: IEntity) {
-        return this._removeItemfromCollection(ENTITIES_COLLECTION, entity).then(() => {
-            return this._notifySystemsWithRecoveryAsync("entityRemovedAsync", [entity]);
+        var promise = this._executeOnQueueAsync(entity, () => {
+            return this._removeItemfromCollection(ENTITIES_COLLECTION, entity).then(() => {
+                return this._notifySystemsWithRecoveryAsync("entityRemovedAsync", [entity]);
+            }).catch(error => {
+                this.logError(error);
+                throw error;
+            });
         }).then(() => {
             return entity;
-        }).catch(error => {
-            this.logError(error);
-            throw error;
         });
+
+        return promise;
     }
 
     /**
@@ -578,6 +615,7 @@ export default class ClarityTransactionDispatcher {
     updateEntityAsync(entity: IEntity) {
         let updatedEntity: any = {
             _id: entity._id ? this.ObjectID(entity._id) : this.ObjectID,
+            revision: entity.revision,
             components: Array.isArray(entity.components) ? entity.components : []
         };
 
@@ -589,25 +627,40 @@ export default class ClarityTransactionDispatcher {
             }
         });
 
-        return this.validateEntityAsync(updatedEntity).then(() => {
-            return this._findOneAsync(ENTITIES_COLLECTION, {
-                _id: updatedEntity._id
-            });
-        }).then((oldEntity: any) => {
-            updatedEntity._id = oldEntity._id;
-            updatedEntity.createdDate = oldEntity.createdDate;
+        var actionAsync = () => {
+            return this.validateEntityAsync(updatedEntity).then(() => {
+                return this._findOneAsync(ENTITIES_COLLECTION, {
+                    _id: updatedEntity._id
+                });
+            }).then((oldEntity: IEntity) => {
+                if (oldEntity.revision != updatedEntity.revision) {
+                    var error = new EntityOutOfDateError("Entity out of date.");
+                    error.name = "OutOfDate";
+                    error.currentRevision = oldEntity;
 
-            return this._updateItemInCollectionAsync(ENTITIES_COLLECTION, updatedEntity).then(() => {
-                return oldEntity;
+                    throw error;
+                }
+
+                updatedEntity._id = oldEntity._id;
+                updatedEntity.revision = this.ObjectID();
+                updatedEntity.createdDate = oldEntity.createdDate;
+
+                return this._updateItemInCollectionAsync(ENTITIES_COLLECTION, updatedEntity).then(() => {
+                    return oldEntity;
+                });
+            }).then((oldEntity) => {
+                return this._notifySystemsWithRecoveryAsync("entityUpdatedAsync", [oldEntity, updatedEntity]);
+            }).then(() => {
+                return updatedEntity;
+            }).catch((error) => {
+                this.logError(error);
+                throw error;
             });
-        }).then((oldEntity) => {
-            return this._notifySystemsWithRecoveryAsync("entityUpdatedAsync", [oldEntity, updatedEntity]);
-        }).then(() => {
-            return updatedEntity;
-        }).catch((error) => {
-            this.logError(error);
-            throw error;
-        });
+
+        };
+
+        return this._executeOnQueueAsync(entity, actionAsync);
+
     }
 
     /**

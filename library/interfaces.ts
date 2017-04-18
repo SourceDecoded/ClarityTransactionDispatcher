@@ -3,6 +3,7 @@ import * as stream from "stream";
 
 export interface IEntity {
     _id?: any;
+    revision? : any;
     modifiedDate?: Date;
     createdDate?: Date;
     components?: Array<any>;
