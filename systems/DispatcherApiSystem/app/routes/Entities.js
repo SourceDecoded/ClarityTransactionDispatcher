@@ -1,5 +1,4 @@
 "use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
 const express = require("express");
 const Busboy = require("busboy");
 const bodyParser = require("body-parser");
@@ -203,5 +202,6 @@ entityRouter.delete("/:entityId/components/:componentId", (request, response) =>
         response.status(400).send({ message: error.message });
     });
 });
+Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = entityRouter;
 //# sourceMappingURL=Entities.js.map

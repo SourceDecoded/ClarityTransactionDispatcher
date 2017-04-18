@@ -3,9 +3,10 @@ import * as express from "express";
 const transactionRouter = express.Router();
 
 transactionRouter.get("/", (request, response) => {
-    const monitor = response.locals.monitor;
-    const transactionId = request.query.id;
-    const getCount = request.query.count;
+    const dispatcherMonitor = response.locals.dispatcherMonitor;
+    const getCount = request.query.getCount;
+    const lastId = request.query.lastId;
+    const pageSize = request.query.pageSize;
     let filter = request.query.filter;
 
     if (filter) {
@@ -16,21 +17,30 @@ transactionRouter.get("/", (request, response) => {
         }
     }
 
-    if (transactionId) {
-        monitor.getTransactionByIdAsync(transactionId).then(transaction => {
-            response.status(200).send({ data: { transaction } });
-        }).catch(error => {
-            response.status(400).send({ message: error.message });
-        });
-    } else if (getCount == "true") {
-        monitor.getTransactionCountAsync(filter).then(count => {
-            response.status(200).send({ data: { count } });
+    if (getCount === "true") {
+        dispatcherMonitor.getTransactionCountAsync(filter).then(count => {
+            response.status(200).send(count.toString());
         }).catch(error => {
             response.status(400).send({ message: error.message });
         });
     } else {
-        response.status(400).send({ message: "The id or count parameter needed." });
+        dispatcherMonitor.getTransactionsAsync({ lastId, pageSize }).then(transactions => {
+            response.status(200).send(transactions);
+        }).catch(error => {
+            response.status(400).send({ message: error.message });
+        });
     }
+});
+
+transactionRouter.get("/:id", (request, response) => {
+    const dispatcherMonitor = response.locals.dispatcherMonitor;
+    const transactionId = request.params.id;
+
+    dispatcherMonitor.getTransactionByIdAsync(transactionId).then(transaction => {
+        response.status(200).send(transaction);
+    }).catch(error => {
+        response.status(400).send({ message: error.message });
+    })
 });
 
 export default transactionRouter;

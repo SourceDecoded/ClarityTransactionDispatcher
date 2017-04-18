@@ -1,5 +1,4 @@
 "use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
 class SocketDispatcherSystem {
     constructor(config) {
         this._name = "RemoteDispatcherSystem";
@@ -117,5 +116,6 @@ class SocketDispatcherSystem {
     validateComponentAsync(component) { }
     validateEntityContentAsync(entity, oldContentId, newContentId) { }
 }
+Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = SocketDispatcherSystem;
 //# sourceMappingURL=index.js.map

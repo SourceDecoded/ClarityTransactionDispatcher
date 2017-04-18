@@ -3,7 +3,6 @@ import ClarityTransactionDispatcher from "./../library/ClarityTransactionDispatc
 import MongoFactory from "./../library/MongoFactory";
 import DispatcherApiSystem from "./../systems/DispatcherApiSystem";
 import DispatcherMonitorSystem from "./../systems/DispatcherMonitorSystem";
-import LeavittSocialSystem from "./../systems/LeavittSocialSystem";
 import LeavittGroupAuthentication from "./../services/LeavittGroupAuthentication";
 import FileSystemService from "./../services/FileSystemService";
 import * as jwtSimple from "jwt-simple";
@@ -19,16 +18,14 @@ server = app.listen(3005, () => console.log("Disptacher Server is running locall
 
 let dispatcher = new ClarityTransactionDispatcher({ mongoFactory, databaseUrl });
 
-
 dispatcher.addServiceAsync("express", app).then(() => {
     //return dispatcher.addServiceAsync("authenticator", authenticator);
+}).then(() => {
     return dispatcher.addServiceAsync("fileSystem", fileSystem);
 }).then(() => {
     return dispatcher.addSystemAsync(new DispatcherApiSystem());
 }).then(() => {
     return dispatcher.addSystemAsync(new DispatcherMonitorSystem());
-}).then(() => {
-    return dispatcher.addSystemAsync(new LeavittSocialSystem());
 }).catch((error) => {
     console.log(error);
 });

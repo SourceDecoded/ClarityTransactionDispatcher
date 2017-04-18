@@ -1,5 +1,4 @@
 "use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
 const MongoCursor_1 = require("./MongoCursor");
 class MongoCollection {
     constructor(config) {
@@ -37,5 +36,6 @@ class MongoCollection {
         return this._mockAsyncResponse(callback);
     }
 }
+Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = MongoCollection;
 //# sourceMappingURL=MongoCollection.js.map
