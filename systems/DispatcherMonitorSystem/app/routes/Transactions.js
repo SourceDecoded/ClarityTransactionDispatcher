@@ -1,4 +1,5 @@
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 const express = require("express");
 const transactionRouter = express.Router();
 transactionRouter.get("/", (request, response) => {
@@ -39,6 +40,5 @@ transactionRouter.get("/:id", (request, response) => {
         response.status(400).send({ message: error.message });
     });
 });
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = transactionRouter;
 //# sourceMappingURL=Transactions.js.map

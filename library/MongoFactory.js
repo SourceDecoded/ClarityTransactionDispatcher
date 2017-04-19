@@ -1,4 +1,5 @@
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 const GridFs = require("gridfs-stream");
 const mongodb = require("mongodb");
 class MongoFactory {
@@ -9,6 +10,5 @@ class MongoFactory {
         return new GridFs(db, mongodb);
     }
 }
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = MongoFactory;
 //# sourceMappingURL=MongoFactory.js.map

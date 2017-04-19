@@ -31,6 +31,15 @@
             "outFiles": [],
             "sourceMaps": true
         },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Debug System Test",
+            "program": "${workspaceRoot}\\examples\\test.js",
+            "cwd": "${workspaceRoot}",
+            "outFiles": [],
+            "sourceMaps": true
+        },
          {
             "type": "node",
             "request": "launch",

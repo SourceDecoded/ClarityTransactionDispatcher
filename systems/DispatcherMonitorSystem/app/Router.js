@@ -1,4 +1,5 @@
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 const Uptimes_1 = require("./routes/Uptimes");
 const Transactions_1 = require("./routes/Transactions");
 const Logs_1 = require("./routes/Logs");
@@ -28,6 +29,5 @@ class Router {
         });
     }
 }
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = Router;
 //# sourceMappingURL=Router.js.map
