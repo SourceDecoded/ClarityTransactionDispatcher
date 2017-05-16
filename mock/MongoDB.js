@@ -1,4 +1,5 @@
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 const MongoCollection_1 = require("./MongoCollection");
 class MongoDB {
     constructor(config) {
@@ -24,6 +25,5 @@ class MongoDB {
         });
     }
 }
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = MongoDB;
 //# sourceMappingURL=MongoDB.js.map

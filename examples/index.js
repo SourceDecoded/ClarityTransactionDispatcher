@@ -1,4 +1,5 @@
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 const express = require("express");
 const ClarityTransactionDispatcher_1 = require("./../library/ClarityTransactionDispatcher");
 const MongoFactory_1 = require("./../library/MongoFactory");

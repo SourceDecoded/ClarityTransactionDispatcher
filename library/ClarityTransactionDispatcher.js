@@ -1,4 +1,5 @@
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 const resolvedPromise = Promise.resolve(null);
 const ENTITIES_COLLECTION = "entities";
 const SYSTEM_DATA_COLLECTION = "systemData";
@@ -567,6 +568,5 @@ class ClarityTransactionDispatcher {
         return true;
     }
 }
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = ClarityTransactionDispatcher;
 //# sourceMappingURL=ClarityTransactionDispatcher.js.map

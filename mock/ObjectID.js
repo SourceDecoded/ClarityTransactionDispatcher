@@ -1,4 +1,5 @@
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 var ObjectIDMock = function (id) {
     var timestamp = Date.now();
     return {
@@ -23,6 +24,5 @@ ObjectIDMock.createFromTime = function (time) {
 ObjectIDMock.isValid = function () {
     return true;
 };
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = ObjectIDMock;
 //# sourceMappingURL=ObjectID.js.map

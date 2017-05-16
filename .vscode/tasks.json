@@ -10,10 +10,9 @@
     "tasks": [
         {
             "taskName": "default",
-            "identifier": "default",
             "args": [],
             "isBuildCommand": true,
-            "isWatching": false,
+            "isBackground": false,
             "problemMatcher": [
                 "$lessCompile",
                 "$tsc",
