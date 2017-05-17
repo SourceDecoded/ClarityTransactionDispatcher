@@ -278,9 +278,10 @@ export default class ClarityTransactionDispatcher {
      * Add an Entity to the datastore. The steps the dispatcher takes when saving an
      * entity are.
      * 
+     * - Have the Systems prepare the entity to be inserted with prepareEntityToBeAddedAsync.
      * - Validate the entity with all systems. All systems have to validate to pass.
      * - Save the entity to the datastore.
-     * - Notify the systems that an entity has been added.
+     * - Notify the systems that an entity has been added with entityAddedAsync.
      * @param {IEntity} entity - The entity that you want to save to the datastore.
      * @return {Promise<Entity>}
      */
@@ -348,10 +349,12 @@ export default class ClarityTransactionDispatcher {
      *  - entityRemovedAsync(entity: IEntity)
      *  - entityRetrievedAsync(entity: IEntity)
      *  - entityUpdatedAsync(oldEntity: IEntity, updatedEntity: IEntity)
+     *  - initializeAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher)
      *  - logError(error: { type?: string; message?: string; })
      *  - logMessage(message: { type?: string; message?: string; })
      *  - logWarning(warning: { type?: string; message?: string; })
-     *  - initializeAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher)
+     *  - prepareEntityToBeAddedAsync(enitty: IEntity)
+     *  - prepareEntityToBeUpdatedAsync(entity: IEntity)
      *  - serviceRemovedAsync(name: string)
      *  - validateEntityAsync(entity: IEntity)
      * @param {ISystem} system - The system to add.

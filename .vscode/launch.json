@@ -8,7 +8,7 @@
             "type": "node",
             "request": "launch",
             "name": "Launch Program",
-            "program": "${workspaceRoot}\\main.js",
+            "program": "${workspaceRoot}/main.js",
             "cwd": "${workspaceRoot}",
             "outFiles": [],
             "sourceMaps": true
@@ -17,7 +17,7 @@
             "type": "node",
             "request": "launch",
             "name": "Debug Tests",
-            "program": "${workspaceRoot}\\TestRunner.js",
+            "program": "${workspaceRoot}/TestRunner.js",
             "cwd": "${workspaceRoot}",
             "outFiles": [],
             "sourceMaps": true
@@ -26,7 +26,7 @@
             "type": "node",
             "request": "launch",
             "name": "Debug Systems",
-            "program": "${workspaceRoot}\\examples\\index.js",
+            "program": "${workspaceRoot}/examples/index.js",
             "cwd": "${workspaceRoot}",
             "outFiles": [],
             "sourceMaps": true
@@ -35,7 +35,7 @@
             "type": "node",
             "request": "launch",
             "name": "Debug System Test",
-            "program": "${workspaceRoot}\\examples\\test.js",
+            "program": "${workspaceRoot}/examples/test.js",
             "cwd": "${workspaceRoot}",
             "outFiles": [],
             "sourceMaps": true
@@ -44,7 +44,7 @@
             "type": "node",
             "request": "launch",
             "name": "Debug Build",
-            "program": "${workspaceRoot}\\gulpfile.js",
+            "program": "${workspaceRoot}/gulpfile.js",
             "cwd": "${workspaceRoot}",
             "outFiles": [],
             "sourceMaps": true
