@@ -3,6 +3,7 @@ import * as stream from "stream";
 
 export interface IEntity {
     _id?: any;
+    revision? : any;
     modifiedDate?: Date;
     createdDate?: Date;
     components?: Array<any>;
@@ -98,20 +99,15 @@ export interface ISystem {
     activatedAsync?(clarityTransactionDispatcher: ClarityTransactionDispatcher);
     deactivatedAsync?(clarityTransactionDispatcher: ClarityTransactionDispatcher);
     disposeAsync?(clarityTransactionDispatcher: ClarityTransactionDispatcher);
-    entityAddedAsync?(entity: { _id: string });
-    entityUpdatedAsync?(oldEntity: any, newEntity: any);
-    entityRemovedAsync?(entity: { _id: string });
-    entityRetrievedAsync?(entity: { _id: string });
-    entityContentUpdatedAsync?(oldContentId: string, newContentId: string);
-    entityComponentAddedAsync?(entity: { _id: string }, component: any);
-    entityComponentUpdatedAsync?(entity: { _id: string }, oldComponent: any, newComponent: any);
-    entityComponentRemovedAsync?(entity: { _id: string }, component: any);
-    entityComponentRetrievedAsync?(entity: { _id: string }, component: any);
+    entityAddedAsync?(entity:IEntity);
+    entityUpdatedAsync?(oldEntity:IEntity, newEntity: IEntity);
+    entityRemovedAsync?(entity: IEntity);
+    entityRetrievedAsync?(entity:IEntity);
     initializeAsync?(clarityTransactionDispatcher: ClarityTransactionDispatcher);
+    prepareEntityToBeAddedAsync?(entity:IEntity);
+    prepareEntityToBeUpdatedAsync?(entity:IEntity);
     serviceRemovedAsync?(name: string, service: any);
-    validateEntityAsync?(entity: { _id: string });
-    validateComponentAsync?(component: { _id: string });
-    validateEntityContentAsync?(entity: { _id: string }, oldContentId: string, newContentId: string);
+    validateEntityAsync?(entity: IEntity);
 }
 
 export interface ISystemData {
