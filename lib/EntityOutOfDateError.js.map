@@ -1,0 +1,1 @@
+{"version":3,"sources":["../src/EntityOutOfDateError.js"],"names":["EntityOUtOfDateError","Error"],"mappings":";;;;;;;;;;;;IAAqBA,oB;;;;;;;;;;EAA6BC,K;;kBAA7BD,oB","file":"EntityOutOfDateError.js","sourcesContent":["export default class EntityOUtOfDateError extends Error {\n}"]}

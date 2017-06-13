@@ -1,0 +1,1 @@
+{"version":3,"sources":["../../src/tests/example.js"],"names":["assert","exports","equal"],"mappings":";;AAAA;;IAAYA,M;;;;AAEZC,QAAQ,qBAAR,IAAiC,YAAU;AACvCD,WAAOE,KAAP,CAAa,IAAb,EAAmB,IAAnB;AACH,CAFD","file":"example.js","sourcesContent":["import * as assert from \"assert\";\n\nexports[\"Test: It's working.\"] = function(){\n    assert.equal(true, true);\n};"]}
