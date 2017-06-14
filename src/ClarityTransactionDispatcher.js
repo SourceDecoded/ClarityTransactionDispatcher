@@ -1,25 +1,11 @@
 import * as fs from "fs";
 import * as uuid from "node-uuid";
-import { MongodHelper } from "mongodb-prebuilt";
-import { MongoClient, ObjectID } from "mongodb";
 
 const resolvedPromise = Promise.resolve(null);
 
 const ENTITIES_COLLECTION = "entities";
 const SYSTEM_DATA_COLLECTION = "systemData";
 const NOTICE = "notice";
-
-const defaultMongodbConfig = {
-    databaseName: "clarity_transaction_dispatcher",
-    ip: "localhost",
-    port: "27017",
-    isBuiltIn: true,
-    isInMemory: false
-};
-
-const defaultConfig = {
-    mongodb: defaultMongodbConfig
-};
 
 /**
  * Class that organizes systems to respond to data transactions.
@@ -41,19 +27,18 @@ export default class ClarityTransactionDispatcher {
     /**
      * Create a Dispatcher.
      * @constructor
-     * @param {object} config - {mongodb:{databaseName:string; ip:string; port:string; isBuildIn:boolean; isInMemory:boolean;}}.
+     * @param {clairty.MongoDb} mongoDb 
      */
-    constructor(config) {
-        config = Object.assign({}, defaultConfig, config);
-        this.mongodbConfig = Object.assign({}, defaultMongodbConfig, config.mongodb);
+    constructor(mongoDb) {
+        if (mongoDb == null) {
+            throw new Error("Null Argument exception: There needs to be a MongoDb.");
+        }
 
+        this.mongoDb = mongoDb;
+        this.ObjectID = mongoDb.getObjectID();
         this.systems = [];
         this.services = {};
         this.entityQueue = new Map();
-        this.isInitialized = false;
-        this.initializingPromise = null;
-        this.mongoHelper = null;
-        this.ObjectID = ObjectID;
     }
 
     /**
@@ -79,7 +64,7 @@ export default class ClarityTransactionDispatcher {
      * Ensures the mongodb is ready by asserting that it has been successfully started.
      */
     _assertIsStarted() {
-        if (!this.isInitialized) {
+        if (!this.mongoDb.isInitialized) {
             throw new Error("The dispatcher needs to be started before calling any other method.");
         }
     }
@@ -140,10 +125,7 @@ export default class ClarityTransactionDispatcher {
      * @returns {Promise<mongodb>}
      */
     _getDatabaseAsync() {
-        var databaseName = this.mongodbConfig.isInMemory ? this.mongodbConfig.databaseName + "_in_memory" : this.mongodbConfig.databaseName;
-        var databaseUrl = `mongodb://${this.mongodbConfig.ip}:${this.mongodbConfig.port}/${databaseName}`;
-
-        return MongoClient.connect(databaseUrl);
+        return this.mongoDb.getDatabaseAsync();
     }
 
     /**
@@ -640,17 +622,7 @@ export default class ClarityTransactionDispatcher {
      * Starts the database.
      */
     startAsync() {
-        if (this.initializingPromise != null) {
-            return this.initializingPromise;
-        } else {
-            this.mongoHelper = new MongodHelper(["--port", this.mongodbConfig.port, "--dbpath", "/data/db"]);
-
-            return this.initializingPromise = this.mongoHelper.run().then(() => {
-                this.isInitialized = true;
-            }).catch((error) => {
-
-            });
-        }
+        return this.mongoDb.startAsync();
     }
 
     /**
@@ -659,16 +631,8 @@ export default class ClarityTransactionDispatcher {
      * manage.
      */
     stopAsync() {
-        var initializingPromise = this.initializingPromise;
-
-        if (this.initializingPromise == null) {
-            initializingPromise = resolvedPromise;
-        }
-
-        return initializingPromise.then(() => {
-            return this._notifySystemsWithRecoveryAsync("deactivatedAsync", []);
-        }).then(() => {
-            this.mongoHelper.mongoBin.childProcess.kill();
+        return this._notifySystemsWithRecoveryAsync("deactivatedAsync", []).then(() => {
+            return this.mongoDb.stopAsync();
         });
     }
 

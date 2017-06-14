@@ -1,18 +1,16 @@
 import express from "express";
-import { ClarityTransactionDispatcher, DispatcherApiSystem, DispatcherMonitorSystem } from "./../index.js";
+import { ClarityTransactionDispatcher, DispatcherApiSystem, DispatcherMonitorSystem, MongoDb } from "./../index.js";
 import FileSystemService from "./../services/FileSystemService";
-import * as GridFs from "gridfs-stream";
-import * as mongodb from "mongodb";
 import * as jwtSimple from "jwt-simple";
 
-const databaseUrl = "mongodb://localhost:27017/ClarityTransactionDispatcher";
-let server;
 let app = express();
-let fileSystem = new FileSystemService({ mongodb, GridFs, databaseUrl });
+let mongoDb = new MongoDb({
+    isInMemory: true
+});
+let fileSystem = new FileSystemService(mongoDb);
+let dispatcher = new ClarityTransactionDispatcher(mongoDb);
 
-server = app.listen(3005, () => console.log("Disptacher Server is running locally on port 3005..."));
-
-let dispatcher = new ClarityTransactionDispatcher();
+app.listen(3005, () => console.log("Disptacher Server is running locally on port 3005..."));
 
 dispatcher.startAsync().then(() => {
     return dispatcher.addServiceAsync("express", app);
@@ -25,3 +23,7 @@ dispatcher.startAsync().then(() => {
 }).catch((error) => {
     console.log(error);
 });
+
+setTimeout(()=>{
+    dispatcher.stopAsync();
+},15000);

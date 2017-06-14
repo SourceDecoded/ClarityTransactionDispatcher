@@ -1,24 +1,14 @@
 export default class FileSystemService {
-    constructor(config) {
-        this.mongodb = config.mongodb;
-        this.MongoClient = this.mongodb.MongoClient;
-        this.ObjectID = this.mongodb.ObjectID;
-        this.databaseUrl = config.databaseUrl;
-        this.GridFs;
-    }
+    constructor(mongoDb) {
+        if (mongoDb == null) {
+            throw new Error("Null Argument exception: There needs to be a MongoDb.");
+        }
 
-     _getDatabaseAsync() {
-        return this.MongoClient.connect(this.databaseUrl);
-    }
-
-     _getGridFsAsync() {
-        return this._getDatabaseAsync().then((db) => {
-            return new this.GridFs(db, this.mongodb);
-        });
+        this.mongoDb = mongoDb;
     }
 
     getFileReadStreamByIdAsync(id) {
-        return this._getGridFsAsync().then((gfs) => {
+        return this.mongoDb.getGridFsAsync().then((gfs) => {
             return gfs.createReadStream({
                 _id: this.ObjectID(id)
             });
@@ -30,7 +20,7 @@ export default class FileSystemService {
     getFileWriteStreamByIdAsync(id) {
         let newFileId = id ? this.ObjectID(id) : this.ObjectID()
 
-        return this._getGridFsAsync().then((gfs) => {
+        return this.mongoDb.getGridFsAsync().then((gfs) => {
             return gfs.createWriteStream({
                 _id: id
             });
@@ -40,7 +30,7 @@ export default class FileSystemService {
     }
 
     removeFileByIdAsync(id) {
-        return this._getGridFsAsync().then((gfs) => {
+        return this.mongoDb.getGridFsAsync().then((gfs) => {
             return new Promise((resolve, reject) => {
                 gfs.remove({
                     _id: id

@@ -42,12 +42,6 @@ var _nodeUuid = require("node-uuid");
 
 var uuid = _interopRequireWildcard(_nodeUuid);
 
-var _EntityOutOfDateError = require("./EntityOutOfDateError");
-
-var _EntityOutOfDateError2 = _interopRequireDefault(_EntityOutOfDateError);
-
-function _interopRequireDefault(obj) { return obj &amp;&amp; obj.__esModule ? obj : { default: obj }; }
-
 function _interopRequireWildcard(obj) { if (obj &amp;&amp; obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -79,15 +73,17 @@ var ClarityTransactionDispatcher = function () {
     /**
      * Create a Dispatcher.
      * @constructor
-     * @param {object} config - {mongodb:object, databaseUrl: string}.
+     * @param {clairty.MongoDb} mongoDb 
      */
-    function ClarityTransactionDispatcher(config) {
+    function ClarityTransactionDispatcher(mongoDb) {
         _classCallCheck(this, ClarityTransactionDispatcher);
 
-        this.mongodb = config.mongodb;
-        this.MongoClient = this.mongodb.MongoClient;
-        this.ObjectID = this.mongodb.ObjectID;
-        this.databaseUrl = config.databaseUrl;
+        if (mongoDb == null) {
+            throw new Error("Null Argument exception: There needs to be a MongoDb.");
+        }
+
+        this.mongoDb = mongoDb;
+        this.ObjectID = mongoDb.getObjectID();
         this.systems = [];
         this.services = {};
         this.entityQueue = new Map();
@@ -113,6 +109,37 @@ var ClarityTransactionDispatcher = function () {
             }).then(function (result) {
                 item._id = result.insertedId;
                 return item;
+            });
+        }
+
+        /**
+         * Ensures the mongodb is ready by asserting that it has been successfully started.
+         */
+
+    }, {
+        key: "_assertIsStarted",
+        value: function _assertIsStarted() {
+            if (!this.mongoDb.isInitialized) {
+                throw new Error("The dispatcher needs to be started before calling any other method.");
+            }
+        }
+
+        /**
+         * 
+         * @param {IEntity} entity - The entity to manage component id's to. 
+         */
+
+    }, {
+        key: "_assignObjectIdsToComponents",
+        value: function _assignObjectIdsToComponents(entity) {
+            var _this = this;
+
+            entity.components.forEach(function (component) {
+                if (!component._id) {
+                    component._id = _this.ObjectID();
+                } else {
+                    component._id = _this.ObjectID(component._id);
+                }
             });
         }
 
@@ -170,7 +197,7 @@ var ClarityTransactionDispatcher = function () {
     }, {
         key: "_getDatabaseAsync",
         value: function _getDatabaseAsync() {
-            return this.MongoClient.connect(this.databaseUrl);
+            return this.mongoDb.getDatabaseAsync();
         }
 
         /**
@@ -181,7 +208,7 @@ var ClarityTransactionDispatcher = function () {
     }, {
         key: "_initializingSystemAsync",
         value: function _initializingSystemAsync(system) {
-            var _this = this;
+            var _this2 = this;
 
             var systemGuid = system.getGuid();
 
@@ -196,19 +223,19 @@ var ClarityTransactionDispatcher = function () {
                         isInitialized: false
                     };
 
-                    return _this._addItemToCollectionAsync(SYSTEM_DATA_COLLECTION, newSystemData);
+                    return _this2._addItemToCollectionAsync(SYSTEM_DATA_COLLECTION, newSystemData);
                 } else {
                     return systemData;
                 }
             }).then(function (systemData) {
                 if (!systemData.isInitialized) {
-                    return _this._invokeMethodAsync(system, "initializeAsync", [_this]).then(function () {
+                    return _this2._invokeMethodAsync(system, "initializeAsync", [_this2]).then(function () {
                         systemData.isInitialized = true;
-                        return _this._updateItemInCollectionAsync(SYSTEM_DATA_COLLECTION, systemData);
+                        return _this2._updateItemInCollectionAsync(SYSTEM_DATA_COLLECTION, systemData);
                     });
                 }
             }).catch(function (error) {
-                _this.logError({ message: error.message });
+                _this2.logError({ message: error.message });
                 throw error;
             });
         }
@@ -244,16 +271,16 @@ var ClarityTransactionDispatcher = function () {
     }, {
         key: "_notifySystemsAsync",
         value: function _notifySystemsAsync(methodName, args) {
-            var _this2 = this;
+            var _this3 = this;
 
             return this.systems.reduce(function (promise, system) {
 
                 return promise.then(function () {
 
                     try {
-                        return _this2._invokeMethodAsync(system, methodName, args);
+                        return _this3._invokeMethodAsync(system, methodName, args);
                     } catch (error) {
-                        _this2.logError(error);
+                        _this3.logError(error);
                         throw error;
                     }
                 });
@@ -273,16 +300,16 @@ var ClarityTransactionDispatcher = function () {
     }, {
         key: "_notifySystemsWithRecoveryAsync",
         value: function _notifySystemsWithRecoveryAsync(methodName, args) {
-            var _this3 = this;
+            var _this4 = this;
 
             return this.systems.reduce(function (promise, system) {
 
                 return promise.then(function () {
 
                     try {
-                        return _this3._invokeMethodAsync(system, methodName, args);
+                        return _this4._invokeMethodAsync(system, methodName, args);
                     } catch (error) {
-                        _this3.logError(error);
+                        _this4.logError(error);
                         throw error;
                     }
                 }).catch(function () {
@@ -300,13 +327,13 @@ var ClarityTransactionDispatcher = function () {
     }, {
         key: "_removeItemfromCollection",
         value: function _removeItemfromCollection(collectionName, item) {
-            var _this4 = this;
+            var _this5 = this;
 
             return this._getDatabaseAsync().then(function (db) {
                 return db.collection(collectionName);
             }).then(function (collection) {
                 return collection.deleteOne({
-                    _id: _this4.ObjectID(item._id)
+                    _id: _this5.ObjectID(item._id)
                 });
             });
         }
@@ -320,14 +347,14 @@ var ClarityTransactionDispatcher = function () {
     }, {
         key: "_updateItemInCollectionAsync",
         value: function _updateItemInCollectionAsync(collectionName, item) {
-            var _this5 = this;
+            var _this6 = this;
 
             item.modifiedDate = new Date();
             return this._getDatabaseAsync().then(function (db) {
                 return db.collection(collectionName);
             }).then(function (collection) {
                 return collection.update({
-                    _id: _this5.ObjectID(item._id)
+                    _id: _this6.ObjectID(item._id)
                 }, item, null);
             });
         }
@@ -347,7 +374,9 @@ var ClarityTransactionDispatcher = function () {
     }, {
         key: "addEntityAsync",
         value: function addEntityAsync(entity) {
-            var _this6 = this;
+            var _this7 = this;
+
+            this._assertIsStarted();
 
             var newEntity = {
                 _id: entity._id ? this.ObjectID(entity._id) : this.ObjectID(),
@@ -355,24 +384,18 @@ var ClarityTransactionDispatcher = function () {
                 components: Array.isArray(entity.components) ? entity.components : []
             };
 
-            newEntity.components.forEach(function (component) {
-                if (!component._id) {
-                    component._id = _this6.ObjectID();
-                } else {
-                    component._id = _this6.ObjectID(component._id);
-                }
-            });
+            this._assignObjectIdsToComponents(newEntity);
 
             return this._notifySystemsWithRecoveryAsync("prepareEntityToBeAddedAsync", [newEntity]).then(function () {
-                _this6.validateEntityAsync(newEntity);
+                _this7.validateEntityAsync(newEntity);
             }).then(function () {
-                return _this6._addItemToCollectionAsync(ENTITIES_COLLECTION, newEntity);
+                return _this7._addItemToCollectionAsync(ENTITIES_COLLECTION, newEntity);
             }).then(function (entity) {
-                return _this6._notifySystemsWithRecoveryAsync("entityAddedAsync", [Object.freeze(entity)]).then(function () {
+                return _this7._notifySystemsWithRecoveryAsync("entityAddedAsync", [Object.freeze(entity)]).then(function () {
                     return entity;
                 });
             }).catch(function (error) {
-                _this6.logError(error);
+                _this7.logError(error);
                 throw error;
             });
         }
@@ -388,6 +411,8 @@ var ClarityTransactionDispatcher = function () {
     }, {
         key: "addServiceAsync",
         value: function addServiceAsync(name, service) {
+            this._assertIsStarted();
+
             this.services[name] = service;
             return resolvedPromise;
         }
@@ -420,7 +445,7 @@ var ClarityTransactionDispatcher = function () {
          *  - logMessage(message: { type?: string; message?: string; })
          *  - logWarning(warning: { type?: string; message?: string; })
          *  - prepareEntityToBeAddedAsync(enitty: IEntity)
-         *  - prepareEntityToBeUpdatedAsync(entity: IEntity)
+         *  - prepareEntityToBeUpdatedAsync(oldEntity: IEntity, entity: IEntity)
          *  - serviceRemovedAsync(name: string)
          *  - validateEntityAsync(entity: IEntity)
          * @param {ISystem} system - The system to add.
@@ -430,26 +455,28 @@ var ClarityTransactionDispatcher = function () {
     }, {
         key: "addSystemAsync",
         value: function addSystemAsync(system) {
-            var _this7 = this;
+            var _this8 = this;
+
+            this._assertIsStarted();
 
             if (!this.validateSystem(system)) {
                 return Promise.reject(new Error("Invalid system: Systems need to have a getName and a getGuid method on them."));
             } else {
                 this.systems.push(system);
                 return this._initializingSystemAsync(system).then(function () {
-                    _this7.logMessage({
+                    _this8.logMessage({
                         type: NOTICE,
                         message: "System \"" + system.getName() + "\" was initialized."
                     });
 
-                    return _this7._invokeMethodAsync(system, "activatedAsync", [_this7]);
+                    return _this8._invokeMethodAsync(system, "activatedAsync", [_this8]);
                 }).then(function () {
-                    _this7.logMessage({
+                    _this8.logMessage({
                         type: NOTICE,
                         message: "System \"" + system.getName() + "\" was activated."
                     });
                 }).catch(function (error) {
-                    _this7.logError(error);
+                    _this8.logError(error);
                     throw error;
                 });
             }
@@ -463,6 +490,8 @@ var ClarityTransactionDispatcher = function () {
     }, {
         key: "approveEntityRemovalAsync",
         value: function approveEntityRemovalAsync(entity) {
+            this._assertIsStarted();
+
             return this._notifySystemsAsync("approveEntityRemovalAsync", [entity]);
         }
 
@@ -476,7 +505,9 @@ var ClarityTransactionDispatcher = function () {
     }, {
         key: "deactivateSystemAsync",
         value: function deactivateSystemAsync(system) {
-            var _this8 = this;
+            var _this9 = this;
+
+            this._assertIsStarted();
 
             var deactivatedPromise = void 0;
             var index = this.systems.indexOf(system);
@@ -489,7 +520,7 @@ var ClarityTransactionDispatcher = function () {
 
                 try {
                     return deactivatedPromise = this._invokeMethodAsync(system, "deactivatedAsync", []).then(function () {
-                        _this8.logMessage({
+                        _this9.logMessage({
                             type: NOTICE,
                             message: "System \"" + system.getName() + "\" was deactivated."
                         });
@@ -512,7 +543,9 @@ var ClarityTransactionDispatcher = function () {
     }, {
         key: "disposeSystemAsync",
         value: function disposeSystemAsync(system) {
-            var _this9 = this;
+            var _this10 = this;
+
+            this._assertIsStarted();
 
             var disposedPromise;
             var index = this.systems.indexOf(system);
@@ -525,7 +558,7 @@ var ClarityTransactionDispatcher = function () {
 
                 try {
                     return disposedPromise = this._invokeMethodAsync(system, "disposedAsync", []).then(function () {
-                        _this9.logMessage({
+                        _this10.logMessage({
                             type: NOTICE,
                             message: "System \"" + system.getName() + "\" was disposed."
                         });
@@ -546,7 +579,9 @@ var ClarityTransactionDispatcher = function () {
     }, {
         key: "getEntitiesAsync",
         value: function getEntitiesAsync(config) {
-            var _this10 = this;
+            var _this11 = this;
+
+            this._assertIsStarted();
 
             var lastId = config.lastId ? this.ObjectID(config.lastId) : null;
             var pageSize = config.pageSize &lt; 50 ? config.pageSize : 50;
@@ -578,14 +613,14 @@ var ClarityTransactionDispatcher = function () {
 
             return this._findAsync(ENTITIES_COLLECTION, filter, sort, pageSize).then(function (entities) {
                 var notifySystemsPromises = entities.map(function (entity) {
-                    return _this10._notifySystemsWithRecoveryAsync("entityRetrievedAsync", [entity]);
+                    return _this11._notifySystemsWithRecoveryAsync("entityRetrievedAsync", [entity]);
                 });
 
                 return Promise.all(notifySystemsPromises).then(function () {
                     return entities;
                 });
             }).catch(function (error) {
-                _this10.logError(error);
+                _this11.logError(error);
                 throw error;
             });
         }
@@ -599,16 +634,18 @@ var ClarityTransactionDispatcher = function () {
     }, {
         key: "getEntityByIdAsync",
         value: function getEntityByIdAsync(entityId) {
-            var _this11 = this;
+            var _this12 = this;
+
+            this._assertIsStarted();
 
             return this._findOneAsync(ENTITIES_COLLECTION, {
                 _id: this.ObjectID(entityId)
             }).then(function (entity) {
-                return _this11._notifySystemsWithRecoveryAsync("entityRetrievedAsync", [entity]).then(function () {
+                return _this12._notifySystemsWithRecoveryAsync("entityRetrievedAsync", [entity]).then(function () {
                     return entity;
                 });
             }).catch(function (error) {
-                _this11.logError(error);
+                _this12.logError(error);
                 throw error;
             });
         }
@@ -620,6 +657,8 @@ var ClarityTransactionDispatcher = function () {
     }, {
         key: "getEntityCountAsync",
         value: function getEntityCountAsync() {
+            this._assertIsStarted();
+
             return this._getCountAsync(ENTITIES_COLLECTION);
         }
 
@@ -632,6 +671,8 @@ var ClarityTransactionDispatcher = function () {
     }, {
         key: "getService",
         value: function getService(name) {
+            this._assertIsStarted();
+
             return this.services[name] || null;
         }
 
@@ -643,6 +684,8 @@ var ClarityTransactionDispatcher = function () {
     }, {
         key: "getSystems",
         value: function getSystems() {
+            this._assertIsStarted();
+
             return this.systems;
         }
 
@@ -655,6 +698,8 @@ var ClarityTransactionDispatcher = function () {
     }, {
         key: "logError",
         value: function logError(error) {
+            this._assertIsStarted();
+
             this._notifySystemsAsync("logError", [error]);
         }
 
@@ -667,6 +712,8 @@ var ClarityTransactionDispatcher = function () {
     }, {
         key: "logMessage",
         value: function logMessage(message) {
+            this._assertIsStarted();
+
             this._notifySystemsAsync("logMessage", [message]);
         }
 
@@ -679,6 +726,8 @@ var ClarityTransactionDispatcher = function () {
     }, {
         key: "logWarning",
         value: function logWarning(warning) {
+            this._assertIsStarted();
+
             this._notifySystemsAsync("logWarning", [warning]);
         }
 
@@ -691,14 +740,16 @@ var ClarityTransactionDispatcher = function () {
     }, {
         key: "removeEntityAsync",
         value: function removeEntityAsync(entity) {
-            var _this12 = this;
+            var _this13 = this;
+
+            this._assertIsStarted();
 
             return this._removeItemfromCollection(ENTITIES_COLLECTION, entity).then(function () {
-                return _this12._notifySystemsWithRecoveryAsync("entityRemovedAsync", [Object.freeze(entity)]);
+                return _this13._notifySystemsWithRecoveryAsync("entityRemovedAsync", [Object.freeze(entity)]);
             }).then(function () {
                 return entity;
             }).catch(function (error) {
-                _this12.logError(error);
+                _this13.logError(error);
                 throw error;
             });
         }
@@ -713,6 +764,8 @@ var ClarityTransactionDispatcher = function () {
     }, {
         key: "removeServiceAsync",
         value: function removeServiceAsync(name) {
+            this._assertIsStarted();
+
             if (this.services[name]) {
                 delete this.services[name];
                 return this._notifySystemsWithRecoveryAsync("serviceRemovedAsync", [name]);
@@ -721,6 +774,32 @@ var ClarityTransactionDispatcher = function () {
                 this.logError(error);
                 return Promise.reject(error);
             }
+        }
+
+        /**
+         * Starts the database.
+         */
+
+    }, {
+        key: "startAsync",
+        value: function startAsync() {
+            return this.mongoDb.startAsync();
+        }
+
+        /**
+         * Stops the database. This will deactivate all the systems so they know that they are about 
+         * to be turned off. This will allow the systems to turn off processes gracefully that they 
+         * manage.
+         */
+
+    }, {
+        key: "stopAsync",
+        value: function stopAsync() {
+            var _this14 = this;
+
+            return this._notifySystemsWithRecoveryAsync("deactivatedAsync", []).then(function () {
+                return _this14.mongoDb.stopAsync();
+            });
         }
 
         /**
@@ -736,7 +815,7 @@ var ClarityTransactionDispatcher = function () {
     }, {
         key: "updateEntityAsync",
         value: function updateEntityAsync(entity) {
-            var _this13 = this;
+            var _this15 = this;
 
             var updatedEntity = {
                 _id: entity._id ? this.ObjectID(entity._id) : this.ObjectID,
@@ -744,23 +823,20 @@ var ClarityTransactionDispatcher = function () {
                 components: Array.isArray(entity.components) ? entity.components : []
             };
 
-            updatedEntity.components.forEach(function (component) {
-                if (!component._id) {
-                    component._id = _this13.ObjectID();
-                } else {
-                    component._id = _this13.ObjectID(component._id);
-                }
-            });
+            this._assignObjectIdsToComponents(updatedEntity);
 
-            return this._notifySystemsWithRecoveryAsync("prepareEntityToBeUpdatedAsync", [updatedEntity]).then(function () {
-                return _this13.validateEntityAsync(updatedEntity);
-            }).then(function () {
-                return _this13._findOneAsync(ENTITIES_COLLECTION, {
-                    _id: updatedEntity._id
+            return this._findOneAsync(ENTITIES_COLLECTION, {
+                _id: updatedEntity._id
+            }).then(function (oldEntity) {
+                return _this15._notifySystemsWithRecoveryAsync("prepareEntityToBeUpdatedAsync", [oldEntity, updatedEntity]).then(function () {
+                    return _this15.validateEntityAsync(updatedEntity);
+                }).then(function () {
+                    return oldEntity;
                 });
             }).then(function (oldEntity) {
+
                 if (oldEntity.revision.toString() !== updatedEntity.revision.toString()) {
-                    var error = new _EntityOutOfDateError2.default("Entity out of date.");
+                    var error = new Error("Entity out of date.");
                     error.name = "OutOfDate";
                     error.currentRevision = oldEntity;
 
@@ -768,16 +844,16 @@ var ClarityTransactionDispatcher = function () {
                 }
 
                 updatedEntity._id = oldEntity._id;
-                updatedEntity.revision = _this13.ObjectID();
+                updatedEntity.revision = _this15.ObjectID();
                 updatedEntity.createdDate = oldEntity.createdDate;
 
-                return _this13._updateItemInCollectionAsync(ENTITIES_COLLECTION, updatedEntity).then(function (oldEntity) {
-                    return _this13._notifySystemsWithRecoveryAsync("entityUpdatedAsync", [oldEntity, Object.freeze(updatedEntity)]);
+                return _this15._updateItemInCollectionAsync(ENTITIES_COLLECTION, updatedEntity).then(function (oldEntity) {
+                    return _this15._notifySystemsWithRecoveryAsync("entityUpdatedAsync", [oldEntity, Object.freeze(updatedEntity)]);
                 }).then(function () {
                     return updatedEntity;
                 });
             }).catch(function (error) {
-                _this13.logError(error);
+                _this15.logError(error);
                 throw error;
             });
         }
@@ -828,7 +904,7 @@ exports.default = ClarityTransactionDispatcher;
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.3</a> on Mon Jun 12 2017 11:11:48 GMT-0600 (MDT)
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.3</a> on Wed Jun 14 2017 12:26:21 GMT-0600 (MDT)
 </footer>
 
 <script> prettyPrint(); </script>
