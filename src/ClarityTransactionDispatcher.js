@@ -34,6 +34,7 @@ export default class ClarityTransactionDispatcher {
             throw new Error("Null Argument exception: There needs to be a MongoDb.");
         }
 
+        this.isInitialized = false;
         this.mongoDb = mongoDb;
         this.ObjectID = mongoDb.getObjectID();
         this.systems = [];
@@ -64,7 +65,7 @@ export default class ClarityTransactionDispatcher {
      * Ensures the mongodb is ready by asserting that it has been successfully started.
      */
     _assertIsStarted() {
-        if (!this.mongoDb.isInitialized) {
+        if (!this.isInitialized) {
             throw new Error("The dispatcher needs to be started before calling any other method.");
         }
     }
@@ -331,7 +332,7 @@ export default class ClarityTransactionDispatcher {
      *  - activatedAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher)
      *  - approveEntityToBeRemovedAsync(entity: IEntity)
      *  - deactivatedAsync()
-     *  - disposedAsync()
+     *  - disposeAsync()
      *  - entityAddedAsync(entity: IEntity)
      *  - entityRemovedAsync(entity: IEntity)
      *  - entityRetrievedAsync(entity: IEntity)
@@ -436,7 +437,7 @@ export default class ClarityTransactionDispatcher {
             this.systems.splice(index, 1);
 
             try {
-                return disposedPromise = this._invokeMethodAsync(system, "disposedAsync", []).then(() => {
+                return disposedPromise = this._invokeMethodAsync(system, "disposeAsync", []).then(() => {
                     this.logMessage({
                         type: NOTICE,
                         message: `System "${system.getName()}" was disposed.`
@@ -623,7 +624,9 @@ export default class ClarityTransactionDispatcher {
      * Starts the database.
      */
     startAsync() {
-        return this.mongoDb.startAsync();
+        return this.mongoDb.startAsync().then(()=>{
+            this.isInitialized = true;
+        });
     }
 
     /**

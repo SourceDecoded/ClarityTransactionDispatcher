@@ -13,10 +13,12 @@ const path = require("path");
 const workspaceRoot = path.resolve(__dirname, "./../");
 
 const removeWorkspaceRoot = (value) => {
-    return value.replace("${workspaceRoot}", workspaceRoot );
+    return value.replace("${workspaceRoot}", workspaceRoot);
 }
 
-fs.readJson(path.join(workspaceRoot, ".vscode/tasks.json")).then((tasksConfig) => {
+fs.readJson(path.join(workspaceRoot, ".vscode/tasks.json")).catch(() => {
+    console.log("Couldn't find tasks.json in .vscode folder.");
+}).then((tasksConfig) => {
     if (tasksConfig && tasksConfig.tasks) {
         return tasksConfig.tasks.filter((task) => {
             return task.taskName !== "build";
@@ -27,13 +29,16 @@ fs.readJson(path.join(workspaceRoot, ".vscode/tasks.json")).then((tasksConfig) =
             }).join(" ");
 
             return promise.then(() => {
-                return exec(command, { cwd: workspaceRoot });
+                return exec(command, { cwd: workspaceRoot }).catch((error) => {
+                    console.log(`Failed to build project because of task: ${task.taskName}`);
+                    throw error;
+                });
             });
 
         }, Promise.resolve(undefined));
     }
 }).then(() => {
     console.log("Build complete.");
-}).catch(() => {
-    console.log("Couldn't find tasks.json in .vscode folder.");
+}).catch(()=>{
+    console.log("Build failed.");
 });

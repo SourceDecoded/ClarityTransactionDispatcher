@@ -30,15 +30,6 @@
             "cwd": "${workspaceRoot}",
             "outFiles": ["${workspaceRoot}/lib/**/*.js"],
             "sourceMaps": true
-        }, {
-            "type": "node",
-            "request": "launch",
-            "name": "Launch Example",
-            "program": "${workspaceRoot}/lib/examples/index.js",
-            "preLaunchTask": "compile",
-            "cwd": "${workspaceRoot}",
-            "outFiles": ["${workspaceRoot}/lib/**/*.js"],
-            "sourceMaps": true
         },
         {
             "type": "node",

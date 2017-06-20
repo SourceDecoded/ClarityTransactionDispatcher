@@ -17,7 +17,6 @@ export default class MongoDb {
         this.config = Object.assign({}, defaultMongodbConfig, config);
         this.initializingPromise = null;
         this.isInitialized = false;
-        this.databasePromise = null;
     }
 
     startAsync() {
@@ -28,11 +27,6 @@ export default class MongoDb {
 
             return this.initializingPromise = this.mongoHelper.run().then(() => {
                 this.isInitialized = true;
-                var config = this.config;
-                var databaseName = config.isInMemory ? config.databaseName + "_in_memory" : config.databaseName;
-                var databaseUrl = `mongodb://${config.ip}:${config.port}/${databaseName}`;
-
-                return this.databasePromise = MongoClient.connect(databaseUrl);
             }).catch((error) => {
 
             });
@@ -66,12 +60,20 @@ export default class MongoDb {
             return promise;
         }).then(() => {
             this.mongoHelper.mongoBin.childProcess.kill();
+            this.isInitialized = false;
+            this.initializingPromise = null;
         });
     }
 
     getDatabaseAsync() {
         return this.startAsync().then(() => {
-            return this.databasePromise;
+            var config = this.config;
+            var databaseName = config.isInMemory ? config.databaseName + "_in_memory" : config.databaseName;
+            var databaseUrl = `mongodb://${config.ip}:${config.port}/${databaseName}`;
+
+            return MongoClient.connect(databaseUrl).catch(()=>{
+                
+            });
         });
     }
 
