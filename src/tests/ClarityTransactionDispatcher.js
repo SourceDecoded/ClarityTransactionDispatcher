@@ -3,10 +3,10 @@ import { ClarityTransactionDispatcher, MongoDb } from "./../index";
 
 var mongoDb = null;
 
-exports.clean = function(){
-    return mongoDb.getDatabaseAsync().then((db)=>{
+exports.clean = function () {
+    return mongoDb.getDatabaseAsync().then((db) => {
         return Promise.all([
-            db.collection("entities").remove({}), 
+            db.collection("entities").remove({}),
             db.collection("systemData").remove({})
         ]);
     });
@@ -97,7 +97,6 @@ exports["ClarityTransactionDispatcher.addServiceAsync."] = function () {
         assert.equal(dispatcher.services["myService"], service);
     });
 };
-
 
 exports["ClarityTransactionDispatcher.addSystemAsync."] = function () {
     var dispatcher = new ClarityTransactionDispatcher(mongoDb);
@@ -206,3 +205,87 @@ exports["ClarityTransactionDispatcher.disposeSystemAsync."] = function () {
         assert.equal(isDisposed, true);
     });
 };
+
+exports["ClarityTransactionDispatcher.getEntitiesAsync."] = function () {
+    var dispatcher = new ClarityTransactionDispatcher(mongoDb);
+    var today = new Date();
+    today.setTime(0, 0, 0, 0);
+
+    return dispatcher.startAsync().then(() => {
+        return dispatcher.addEntityAsync({ components: [{ type: "test1" }] });
+    }).then(() => {
+        return dispatcher.addEntityAsync({ components: [{ type: "test2" }] });
+    }).then(() => {
+        return dispatcher.getEntitiesAsync({
+            pageSize: 1,
+            lastCreatedDate: today,
+            lastModifiedDate: today
+        });
+    }).then((results) => {
+        var entity = results[0];
+
+        assert.equal(results.length, 1);
+        assert.equal(entity.components[0].type, "test1");
+
+        return dispatcher.getEntitiesAsync({
+            pageSize: 1,
+            lastId: results[0]._id,
+            lastCreatedDate: entity.createDate,
+            lastModifiedDate: entity.modifiedDate
+        });
+    }).then((results) => {
+        var entity = results[0];
+
+        assert.equal(results.length, 1);
+        assert.equal(entity.components[0].type, "test2");
+    });
+};
+
+exports["ClarityTransactionDispatcher.getEntityByIdAsync."] = function () {
+    var dispatcher = new ClarityTransactionDispatcher(mongoDb);
+    var today = new Date();
+    today.setTime(0, 0, 0, 0);
+
+    return dispatcher.startAsync().then(() => {
+        return dispatcher.addEntityAsync({ components: [{ type: "test1" }] });
+    }).then(() => {
+        return dispatcher.getEntitiesAsync({
+            pageSize: 1
+        });
+    }).then((results) => {
+        var entity = results[0];
+
+        assert.equal(results.length, 1);
+        assert.equal(entity.components[0].type, "test1");
+
+        return dispatcher.getEntityByIdAsync(entity._id.toString());
+    }).then((entity) => {
+        assert.equal(entity.components[0].type, "test1");
+    });
+};
+
+exports["ClarityTransactionDispatcher.getEntityCountAsync."] = function () {
+    var dispatcher = new ClarityTransactionDispatcher(mongoDb);
+    var today = new Date();
+    today.setTime(0, 0, 0, 0);
+
+    return dispatcher.startAsync().then(() => {
+        return dispatcher.addEntityAsync({ components: [{ type: "test1" }] });
+    }).then(() => {
+        return dispatcher.getEntityCountAsync();
+    }).then((count) => {
+        assert.equal(count, 1);
+    });
+};
+
+exports["ClarityTransactionDispatcher.getService."] = function () {
+    var dispatcher = new ClarityTransactionDispatcher(mongoDb);
+    var service = {};
+    
+    dispatcher.startAsync().then(() => {
+        return dispatcher.addServiceAsync("testService", service);
+    }).then(() => {
+        assert.equal("testService", dispatcher.getService("testService"));
+    });
+};
+

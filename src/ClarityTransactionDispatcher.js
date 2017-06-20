@@ -457,13 +457,14 @@ export default class ClarityTransactionDispatcher {
      */
     getEntitiesAsync(config) {
         this._assertIsStarted();
+        config = config || {};
 
         let lastId = config.lastId ? this.ObjectID(config.lastId) : null;
         let pageSize = config.pageSize < 50 ? config.pageSize : 50;
         let lastModifiedDate = config.lastModifiedDate;
         let lastCreatedDate = config.lastCreatedDate;
 
-        let sort = [["_id", 1]];
+        let sort = {};
         let filter = {};
 
         if (lastId != null) {
@@ -472,18 +473,20 @@ export default class ClarityTransactionDispatcher {
             };
         }
 
+        sort._id = 1;
+
         if (lastCreatedDate != null) {
             filter.createdDate = {
                 $gt: lastCreatedDate
             };
-            sort.push(["createdDate", 1]);
+            sort.createdDate = 1;
         }
 
         if (lastModifiedDate != null) {
             filter.modifiedDate = {
                 $gt: lastModifiedDate
             };
-            sort.push(["modifiedDate", 1]);
+            sort.modifiedDate = 1;
         }
 
         return this._findAsync(ENTITIES_COLLECTION, filter, sort, pageSize).then(entities => {
@@ -624,7 +627,7 @@ export default class ClarityTransactionDispatcher {
      * Starts the database.
      */
     startAsync() {
-        return this.mongoDb.startAsync().then(()=>{
+        return this.mongoDb.startAsync().then(() => {
             this.isInitialized = true;
         });
     }
