@@ -286,7 +286,7 @@ export default class ClarityTransactionDispatcher {
         this._assignObjectIdsToComponents(newEntity);
 
         return this._notifySystemsWithRecoveryAsync("prepareEntityToBeAddedAsync", [newEntity]).then(() => {
-            this.validateEntityAsync(newEntity);
+            this.validateEntityToBeAddedAsync(newEntity);
         }).then(() => {
             return this._addItemToCollectionAsync(ENTITIES_COLLECTION, newEntity);
         }).then(entity => {
@@ -329,7 +329,7 @@ export default class ClarityTransactionDispatcher {
      * 
      * #### Optional System Methods
      *  - activatedAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher)
-     *  - approveEntityRemovalAsync(entity: IEntity)
+     *  - approveEntityToBeRemovedAsync(entity: IEntity)
      *  - deactivatedAsync()
      *  - disposedAsync()
      *  - entityAddedAsync(entity: IEntity)
@@ -343,7 +343,8 @@ export default class ClarityTransactionDispatcher {
      *  - prepareEntityToBeAddedAsync(enitty: IEntity)
      *  - prepareEntityToBeUpdatedAsync(oldEntity: IEntity, entity: IEntity)
      *  - serviceRemovedAsync(name: string)
-     *  - validateEntityAsync(entity: IEntity)
+     *  - validateEntityToBeAddedAsync(entity: IEntity)
+     *  - validateEntityToBeUpdatedAsync(oldEnitty: IEntity, entity: IEntity)
      * @param {ISystem} system - The system to add.
      * @return {Promise} - An undefined Promise.
      */
@@ -377,10 +378,10 @@ export default class ClarityTransactionDispatcher {
    * Approves whether an entity can be removed. Systems can deny the ability to remove entities.
    * @param entity {object} - The entity to be removed.
    */
-    approveEntityRemovalAsync(entity) {
+    approveEntityToBeRemovedAsync(entity) {
         this._assertIsStarted();
 
-        return this._notifySystemsAsync("approveEntityRemovalAsync", [entity]);
+        return this._notifySystemsAsync("approveEntityToBeRemovedAsync", [entity]);
     }
 
     /**
@@ -582,7 +583,7 @@ export default class ClarityTransactionDispatcher {
     }
 
     /**
-     * Removes the entity to be removed and notifies the systems the entity has been removed.
+     * Removes the entity and notifies the systems the entity has been removed.
      * @param {IEntity} entity - The entity to be removed.
      * @returns {Promise<undefined>} 
      */
@@ -658,7 +659,7 @@ export default class ClarityTransactionDispatcher {
             _id: updatedEntity._id
         }).then((oldEntity) => {
             return this._notifySystemsWithRecoveryAsync("prepareEntityToBeUpdatedAsync", [oldEntity, updatedEntity]).then(() => {
-                return this.validateEntityAsync(updatedEntity);
+                return this.validateEntityToBeUpdatedAsync(updatedEntity);
             }).then(() => {
                 return oldEntity;
             });
@@ -690,10 +691,17 @@ export default class ClarityTransactionDispatcher {
     }
 
     /**
-     * This allows systems to validate the entity being saved.
+     * This allows systems to validate the entity that will be added.
      */
-    validateEntityAsync(entity) {
-        return this._notifySystemsAsync("validateEntityAsync", [entity]);
+    validateEntityToBeAddedAsync(entity) {
+        return this._notifySystemsAsync("validateEntityToBeAddedAsync", [entity]);
+    }
+
+    /**
+     * This allows systems to validate the entity that will be updated.
+     */
+    validateEntityToBeUpdatedAsync(entity) {
+        return this._notifySystemsAsync("validateEntityToBeUpdatedAsync", [entity]);
     }
 
     /**
