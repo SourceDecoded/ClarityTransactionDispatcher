@@ -1,3 +1,0 @@
-exports["Happy Test"] = function(){
-
-}

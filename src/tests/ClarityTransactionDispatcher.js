@@ -281,11 +281,250 @@ exports["ClarityTransactionDispatcher.getEntityCountAsync."] = function () {
 exports["ClarityTransactionDispatcher.getService."] = function () {
     var dispatcher = new ClarityTransactionDispatcher(mongoDb);
     var service = {};
-    
-    dispatcher.startAsync().then(() => {
+
+    return dispatcher.startAsync().then(() => {
         return dispatcher.addServiceAsync("testService", service);
     }).then(() => {
-        assert.equal("testService", dispatcher.getService("testService"));
+        assert.equal(service, dispatcher.getService("testService"));
     });
 };
 
+exports["ClarityTransactionDispatcher.getSystems."] = function () {
+    var dispatcher = new ClarityTransactionDispatcher(mongoDb);
+    var system = {
+        getGuid: () => { },
+        getName: () => { }
+    };
+
+    return dispatcher.startAsync().then(() => {
+        return dispatcher.addSystemAsync(system);
+    }).then(() => {
+        var systems = dispatcher.getSystems();
+
+        assert.equal(systems.length, 1);
+    });
+};
+
+exports["ClarityTransactionDispatcher.logError."] = function () {
+    var dispatcher = new ClarityTransactionDispatcher(mongoDb);
+    var hasLogged = false;
+    var system = {
+        getGuid: () => { },
+        getName: () => { },
+        logError: () => {
+            hasLogged = true;
+        }
+    };
+
+    return dispatcher.startAsync().then(() => {
+        return dispatcher.addSystemAsync(system);
+    }).then(() => {
+        dispatcher.logError(new Error("Something bad happened."));
+        assert.equal(hasLogged, true);
+    });
+};
+
+exports["ClarityTransactionDispatcher.logMessage."] = function () {
+    var dispatcher = new ClarityTransactionDispatcher(mongoDb);
+    var hasLogged = false;
+    var logMessage = null;
+
+    var system = {
+        getGuid: () => { },
+        getName: () => { },
+        logMessage: (message) => {
+            logMessage = message;
+            hasLogged = true;
+        }
+    };
+
+    return dispatcher.startAsync().then(() => {
+        return dispatcher.addSystemAsync(system);
+    }).then(() => {
+        dispatcher.logMessage("Message");
+        assert.equal(logMessage, "Message");
+        assert.equal(hasLogged, true);
+    });
+};
+
+exports["ClarityTransactionDispatcher.logWarning."] = function () {
+    var dispatcher = new ClarityTransactionDispatcher(mongoDb);
+    var hasLogged = false;
+    var logMessage = null;
+
+    var system = {
+        getGuid: () => { },
+        getName: () => { },
+        logWarning: (message) => {
+            logMessage = message;
+            hasLogged = true;
+        }
+    };
+
+    return dispatcher.startAsync().then(() => {
+        return dispatcher.addSystemAsync(system);
+    }).then(() => {
+        dispatcher.logWarning("Message");
+        assert.equal(logMessage, "Message");
+        assert.equal(hasLogged, true);
+    });
+};
+
+exports["ClarityTransactionDispatcher.removeEntityAsync: Approve removal."] = function () {
+    var dispatcher = new ClarityTransactionDispatcher(mongoDb);
+    var askedForApproval = false;
+
+    var system = {
+        getGuid: () => { },
+        getName: () => { },
+        approveEntityToBeRemovedAsync: (entity) => {
+            askedForApproval = true;
+            return Promise.resolve(null);
+        }
+    };
+
+    return dispatcher.startAsync().then(() => {
+        return dispatcher.addSystemAsync(system);
+    }).then(() => {
+        return dispatcher.addEntityAsync({
+            components: [
+                {
+                    type: "test"
+                }
+            ]
+        });
+    }).then((entity) => {
+        return dispatcher.removeEntityAsync(entity);
+    }).then(() => {
+        return dispatcher.getEntitiesAsync();
+    }).then((entities) => {
+        assert.equal(entities.length, 0);
+        assert.equal(askedForApproval, true);
+    });
+};
+
+exports["ClarityTransactionDispatcher.removeEntityAsync: Reject removal."] = function () {
+    var dispatcher = new ClarityTransactionDispatcher(mongoDb);
+    var askedForApproval = false;
+    var threw = false;
+
+    var system = {
+        getGuid: () => { },
+        getName: () => { },
+        approveEntityToBeRemovedAsync: (entity) => {
+            askedForApproval = true;
+            return Promise.reject(null);
+        }
+    };
+
+    return dispatcher.startAsync().then(() => {
+        return dispatcher.addSystemAsync(system);
+    }).then(() => {
+        return dispatcher.addEntityAsync({
+            components: [
+                {
+                    type: "test"
+                }
+            ]
+        });
+    }).then((entity) => {
+        return dispatcher.removeEntityAsync(entity);
+    }).catch(() => {
+        threw = true;
+    }).then(() => {
+        return dispatcher.getEntitiesAsync();
+    }).then((entities) => {
+        assert.equal(entities.length, 1);
+        assert.equal(askedForApproval, true);
+        assert.equal(threw, true);
+    });
+};
+
+exports["ClarityTransactionDispatcher.removeServiceAsync: Remove existing service."] = function () {
+    var dispatcher = new ClarityTransactionDispatcher(mongoDb);
+    var service = {};
+
+    return dispatcher.startAsync().then(() => {
+        return dispatcher.addServiceAsync("test", service);
+    }).then(() => {
+        assert.equal(dispatcher.getService("test"), service);
+    }).then(() => {
+        return dispatcher.removeServiceAsync("test");
+    }).then(() => {
+        assert.equal(dispatcher.getService("test"), null);
+    });
+};
+
+exports["ClarityTransactionDispatcher.removeServiceAsync: Remove non-existing service, expect it to throw."] = function () {
+    var dispatcher = new ClarityTransactionDispatcher(mongoDb);
+    var service = {};
+
+    return dispatcher.startAsync().then(() => {
+        dispatcher.removeServiceAsync("test").then(() => {
+            assert.fail(true);
+        }).catch((error) => {
+            assert.ok(true);
+        });
+    });
+};
+
+exports["ClarityTransactionDispatcher.startAsync."] = function () {
+    var dispatcher = new ClarityTransactionDispatcher(mongoDb);
+
+    return dispatcher.startAsync().then(() => {
+        assert.equal(dispatcher.isInitialized, true);
+    });
+};
+
+exports["ClarityTransactionDispatcher.stopAsync."] = function () {
+    var dispatcher = new ClarityTransactionDispatcher(mongoDb);
+    var isDeactivated = false;
+
+    var system = {
+        deactivatedAsync: () => {
+            isDeactivated = true;
+        },
+        getName: ()=>{
+            return "Test";
+        },
+        getGuid: ()=>{
+            return "Test";
+        }
+    };
+
+    return dispatcher.startAsync().then(() => {
+        return dispatcher.addSystemAsync(system);
+    }).then(() => {
+        return dispatcher.stopAsync();
+    }).then(() => {
+        assert.equal(isDeactivated, true);
+    });
+};
+
+// exports["ClarityTransactionDispatcher.updateEntityAsync."] = function () {
+//     var dispatcher = new ClarityTransactionDispatcher(mongoDb);
+//     var isDeactivated = false;
+
+//     var system = {
+//         prepareEntityToBeUpdatedAsync: (entity) => {
+//             return Promise.resolve();
+//         },
+//         validateEntityToBeUpdatedAsync:(entity)=>{
+//             return Promise.resolve();
+//         },
+//         getName: ()=>{
+//             return "Test";
+//         },
+//         getGuid: ()=>{
+//             return "Test";
+//         }
+//     };
+
+//     return dispatcher.startAsync().then(() => {
+//         return dispatcher.addSystemAsync(system);
+//     }).then(() => {
+//         return dispatcher.stopAsync();
+//     }).then(() => {
+//         assert.equal(isDeactivated, true);
+//     });
+// };

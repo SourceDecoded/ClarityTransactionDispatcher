@@ -164,6 +164,16 @@ export default class ClarityTransactionDispatcher {
         });
     }
 
+    _invokeMethod(obj, methodName, args) {
+        var returnValue;
+
+        if (typeof obj[methodName] === "function") {
+            returnValue = obj[methodName].apply(obj, args);
+        }
+
+        return returnValue;
+    }
+
     /**
      * Invoke a method on any object and make sure a promise is the returned value.
      * @private
@@ -181,6 +191,19 @@ export default class ClarityTransactionDispatcher {
         }
 
         return returnValue;
+    }
+
+    _notifySystems(method, args) {
+        return this.systems.map((systems) => {
+            try {
+                return this._invokeMethod(systems, method, args);
+            } catch (error) {
+                // Only log if the method isn't logError.
+                if (method !== "logError") {
+                    this.logError(error);
+                }
+            }
+        });
     }
 
     /**
@@ -561,7 +584,7 @@ export default class ClarityTransactionDispatcher {
     logError(error) {
         this._assertIsStarted();
 
-        this._notifySystemsAsync("logError", [error]);
+        this._notifySystems("logError", [error]);
     }
 
     /**
@@ -572,7 +595,7 @@ export default class ClarityTransactionDispatcher {
     logMessage(message) {
         this._assertIsStarted();
 
-        this._notifySystemsAsync("logMessage", [message]);
+        this._notifySystems("logMessage", [message]);
     }
 
     /**
@@ -583,7 +606,7 @@ export default class ClarityTransactionDispatcher {
     logWarning(warning) {
         this._assertIsStarted();
 
-        this._notifySystemsAsync("logWarning", [warning]);
+        this._notifySystems("logWarning", [warning]);
     }
 
     /**
@@ -593,9 +616,12 @@ export default class ClarityTransactionDispatcher {
      */
     removeEntityAsync(entity) {
         this._assertIsStarted();
+        entity = Object.freeze(entity);
 
-        return this._removeItemfromCollection(ENTITIES_COLLECTION, entity).then(() => {
-            return this._notifySystemsWithRecoveryAsync("entityRemovedAsync", [Object.freeze(entity)]);
+        return this.approveEntityToBeRemovedAsync(entity).then(() => {
+            return this._removeItemfromCollection(ENTITIES_COLLECTION, entity)
+        }).then(() => {
+            return this._notifySystemsWithRecoveryAsync("entityRemovedAsync", [entity]);
         }).then(() => {
             return entity;
         }).catch(error => {
