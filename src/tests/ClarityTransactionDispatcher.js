@@ -20,7 +20,6 @@ exports.prepare = function () {
 };
 
 exports.destroy = function () {
-    return mongoDb.stopAsync();
 };
 
 exports["ClarityTransactionDispatcher.constructor: Empty"] = function () {

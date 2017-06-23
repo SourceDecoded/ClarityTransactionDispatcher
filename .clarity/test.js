@@ -23,50 +23,72 @@ const promisify = (fn) => {
     }
 }
 
-fs.readdir(testDirectory).then((files) => {
-    files.forEach((file) => {
-        if (path.extname(file) === ".js") {
+fs.readdir(testDirectory).catch(() => {
+    console.log(`Couldn't find test folder here: ${testDirectory}`);
+    return [];
+}).then((files) => {
+    return files.reduce((promise, file) => {
 
-            var tests = require(path.join(testDirectory, file));
-            var defaultModules = tests.default || tests;
+        return promise.then(() => {
+            if (path.extname(file) === ".js") {
 
-            var prepare = promisify(defaultModules.prepare);
-            var destroy = promisify(defaultModules.destroy);
-            var clean = promisify(defaultModules.clean);
+                var tests = require(path.join(testDirectory, file));
+                var defaultModules = tests.default || tests;
 
-            Object.keys(defaultModules).filter((testName) => {
-                return specialTestNames[testName] == null;
-            }).reduce((promise, testName) => {
-                if (typeof defaultModules[testName] !== "function") {
-                    return Promise.resolve("UNEXPECTED EXPORT:  This export '" + testName + "' needs to be a function.");
-                }
-                return promise.then(() => {
-                    try {
-                        let result = defaultModules[testName]();
-                        result = result instanceof Promise ? result : Promise.resolve(result);
+                var prepare = promisify(defaultModules.prepare);
+                var destroy = promisify(defaultModules.destroy);
+                var clean = promisify(defaultModules.clean);
 
-                        return result.then(() => {
-                            console.log("PASSED: " + testName);
-                        }).catch((error) => {
+                return Object.keys(defaultModules).filter((testName) => {
+                    return specialTestNames[testName] == null;
+                }).reduce((promise, testName) => {
+
+                    if (typeof defaultModules[testName] !== "function") {
+                        return Promise.resolve("UNEXPECTED EXPORT:  This export '" + testName + "' needs to be a function.");
+                    }
+
+                    return promise.then(() => {
+                        try {
+
+                            let result = defaultModules[testName]();
+                            result = result instanceof Promise ? result : Promise.resolve(result);
+
+                            return result.then(() => {
+                                console.log("PASSED: " + testName);
+                            }).catch((error) => {
+                                console.log("FAILED: " + testName);
+                                console.log(error);
+                            });
+
+                        } catch (error) {
+
                             console.log("FAILED: " + testName);
                             console.log(error);
-                        });
-                    } catch (error) {
-                        console.log("FAILED: " + testName);
-                        console.log(error);
 
-                        return Promise.resolve(null);
-                    }
+                            return Promise.resolve(null);
+
+                        }
+                    }).then(() => {
+
+                        return clean();
+
+                    });
+                }, prepare()).catch((error) => {
+
+                    console.log("UNEXPECTED FAILURE: Most likely an async error.");
+
                 }).then(() => {
-                    return clean();
+
+                    return destroy();
+
                 });
-            }, prepare()).catch((error) => {
-                console.log("UNEXPECTED FAILURE: Most likely an async error.");
-            }).then(() => {
-                return destroy();
-            });
-        }
-    });
-}).catch(() => {
-    console.log(`Couldn't find test folder here: ${testDirectory}`);
+            }
+
+            return Promise.resolve();
+        });
+
+    }, Promise.resolve());
+
+}).catch((error) => {
+    console.log("UNEXPECTED FAILURE: " + error.message);
 });
