@@ -1,6 +1,6 @@
 {
     "name": "clarity-transaction-dispatcher",
-    "version": "0.0.6",
+    "version": "0.0.7",
     "description": "Integrate your data.",
     "main": "./lib/index.js",
     "scripts": {
