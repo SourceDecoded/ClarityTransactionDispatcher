@@ -1,5 +1,7 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
+import * as fs from "fs";
+import * as uuid from "node-uuid";
+import Query from "./Query";
+
 const resolvedPromise = Promise.resolve(null);
 const ENTITIES_COLLECTION = "entities";
 const SYSTEM_DATA_COLLECTION = "systemData";
@@ -375,6 +377,13 @@ class ClarityTransactionDispatcher {
             }
         }
     }
+    /**
+     * This allows you to define a query for entities, and then manages the iteration over the entities.
+     */
+    getQuery(){
+        return new Query(this.mongoDb, ENTITIES_COLLECTION);
+    }
+    
     /**
      * Page through entities using the lastId from a previous query. Use null or undefined to begin at the beginning.
      * @param config {} - The configuration of the query. It takes a lastId, pageSize, lastModifiedDate, and a lastCreatedDate.
