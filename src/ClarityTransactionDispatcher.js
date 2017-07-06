@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import * as uuid from "node-uuid";
+import Query from "./Query";
 
 const resolvedPromise = Promise.resolve(null);
 
@@ -472,6 +473,13 @@ export default class ClarityTransactionDispatcher {
                 return resolvedPromise;
             }
         }
+    }
+    
+    /**
+     * This allows you to define a query for entities, and then manages the iteration over the entities.
+     */
+    getQuery(){
+        return new Query(this.mongoDb, ENTITIES_COLLECTION);
     }
 
     /**
