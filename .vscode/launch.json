@@ -1,52 +1,41 @@
 {
-    // Use IntelliSense to learn about possible Node.js debug attributes.
-    // Hover to view descriptions of existing attributes.
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
         {
             "type": "node",
             "request": "launch",
             "name": "Launch Program",
-            "program": "${workspaceRoot}/main.js",
+            "program": "${workspaceRoot}/lib/index.js",
+            "preLaunchTask": "compile",
             "cwd": "${workspaceRoot}",
-            "outFiles": [],
-            "sourceMaps": true
-        },
-        {
-            "type": "node",
-            "request": "launch",
-            "name": "Debug Tests",
-            "program": "${workspaceRoot}/TestRunner.js",
-            "cwd": "${workspaceRoot}",
-            "outFiles": [],
-            "sourceMaps": true
-        },
-        {
-            "type": "node",
-            "request": "launch",
-            "name": "Debug Systems",
-            "program": "${workspaceRoot}/examples/index.js",
-            "cwd": "${workspaceRoot}",
-            "outFiles": [],
+            "outFiles": ["${workspaceRoot}/lib/**/*.js"],
             "sourceMaps": true
         },
          {
             "type": "node",
             "request": "launch",
-            "name": "Debug Build",
-            "program": "${workspaceRoot}/gulpfile.js",
+            "name": "Launch Test",
+            "program": "${workspaceRoot}/.clarity/test.js",
+            "preLaunchTask": "compile",
             "cwd": "${workspaceRoot}",
-            "outFiles": [],
+            "outFiles": ["${workspaceRoot}/lib/**/*.js"],
+            "sourceMaps": true
+        },
+         {
+            "type": "node",
+            "request": "launch",
+            "name": "Launch Build",
+            "program": "${workspaceRoot}/.clarity/build.js",
+            "preLaunchTask": "compile",
+            "cwd": "${workspaceRoot}",
+            "outFiles": ["${workspaceRoot}/lib/**/*.js"],
             "sourceMaps": true
         },
         {
             "type": "node",
             "request": "attach",
             "name": "Attach to Process",
-            "port": 5858,
-            "outFiles": [],
-            "sourceMaps": true
+            "port": 5858
         }
     ]
 }

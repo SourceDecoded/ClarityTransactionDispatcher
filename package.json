@@ -1,41 +1,41 @@
 {
-    "name": "clarity-transaction-dispatcher",
-    "version": "0.0.7",
-    "description": "Integrate your data.",
-    "main": "./lib/index.js",
-    "scripts": {
-        "test": "node ./.clarity/test.js",
-        "build": "node ./.clarity/build.js"
-    },
-    "keywords": [
-        "IoT",
-        "Data Integration"
-    ],
-    "devDependencies": {
-        "babel-cli": "^6.24.1",
-        "babel-preset-env": "^1.6.0",
-        "child-process-es6-promise": "^1.1.0",
-        "fs-extra": "^3.0.1",
-        "istanbul": "^0.4.5",
-        "jsdoc": "^3.4.3",
-        "mongo-mock": "^2.4.0"
-    },
-    "dependencies": {
-        "body-parser": "^1.17.2",
-        "busboy": "^0.2.14",
-        "express": "^4.15.3",
-        "gridfs-stream": "^1.1.1",
-        "jwt-simple": "^0.5.1",
-        "mongodb": "^2.2.29",
-        "mongodb-prebuilt": "^6.3.3",
-        "node-uuid": "^1.4.7",
-        "socket.io": "^1.7.4",
-        "socket.io-client": "^1.7.4",
-        "socket.io-stream": "^0.9.1"
-    },
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/SourceDecoded/ClarityTransactionDispatcher.git"
-    },
-    "author": "Jared J Barnes"
+  "name": "clarity-transaction-dispatcher",
+  "version": "0.0.7",
+  "description": "Integrate your data.",
+  "main": "./lib/index.js",
+  "scripts": {
+    "test": "node ./.clarity/test.js",
+    "build": "node ./.clarity/build.js"
+  },
+  "keywords": [
+    "IoT",
+    "Data Integration"
+  ],
+  "devDependencies": {
+    "babel-cli": "^6.24.1",
+    "babel-preset-env": "^1.6.0",
+    "child-process-es6-promise": "^1.1.0",
+    "fs-extra": "^3.0.1",
+    "istanbul": "^0.4.5",
+    "jsdoc": "^3.4.3",
+    "mongo-mock": "^2.4.0"
+  },
+  "dependencies": {
+    "body-parser": "^1.17.2",
+    "busboy": "^0.2.14",
+    "express": "^4.15.3",
+    "gridfs-stream": "^1.1.1",
+    "jwt-simple": "^0.5.1",
+    "mongodb": "^2.2.29",
+    "mongodb-prebuilt": "^6.3.3",
+    "node-uuid": "^1.4.7",
+    "socket.io": "^1.7.4",
+    "socket.io-client": "^1.7.4",
+    "socket.io-stream": "^0.9.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SourceDecoded/ClarityTransactionDispatcher.git"
+  },
+  "author": "Jared J Barnes"
 }
