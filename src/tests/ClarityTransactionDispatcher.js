@@ -1,10 +1,15 @@
 import assert from "assert";
-import { ClarityTransactionDispatcher, MongoDb } from "./../index";
+import clarityPackage from "./../index";
+
+const ClarityTransactionDispatcher = clarityPackage.ClarityTransactionDispatcher;
+const MongoDb = clarityPackage.MongoDb;
+
+const DATABASE_NAME = "clarity_transaction_dispatcher";
 
 var mongoDb = null;
 
 exports.clean = function () {
-    return mongoDb.getDatabaseAsync().then((db) => {
+    return mongoDb.getDatabaseAsync(DATABASE_NAME).then((db) => {
         return Promise.all([
             db.collection("entities").remove({}),
             db.collection("systemData").remove({})
@@ -13,13 +18,21 @@ exports.clean = function () {
 };
 
 exports.prepare = function () {
-    mongoDb = new MongoDb({
-        isInMemory: true
-    });
-    return mongoDb.startAsync();
+    mongoDb = new MongoDb();
 };
 
 exports.destroy = function () {
+    return mongoDb.getDatabaseAsync(DATABASE_NAME).then(() => {
+        return new Promise((resolve, reject) => {
+            db.dropDatabase((error, result) => {
+                if (error != null) {
+                    reject(error);
+                } else {
+                    resolve(result);
+                }
+            });
+        });
+    });
 };
 
 exports["ClarityTransactionDispatcher.constructor: Empty"] = function () {
@@ -47,32 +60,51 @@ exports["ClarityTransactionDispatcher.stopAsync"] = function () {
         assert.equal(mongoDb.isInitialized, true);
         return dispatcher.stopAsync();
     }).then(() => {
-        assert.equal(mongoDb.isInitialized, false);
+        if (mongoDb.process.connections === 0) {
+            assert.equal(mongoDb.isInitialized, false);
+        } else {
+            assert.equal(mongoDb.isInitialized, true);
+        }
     });
-};
-
-exports["ClarityTransactionDispatcher.addEntityAsync without invoking startAsync."] = function () {
-    assert.throws(() => {
-        var dispatcher = new ClarityTransactionDispatcher(mongoDb);
-        var entity = {};
-        dispatcher.addEntityAsync(entity);
-    }, "Expected to throw an error without invoking startAsync first.");
-
 };
 
 exports["ClarityTransactionDispatcher.addEntityAsync."] = function () {
     var dispatcher = new ClarityTransactionDispatcher(mongoDb);
+    var calledPrepare = false;
+    var calledValidate = false;
+
+    var system = {
+        prepareEntityToBeAddedAsync: (entity) => {
+            calledPrepare = true;
+            return Promise.resolve();
+        },
+        validateEntityToBeAddedAsync: (entity) => {
+            calledValidate = true;
+            return Promise.resolve();
+        },
+        getName: () => {
+            return "Test";
+        },
+        getGuid: () => {
+            return "Test";
+        }
+    };
+
     var collection = null;
 
     return dispatcher.startAsync().then(() => {
+        return dispatcher.addSystemAsync(system);
+    }).then(() => {
         return dispatcher.addEntityAsync({ components: [{ type: "test" }] });
     }).then(() => {
-        return mongoDb.getDatabaseAsync();
+        return mongoDb.getDatabaseAsync(DATABASE_NAME);
     }).then((db) => {
         collection = db.collection("entities");
         return collection.find().toArray();
     }).then((results) => {
         assert.equal(results.length, 1);
+        assert.equal(calledValidate, true);
+        assert.equal(calledPrepare, true);
     }).then(() => {
         return collection.remove({});
     });
@@ -81,9 +113,8 @@ exports["ClarityTransactionDispatcher.addEntityAsync."] = function () {
 exports["ClarityTransactionDispatcher.addServiceAsync without invoking startAsync."] = function () {
     assert.throws(() => {
         var dispatcher = new ClarityTransactionDispatcher(mongoDb);
-        dispatcher.addServiceAsync({});
+        dispatcher.addServiceAsync({}).then(resolve).catch(reject);
     }, "Expected to throw an error without invoking startAsync first.");
-
 };
 
 exports["ClarityTransactionDispatcher.addServiceAsync."] = function () {
@@ -181,7 +212,7 @@ exports["ClarityTransactionDispatcher.disposeSystemAsync."] = function () {
         deactivatedAsync: () => {
             isDeactivated = true;
         },
-        disposeAsync: () => {
+        disposedAsync: () => {
             isDisposed = true;
         },
         getGuid: () => {
@@ -304,13 +335,13 @@ exports["ClarityTransactionDispatcher.getSystems."] = function () {
     });
 };
 
-exports["ClarityTransactionDispatcher.logError."] = function () {
+exports["ClarityTransactionDispatcher.logErrorAsync."] = function () {
     var dispatcher = new ClarityTransactionDispatcher(mongoDb);
     var hasLogged = false;
     var system = {
         getGuid: () => { },
         getName: () => { },
-        logError: () => {
+        logErrorAsync: () => {
             hasLogged = true;
         }
     };
@@ -318,12 +349,13 @@ exports["ClarityTransactionDispatcher.logError."] = function () {
     return dispatcher.startAsync().then(() => {
         return dispatcher.addSystemAsync(system);
     }).then(() => {
-        dispatcher.logError(new Error("Something bad happened."));
+        return dispatcher.logErrorAsync(new Error("Something bad happened."))
+    }).then(() => {
         assert.equal(hasLogged, true);
     });
 };
 
-exports["ClarityTransactionDispatcher.logMessage."] = function () {
+exports["ClarityTransactionDispatcher.logMessageAsync."] = function () {
     var dispatcher = new ClarityTransactionDispatcher(mongoDb);
     var hasLogged = false;
     var logMessage = null;
@@ -331,7 +363,7 @@ exports["ClarityTransactionDispatcher.logMessage."] = function () {
     var system = {
         getGuid: () => { },
         getName: () => { },
-        logMessage: (message) => {
+        logMessageAsync: (message) => {
             logMessage = message;
             hasLogged = true;
         }
@@ -340,13 +372,14 @@ exports["ClarityTransactionDispatcher.logMessage."] = function () {
     return dispatcher.startAsync().then(() => {
         return dispatcher.addSystemAsync(system);
     }).then(() => {
-        dispatcher.logMessage("Message");
+        return dispatcher.logMessageAsync("Message");
+    }).then(() => {
         assert.equal(logMessage, "Message");
         assert.equal(hasLogged, true);
     });
 };
 
-exports["ClarityTransactionDispatcher.logWarning."] = function () {
+exports["ClarityTransactionDispatcher.logWarningAsync."] = function () {
     var dispatcher = new ClarityTransactionDispatcher(mongoDb);
     var hasLogged = false;
     var logMessage = null;
@@ -354,7 +387,7 @@ exports["ClarityTransactionDispatcher.logWarning."] = function () {
     var system = {
         getGuid: () => { },
         getName: () => { },
-        logWarning: (message) => {
+        logWarningAsync: (message) => {
             logMessage = message;
             hasLogged = true;
         }
@@ -363,7 +396,8 @@ exports["ClarityTransactionDispatcher.logWarning."] = function () {
     return dispatcher.startAsync().then(() => {
         return dispatcher.addSystemAsync(system);
     }).then(() => {
-        dispatcher.logWarning("Message");
+        return dispatcher.logWarningAsync("Message");
+    }).then(() => {
         assert.equal(logMessage, "Message");
         assert.equal(hasLogged, true);
     });
@@ -467,14 +501,6 @@ exports["ClarityTransactionDispatcher.removeServiceAsync: Remove non-existing se
     });
 };
 
-exports["ClarityTransactionDispatcher.startAsync."] = function () {
-    var dispatcher = new ClarityTransactionDispatcher(mongoDb);
-
-    return dispatcher.startAsync().then(() => {
-        assert.equal(dispatcher.isInitialized, true);
-    });
-};
-
 exports["ClarityTransactionDispatcher.stopAsync."] = function () {
     var dispatcher = new ClarityTransactionDispatcher(mongoDb);
     var isDeactivated = false;
@@ -483,10 +509,10 @@ exports["ClarityTransactionDispatcher.stopAsync."] = function () {
         deactivatedAsync: () => {
             isDeactivated = true;
         },
-        getName: ()=>{
+        getName: () => {
             return "Test";
         },
-        getGuid: ()=>{
+        getGuid: () => {
             return "Test";
         }
     };
@@ -500,30 +526,40 @@ exports["ClarityTransactionDispatcher.stopAsync."] = function () {
     });
 };
 
-// exports["ClarityTransactionDispatcher.updateEntityAsync."] = function () {
-//     var dispatcher = new ClarityTransactionDispatcher(mongoDb);
-//     var isDeactivated = false;
+exports["ClarityTransactionDispatcher.updateEntityAsync."] = function () {
+    var dispatcher = new ClarityTransactionDispatcher(mongoDb);
+    var calledPrepare = false;
+    var calledValidate = false;
 
-//     var system = {
-//         prepareEntityToBeUpdatedAsync: (entity) => {
-//             return Promise.resolve();
-//         },
-//         validateEntityToBeUpdatedAsync:(entity)=>{
-//             return Promise.resolve();
-//         },
-//         getName: ()=>{
-//             return "Test";
-//         },
-//         getGuid: ()=>{
-//             return "Test";
-//         }
-//     };
+    var system = {
+        prepareEntityToBeUpdatedAsync: (entity) => {
+            calledPrepare = true;
+            return Promise.resolve();
+        },
+        validateEntityToBeUpdatedAsync: (entity) => {
+            calledValidate = true;
+            return Promise.resolve();
+        },
+        getName: () => {
+            return "Test";
+        },
+        getGuid: () => {
+            return "Test";
+        }
+    };
 
-//     return dispatcher.startAsync().then(() => {
-//         return dispatcher.addSystemAsync(system);
-//     }).then(() => {
-//         return dispatcher.stopAsync();
-//     }).then(() => {
-//         assert.equal(isDeactivated, true);
-//     });
-// };
+    return dispatcher.startAsync().then(() => {
+        return dispatcher.addSystemAsync(system);
+    }).then(() => {
+        return dispatcher.addEntityAsync({});
+    }).then((entity) => {
+        entity.components.push({
+            type: "comp",
+            prop: "foo"
+        });
+        return dispatcher.updateEntityAsync(entity);
+    }).then(() => {
+        assert.equal(calledValidate, true);
+        assert.equal(calledPrepare, true);
+    });
+};

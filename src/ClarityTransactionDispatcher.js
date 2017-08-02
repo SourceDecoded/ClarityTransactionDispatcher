@@ -6,6 +6,7 @@ const resolvedPromise = Promise.resolve(null);
 const ENTITIES_COLLECTION = "entities";
 const SYSTEM_DATA_COLLECTION = "systemData";
 const NOTICE = "notice";
+const DATABASE_URL = "clarity_transaction_dispatcher";
 /**
  * Class that organizes systems to respond to data transactions.
  * The dispatcher manages the life-cycle of data entities. They can be
@@ -21,20 +22,18 @@ const NOTICE = "notice";
  * these needs is a data dispatcher which lets all independent systems know
  * about data changes.
  */
-class ClarityTransactionDispatcher {
+export default class ClarityTransactionDispatcher {
     /**
      * Create a Dispatcher.
      * @constructor
      */
-    constructor(config) {
-        this.mongoFactory = config.mongoFactory;
-        this.mongodb = this.mongoFactory.createMongodb();
-        this.MongoClient = this.mongodb.MongoClient;
-        this.ObjectID = this.mongodb.ObjectID;
-        this.databaseUrl = config.databaseUrl;
+    constructor(mongoDb) {
+        this.mongoDb = mongoDb;
+        this.ObjectID = mongoDb.getObjectID();
         this.systems = [];
         this.services = {};
     }
+
     /**
      * Add an item to a collection into mongodb.
      * @private
@@ -53,6 +52,11 @@ class ClarityTransactionDispatcher {
             return item;
         });
     }
+
+    _clone(obj) {
+        return JSON.parse(JSON.stringify(obj));
+    }
+
     /**
      * Find one in a collection.
      * @private
@@ -64,6 +68,7 @@ class ClarityTransactionDispatcher {
             return collection.findOne(filter);
         });
     }
+
     /**
     * Find many in a collection.
     * @private
@@ -75,6 +80,7 @@ class ClarityTransactionDispatcher {
             return collection.find(filter).limit(parseInt(pageSize, 10)).sort(sort).toArray();
         });
     }
+
     /**
      * Get count in a collection.
      * @private
@@ -86,14 +92,16 @@ class ClarityTransactionDispatcher {
             return collection.count();
         });
     }
+
     /**
      * Get a mongodb.
      * @private
      * @returns {Promise<mongodb>}
      */
     _getDatabaseAsync() {
-        return this.MongoClient.connect(this.databaseUrl);
+        return this.mongoDb.getDatabaseAsync(DATABASE_URL);
     }
+
     /**
      * Initialize a system.
      * @private
@@ -122,10 +130,11 @@ class ClarityTransactionDispatcher {
                 });
             }
         }).catch((error) => {
-            this.logError({ message: error.message });
+            this.logErrorAsync({ message: error.message });
             throw error;
         });
     }
+
     /**
      * Invoke a method on any object and make sure a promise is the returned value.
      * @private
@@ -143,6 +152,7 @@ class ClarityTransactionDispatcher {
         }
         return returnValue;
     }
+
     /**
      * Notify the systems of a life cycle by its method name.
      * @private
@@ -155,12 +165,15 @@ class ClarityTransactionDispatcher {
                     return this._invokeMethodAsync(system, methodName, args);
                 }
                 catch (error) {
-                    this.logError(error);
+                    if (methodName !== "logErrorAsync") {
+                        this.logErrorAsync(error);
+                    }
                     throw error;
                 }
             });
         }, resolvedPromise);
     }
+
     /**
        * Notify the systems of a life cycle by its method name and recover if
        * any of the systems reject the promise.
@@ -177,7 +190,7 @@ class ClarityTransactionDispatcher {
                     return this._invokeMethodAsync(system, methodName, args);
                 }
                 catch (error) {
-                    this.logError(error);
+                    this.logErrorAsync(error);
                     throw error;
                 }
             }).catch(() => {
@@ -199,6 +212,7 @@ class ClarityTransactionDispatcher {
             });
         });
     }
+
     /**
      * Update an item in a collection.
      * @private
@@ -214,6 +228,7 @@ class ClarityTransactionDispatcher {
             }, item, null);
         });
     }
+
     /**
      * Add an Entity to the datastore. The steps the dispatcher takes when saving an
      * entity are.
@@ -229,6 +244,7 @@ class ClarityTransactionDispatcher {
             _id: entity._id ? this.ObjectID(entity._id) : this.ObjectID(),
             components: Array.isArray(entity.components) ? entity.components : []
         };
+
         newEntity.components.forEach(component => {
             if (!component._id) {
                 component._id = this.ObjectID();
@@ -237,15 +253,21 @@ class ClarityTransactionDispatcher {
                 component._id = this.ObjectID(component._id);
             }
         });
-        return this.validateEntityAsync(newEntity).then(() => {
+
+        return this._notifySystemsWithRecoveryAsync("prepareEntityToBeAddedAsync", [newEntity]).then(() => {
+            return this.validateEntityToBeAddedAsync(newEntity);
+        }).then(() => {
             return this._addItemToCollectionAsync(ENTITIES_COLLECTION, newEntity);
         }).then(entity => {
-            return this._notifySystemsWithRecoveryAsync("entityAddedAsync", [entity]);
+            return this._notifySystemsWithRecoveryAsync("entityAddedAsync", [entity]).then(() => {
+                return entity;
+            });
         }).catch(error => {
-            this.logError(error);
+            this.logErrorAsync(error);
             throw error;
         });
     }
+
     /**
      * Add a service for systems to use. Services could be HTTP services,
      * or governance that needs to be shared acrossed systems.
@@ -257,6 +279,7 @@ class ClarityTransactionDispatcher {
         this.services[name] = service;
         return resolvedPromise;
     }
+
     /**
      * Add a system to the dispatcher. The systems are really where the work
      * is done. They listen to the life-cycle of the entity and react based
@@ -273,17 +296,19 @@ class ClarityTransactionDispatcher {
      *
      * #### Optional System Methods
      *  - activatedAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher)
-     *  - approveEntityRemovalAsync(entity: IEntity)
+     *  - approveEntityToBeRemovedAsync(entity: IEntity)
      *  - deactivatedAsync()
      *  - disposedAsync()
      *  - entityAddedAsync(entity: IEntity)
      *  - entityRemovedAsync(entity: IEntity)
      *  - entityRetrievedAsync(entity: IEntity)
      *  - entityUpdatedAsync(oldEntity: IEntity, updatedEntity: IEntity)
-     *  - logError(error: { type?: string; message?: string; })
-     *  - logMessage(message: { type?: string; message?: string; })
-     *  - logWarning(warning: { type?: string; message?: string; })
      *  - initializeAsync(clarityTransactionDispatcher: ClarityTransactionDispatcher)
+     *  - logErrorAsync(error: { type?: string; message?: string; })
+     *  - logMessageAsync(message: { type?: string; message?: string; })
+     *  - logWarningAsync(warning: { type?: string; message?: string; })
+     *  - prepareEntityToBeUpdatedAsync(oldEntity, entity)
+     *  - prepareEntityToAddedAsync(entity)
      *  - serviceRemovedAsync(name: string)
      *  - validateEntityAsync(entity: IEntity)
      * @param {ISystem} system - The system to add.
@@ -296,29 +321,31 @@ class ClarityTransactionDispatcher {
         else {
             this.systems.push(system);
             return this._initializingSystemAsync(system).then(() => {
-                this.logMessage({
+                this.logMessageAsync({
                     type: NOTICE,
                     message: `System "${system.getName()}" was initialized.`
                 });
                 return this._invokeMethodAsync(system, "activatedAsync", [this]);
             }).then(() => {
-                this.logMessage({
+                this.logMessageAsync({
                     type: NOTICE,
                     message: `System "${system.getName()}" was activated.`
                 });
             }).catch(error => {
-                this.logError(error);
+                this.logErrorAsync(error);
                 throw error;
             });
         }
     }
+
     /**
    * Approves whether an entity can be removed. Systems can deny the ability to remove entities.
    * @param entity {object} - The entity to be removed.
    */
-    approveEntityRemovalAsync(entity) {
-        return this._notifySystemsAsync("approveEntityRemovalAsync", [entity]);
+    approveEntityToBeRemovedAsync(entity) {
+        return this._notifySystemsAsync("approveEntityToBeRemovedAsync", [entity]);
     }
+
     /**
      * Deactivates a system and removes it from the systems being notified. To activate again use addSystemAsync.
      * Think of this like a pause. The dispatcher calls deactivatedAsync on the system being removed.
@@ -335,7 +362,7 @@ class ClarityTransactionDispatcher {
             this.systems.splice(index, 1);
             try {
                 return deactivatedPromise = this._invokeMethodAsync(system, "deactivatedAsync", []).then(() => {
-                    this.logMessage({
+                    this.logMessageAsync({
                         type: NOTICE,
                         message: `System "${system.getName()}" was deactivated.`
                     });
@@ -348,6 +375,7 @@ class ClarityTransactionDispatcher {
             }
         }
     }
+
     /**
      * Disposes a system and removes it from the systems being notified. Use when removing systems for
      * good. This allows the system to clean up after itself if needed. The dispatcher calls disposeAsync on the system being removed.
@@ -364,7 +392,7 @@ class ClarityTransactionDispatcher {
             this.systems.splice(index, 1);
             try {
                 return disposedPromise = this._invokeMethodAsync(system, "disposedAsync", []).then(() => {
-                    this.logMessage({
+                    this.logMessageAsync({
                         type: NOTICE,
                         message: `System "${system.getName()}" was disposed.`
                     });
@@ -377,18 +405,19 @@ class ClarityTransactionDispatcher {
             }
         }
     }
+
     /**
      * This allows you to define a query for entities, and then manages the iteration over the entities.
      */
-    getQuery(){
+    getQuery() {
         return new Query(this.mongoDb, ENTITIES_COLLECTION);
     }
-    
+
     /**
      * Page through entities using the lastId from a previous query. Use null or undefined to begin at the beginning.
      * @param config {} - The configuration of the query. It takes a lastId, pageSize, lastModifiedDate, and a lastCreatedDate.
      */
-    getEntitiesAsync(config) {
+    getEntitiesAsync(config = {}) {
         let lastId = config.lastId ? this.ObjectID(config.lastId) : null;
         let pageSize = config.pageSize < 50 ? config.pageSize : 50;
         let lastModifiedDate = config.lastModifiedDate;
@@ -420,10 +449,11 @@ class ClarityTransactionDispatcher {
                 return entities;
             });
         }).catch(error => {
-            this.logError(error);
+            this.logErrorAsync(error);
             throw error;
         });
     }
+
     /**
      * Get an entity by its id.
      * @param {string} entityId - The id of the desired entity.
@@ -437,10 +467,11 @@ class ClarityTransactionDispatcher {
                 return entity;
             });
         }).catch((error) => {
-            this.logError(error);
+            this.logErrorAsync(error);
             throw error;
         });
     }
+
     /**
      * Get count for all entities in collection.
      */
@@ -467,24 +498,24 @@ class ClarityTransactionDispatcher {
      * @param error {object} - The error to be sent to the systems.
      * @returns {undefined}
      */
-    logError(error) {
-        this._notifySystemsAsync("logError", [error]);
+    logErrorAsync(error) {
+        this._notifySystemsAsync("logErrorAsync", [error]);
     }
     /**
      * Notifies the systems about a message.
      * @param message {object} - The message to be sent to the systems.
      * @returns {undefined}
      */
-    logMessage(message) {
-        this._notifySystemsAsync("logMessage", [message]);
+    logMessageAsync(message) {
+        this._notifySystemsAsync("logMessageAsync", [message]);
     }
     /**
      * Notifies the systems about a warning.
      * @param warning {object} - The warning to be sent to the systems.
      * @returns {undefined}
      */
-    logWarning(warning) {
-        this._notifySystemsAsync("logWarning", [warning]);
+    logWarningAsync(warning) {
+        this._notifySystemsAsync("logWarningAsync", [warning]);
     }
     /**
      * Removes the entity to be removed and notifies the systems the entity has been removed.
@@ -492,12 +523,14 @@ class ClarityTransactionDispatcher {
      * @returns {Promise<undefined>}
      */
     removeEntityAsync(entity) {
-        return this._removeItemfromCollection(ENTITIES_COLLECTION, entity).then(() => {
+        return this.approveEntityToBeRemovedAsync(entity).then(() => {
+            return this._removeItemfromCollection(ENTITIES_COLLECTION, entity);
+        }).then(() => {
             return this._notifySystemsWithRecoveryAsync("entityRemovedAsync", [entity]);
         }).then(() => {
             return entity;
         }).catch(error => {
-            this.logError(error);
+            this.logErrorAsync(error);
             throw error;
         });
     }
@@ -514,10 +547,21 @@ class ClarityTransactionDispatcher {
         }
         else {
             var error = Error("Couldn't find service to be removed.");
-            this.logError(error);
+            this.logErrorAsync(error);
             return Promise.reject(error);
         }
     }
+
+    startAsync() {
+        return this.mongoDb.startAsync();
+    }
+
+    stopAsync() {
+        return this._notifySystemsWithRecoveryAsync("deactivatedAsync", []).then(() => {
+            return this.mongoDb.stopAsync();
+        });
+    }
+
     /**
      * Update an entity. The dispatcher will perform the following actions when updating.
      *
@@ -528,10 +572,12 @@ class ClarityTransactionDispatcher {
      * @returns {Promise<undefined>} - Resolves when the entity is saved.
      */
     updateEntityAsync(entity) {
+        let oldEntity = null;
         let updatedEntity = {
             _id: entity._id ? this.ObjectID(entity._id) : this.ObjectID,
             components: Array.isArray(entity.components) ? entity.components : []
         };
+
         updatedEntity.components.forEach(component => {
             if (!component._id) {
                 component._id = this.ObjectID();
@@ -540,31 +586,44 @@ class ClarityTransactionDispatcher {
                 component._id = this.ObjectID(component._id);
             }
         });
-        return this.validateEntityAsync(updatedEntity).then(() => {
-            return this._findOneAsync(ENTITIES_COLLECTION, {
-                _id: updatedEntity._id
-            });
-        }).then((oldEntity) => {
+
+        return this._findOneAsync(ENTITIES_COLLECTION, {
+            _id: updatedEntity._id
+        }).then((entity) => {
+            oldEntity = entity;
             updatedEntity._id = oldEntity._id;
             updatedEntity.createdDate = oldEntity.createdDate;
-            return this._updateItemInCollectionAsync(ENTITIES_COLLECTION, updatedEntity).then(() => {
-                return oldEntity;
-            });
-        }).then((oldEntity) => {
+
+            return this._notifySystemsWithRecoveryAsync("prepareEntityToBeUpdatedAsync", [oldEntity, updatedEntity]);
+        }).then(() => {
+            return this.validateEntityToBeUpdatedAsync(oldEntity, updatedEntity);
+        }).then(() => {
+            return this._updateItemInCollectionAsync(ENTITIES_COLLECTION, updatedEntity);
+        }).then(() => {
             return this._notifySystemsWithRecoveryAsync("entityUpdatedAsync", [oldEntity, updatedEntity]);
         }).then(() => {
             return updatedEntity;
         }).catch((error) => {
-            this.logError(error);
+            this.logErrorAsync(error);
             throw error;
         });
     }
+
     /**
      * This allows systems to validate the entity being saved.
      */
-    validateEntityAsync(entity) {
-        return this._notifySystemsAsync("validateEntityAsync", [entity]);
+    validateEntityToBeAddedAsync(entity) {
+        return this._notifySystemsAsync("validateEntityToBeAddedAsync", [entity]);
     }
+
+    /**
+     * This allows systems to validate the entity being saved.
+     */
+    validateEntityToBeUpdatedAsync(oldEntity, entity) {
+        return this._notifySystemsAsync("validateEntityToBeUpdatedAsync", [oldEntity, entity]);
+    }
+
+
     /**
      * Ensures the system has the required methods.
      * @param {ISystem} system - The System to be validated.
@@ -577,5 +636,3 @@ class ClarityTransactionDispatcher {
         return true;
     }
 }
-exports.default = ClarityTransactionDispatcher;
-//# sourceMappingURL=ClarityTransactionDispatcher.js.map

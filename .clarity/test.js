@@ -23,72 +23,51 @@ const promisify = (fn) => {
     }
 }
 
-fs.readdir(testDirectory).catch(() => {
-    console.log(`Couldn't find test folder here: ${testDirectory}`);
-    return [];
-}).then((files) => {
-    return files.reduce((promise, file) => {
+fs.readdir(testDirectory).then((files) => {
+    files.forEach((file) => {
+        if (path.extname(file) === ".js") {
 
-        return promise.then(() => {
-            if (path.extname(file) === ".js") {
+            var tests = require(path.join(testDirectory, file));
+            var defaultModules = tests.default || tests;
 
-                var tests = require(path.join(testDirectory, file));
-                var defaultModules = tests.default || tests;
+            var prepare = promisify(defaultModules.prepare);
+            var destroy = promisify(defaultModules.destroy);
+            var clean = promisify(defaultModules.clean);
 
-                var prepare = promisify(defaultModules.prepare);
-                var destroy = promisify(defaultModules.destroy);
-                var clean = promisify(defaultModules.clean);
+            Object.keys(defaultModules).filter((testName) => {
+                return specialTestNames[testName] == null;
+            }).reduce((promise, testName) => {
+                if (typeof defaultModules[testName] !== "function") {
+                    return Promise.resolve("UNEXPECTED EXPORT:  This export '" + testName + "' needs to be a function.");
+                }
+                return promise.then(() => {
+                    try {
+                        let result = defaultModules[testName]();
+                        result = result instanceof Promise ? result : Promise.resolve(result);
 
-                return Object.keys(defaultModules).filter((testName) => {
-                    return specialTestNames[testName] == null;
-                }).reduce((promise, testName) => {
-
-                    if (typeof defaultModules[testName] !== "function") {
-                        return Promise.resolve("UNEXPECTED EXPORT:  This export '" + testName + "' needs to be a function.");
-                    }
-
-                    return promise.then(() => {
-                        try {
-
-                            let result = defaultModules[testName]();
-                            result = result instanceof Promise ? result : Promise.resolve(result);
-
-                            return result.then(() => {
-                                console.log("PASSED: " + testName);
-                            }).catch((error) => {
-                                console.log("FAILED: " + testName);
-                                console.log(error);
-                            });
-
-                        } catch (error) {
-
+                        return result.then(() => {
+                            console.log("PASSED: " + testName);
+                        }).catch((error) => {
                             console.log("FAILED: " + testName);
                             console.log(error);
+                        });
+                    } catch (error) {
+                        console.log("FAILED: " + testName);
+                        console.log(error);
 
-                            return Promise.resolve(null);
-
-                        }
-                    }).then(() => {
-
-                        return clean();
-
-                    });
-                }, prepare()).catch((error) => {
-
-                    console.log("UNEXPECTED FAILURE: Most likely an async error.");
-
+                        return Promise.resolve(null);
+                    }
                 }).then(() => {
-
-                    return destroy();
-
+                    return clean();
                 });
-            }
-
-            return Promise.resolve();
-        });
-
-    }, Promise.resolve());
-
+            }, prepare()).catch((error) => {
+                console.log("UNEXPECTED FAILURE: Most likely an async error.");
+                console.log(error);
+            }).then(() => {
+                return destroy();
+            });
+        }
+    });
 }).catch((error) => {
-    console.log("UNEXPECTED FAILURE: " + error.message);
+    console.log(error);
 });
