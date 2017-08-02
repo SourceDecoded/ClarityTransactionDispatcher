@@ -1,5 +1,5 @@
 import assert from "assert";
-import clarityPackage from "./../index";
+import * as clarityPackage from "./../index";
 
 const ClarityTransactionDispatcher = clarityPackage.ClarityTransactionDispatcher;
 const MongoDb = clarityPackage.MongoDb;
