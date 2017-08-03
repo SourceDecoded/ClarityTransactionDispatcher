@@ -6,7 +6,7 @@ import fs from "fs-extra"
 const MongoClient = mongodb.MongoClient;
 const ObjectID = mongodb.ObjectID;
 const resolvedPromise = Promise.resolve();
-const dbpath = /^win/.test(process.platform) ? "c:/data/db" : "~/data/db";
+const dbpath = /^win/.test(process.platform) ? "c:/data/db" : "/data/db";
 const defaultMongodbConfig = {
     ip: "127.0.0.1",
     args: ["--port", "27017", "--dbpath", dbpath]
