@@ -410,7 +410,11 @@ export default class ClarityTransactionDispatcher {
      * This allows you to define a query for entities, and then manages the iteration over the entities.
      */
     getQuery() {
-        return new Query(this.mongoDb, ENTITIES_COLLECTION);
+        return new Query({
+            mongodDb: this.mongoDb,
+            collectionName: ENTITIES_COLLECTION,
+            databaseName: DATABASE_URL
+        });
     }
 
     /**
