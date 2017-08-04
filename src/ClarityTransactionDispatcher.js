@@ -411,7 +411,7 @@ export default class ClarityTransactionDispatcher {
      */
     getQuery() {
         return new Query({
-            mongodDb: this.mongoDb,
+            mongoDb: this.mongoDb,
             collectionName: ENTITIES_COLLECTION,
             databaseName: DATABASE_URL
         });
