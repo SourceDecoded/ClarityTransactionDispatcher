@@ -1,8 +1,9 @@
 export default class Query {
 
-    constructor(mongoDb, collectionName) {
-        this.mongoDb = mongoDb;
-        this.collectionName = collectionName;
+    constructor(options) {
+        this.databaseName = options.databaseName;
+        this.mongoDb = options.mongoDb;
+        this.collectionName = options.collectionName;
         this.filter = {};
         this.sort = {_id: 1};
         this.batchSize = 50;
@@ -64,7 +65,7 @@ export default class Query {
 
         var filter = Object.assign({}, this.filter, filter);
 
-        return this.mongoDb.getDatabaseAsync().then((database) => {
+        return this.mongoDb.getDatabaseAsync(this.databaseName).then((database) => {
             return database.collection(this.collectionName).find(filter).sort(this.sort).limit(this.batchSize).toArray();
         }).then((results) => {
 
