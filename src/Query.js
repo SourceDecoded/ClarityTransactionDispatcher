@@ -36,16 +36,19 @@ export default class Query {
     find(filter) {
         this._assertLock();
         this.filter = Object.assign({}, this.filter, filter);
+        return this;
     }
 
     sort(sort) {
         this._assertLock();
         this.sort = Object.assign({}, this.sort, sort);
+        return this;
     }
 
     limit(limit) {
         this._assertLock();
         this.limit = limit;
+        return this;
     }
 
     nextAsync() {
@@ -61,7 +64,7 @@ export default class Query {
 
         var filter = Object.assign({}, this.filter, filter);
 
-        return mongoDb.getDatabaseAsync().then((database) => {
+        return this.mongoDb.getDatabaseAsync().then((database) => {
             return database.collection(this.collectionName).find(filter).sort(this.sort).limit(this.batchSize).toArray();
         }).then((results) => {
 
