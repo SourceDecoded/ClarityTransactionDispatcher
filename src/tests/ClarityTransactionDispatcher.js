@@ -49,7 +49,7 @@ exports["ClarityTransactionDispatcher.startAsync"] = function () {
     var dispatcher = new ClarityTransactionDispatcher(mongoDb);
 
     return dispatcher.startAsync().then(() => {
-        assert.equal(mongoDb.isInitialized, true);
+        assert.equal(dispatcher.isInitialized, true);
     });
 };
 
@@ -57,14 +57,10 @@ exports["ClarityTransactionDispatcher.stopAsync"] = function () {
     var dispatcher = new ClarityTransactionDispatcher(mongoDb);
 
     return dispatcher.startAsync().then(() => {
-        assert.equal(mongoDb.isInitialized, true);
+        assert.equal(dispatcher.isInitialized, true);
         return dispatcher.stopAsync();
     }).then(() => {
-        if (mongoDb.process.connections === 0) {
-            assert.equal(mongoDb.isInitialized, false);
-        } else {
-            assert.equal(mongoDb.isInitialized, true);
-        }
+        assert.equal(dispatcher.isInitialized, false);
     });
 };
 

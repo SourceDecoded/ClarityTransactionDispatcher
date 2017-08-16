@@ -32,6 +32,9 @@ export default class ClarityTransactionDispatcher {
         this.ObjectID = mongoDb.getObjectID();
         this.systems = [];
         this.services = {};
+        this.isInitialized = false;
+        this.startedPromise = null;
+        this.stoppedPromise = null;
     }
 
     /**
@@ -410,7 +413,11 @@ export default class ClarityTransactionDispatcher {
      * This allows you to define a query for entities, and then manages the iteration over the entities.
      */
     getQuery() {
-        return new Query(this.mongoDb, ENTITIES_COLLECTION);
+        return new Query({
+            mongoDb: this.mongoDb,
+            collectionName: ENTITIES_COLLECTION,
+            databaseName: DATABASE_URL
+        });
     }
 
     /**
@@ -553,13 +560,42 @@ export default class ClarityTransactionDispatcher {
     }
 
     startAsync() {
-        return this.mongoDb.startAsync();
+        if (this.startedPromise == null) {
+            var stoppedPromise = this.stoppedPromise;
+
+            if (stoppedPromise == null) {
+                stoppedPromise = resolvedPromise;
+            }
+
+            return this.startedPromise = stoppedPromise.then(() => {
+                this._notifySystemsWithRecoveryAsync("activatedAsync", [this])
+            }).then(() => {
+                this.isInitialized = true;
+            });
+
+        } else {
+            return this.startedPromise;
+        }
     }
 
     stopAsync() {
-        return this._notifySystemsWithRecoveryAsync("deactivatedAsync", []).then(() => {
-            return this.mongoDb.stopAsync();
-        });
+        if (this.stoppedPromise == null) {
+
+            var startedPromise = this.startedPromise;
+
+            if (startedPromise == null) {
+                startedPromise = resolvedPromise;
+            }
+
+            return this.stoppedPromise = startedPromise.then(() => {
+                return this._notifySystemsWithRecoveryAsync("deactivatedAsync", []);
+            }).then(() => {
+                this.isInitialized = false;
+            });
+
+        } else {
+            return this.stoppedPromise;
+        }
     }
 
     /**
